@@ -1,0 +1,139 @@
+:root {
+  --color-bg-primary: 0 0% 100%;
+  --color-bg-secondary: 0 0% 98%;
+  --color-bg-panel: 0 0% 100%;
+  --color-text-primary: 0 0% 10%;
+  --color-text-secondary: 0 0% 45%;
+  --color-accent: 215 90% 50%;
+  --color-accent-soft: 215 90% 95%;
+  --color-border: 0 0% 90%;
+
+  --color-selection-bg: 215 90% 50%;
+  --color-selection-text: 0 0% 100%;
+  --color-selection-hover: 215 90% 60%;
+
+  --glass-bg: hsla(0 0% 100% / 0.85);
+  --glass-border: hsla(0 0% 100% / 0.3);
+  --color-bg-panel: 0 0% 100%;
+  /* Default for light */
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 24px 48px -12px rgba(0, 0, 0, 0.15);
+}
+
+
+/* Light Theme Override */
+[data-theme='light'] {
+  --color-bg-primary: 0 0% 100%;
+  --color-bg-secondary: 0 0% 98%;
+  --color-bg-panel: 0 0% 100%;
+  --color-text-primary: 0 0% 10%;
+  --color-text-secondary: 0 0% 45%;
+  --color-border: 0 0% 90%;
+  --glass-bg: hsla(0 0% 100% / 0.85);
+}
+
+/* Dark Theme Override */
+[data-theme='dark'] {
+  --color-bg-primary: 0 0% 0%;
+  --color-bg-secondary: 220 15% 5%;
+  --color-bg-panel: 220 15% 10%;
+  /* Lighter than black for buttons */
+  --color-text-primary: 0 0% 95%;
+  --color-text-secondary: 220 10% 65%;
+  --color-border: 220 15% 15%;
+  --glass-bg: hsla(220 15% 5% / 0.9);
+  --glass-border: hsla(0 0% 100% / 0.08);
+
+  --color-accent: 215 100% 60%;
+  --color-selection-bg: 215 100% 55%;
+  --color-selection-hover: 215 100% 45%;
+}
+
+
+/* System Preference (Default fallback if no data-theme) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg-primary: 0 0% 0%;
+    --color-bg-secondary: 220 15% 5%;
+    --color-bg-panel: 220 15% 10%;
+    --color-text-primary: 0 0% 95%;
+    --color-text-secondary: 220 10% 65%;
+    --color-border: 220 15% 15%;
+    --glass-bg: hsla(220 15% 5% / 0.9);
+    --glass-border: hsla(0 0% 100% / 0.08);
+
+    --color-accent: 215 100% 60%;
+    --color-selection-bg: 215 100% 55%;
+    --color-selection-hover: 215 100% 45%;
+  }
+}
+
+
+
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  background-color: hsl(var(--color-bg-primary));
+  color: hsl(var(--color-text-primary));
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  /* App-like feel */
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--color-text-secondary) / 0.2);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--color-text-secondary) / 0.4);
+}
+
+/* Dark mode overrides for Tldraw */
+[data-theme='dark'] .tl-container,
+[data-theme='dark'] .tl-canvas,
+[data-theme='dark'] .tl-background,
+[data-theme='dark'] .tl-background__inner {
+  background-color: #000000 !important;
+}
+
+/* Hybrid strokes brightness inversion (preserving color) */
+[data-theme='dark'] [class*="strokeOverlay"],
+[data-theme='dark'] [class*="nameStrokes"],
+[data-theme='dark'] [class*="svgOverlay"] {
+  /* Use absolute black as base so invert(1) produces absolute white. */
+  color: #000000 !important;
+  /* Boost brightness and contrast for "almost black" -> "almost white" conversion */
+  filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
+  opacity: 1 !important;
+}

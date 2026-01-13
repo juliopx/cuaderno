@@ -1,0 +1,15 @@
+.container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: hsl(var(--color-bg-base));
+}
+
+.main {
+  flex: 1;
+  position: relative;
+  background-color: hsl(var(--color-bg-subtle));
+  /* Subtle difference for canvas area */
+  overflow: hidden;
+}

@@ -1,0 +1,140 @@
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  background: hsl(var(--color-bg-primary));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  min-width: 300px;
+  max-width: 500px;
+  box-shadow: var(--shadow-md);
+}
+
+.message {
+  color: hsl(var(--color-text-primary));
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.itemReplica {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  background-color: hsl(var(--color-bg-secondary));
+  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  border-radius: var(--radius-md);
+  margin: 1rem 0 2rem;
+  height: 3.5rem;
+  /* Slighly larger than item for padding */
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.icon {
+  color: hsl(var(--color-text-secondary));
+  flex-shrink: 0;
+}
+
+.itemName {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  position: relative;
+  height: 2.5rem;
+  padding: 0 8px;
+  overflow: hidden;
+}
+
+.nameText {
+  font-family: inherit;
+  font-weight: normal;
+  font-size: 0.9rem;
+  letter-spacing: normal;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  color: hsl(var(--color-text-primary));
+}
+
+.strokeClip {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  /* Match nameContainer padding */
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nameStrokes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+.buttons {
+
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.cancelBtn,
+.confirmBtn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn {
+  background: hsl(var(--color-bg-secondary));
+  color: hsl(var(--color-text-primary));
+  border: 1px solid var(--glass-border);
+}
+
+.cancelBtn:hover {
+  background: hsl(var(--color-text-secondary) / 0.1);
+}
+
+.confirmBtn {
+  background: hsl(0, 70%, 50%);
+  color: white;
+}
+
+.confirmBtn:hover {
+  background: hsl(0, 70%, 45%);
+}

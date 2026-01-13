@@ -1,0 +1,125 @@
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.1);
+  /* Subtle backdrop to focus */
+}
+
+.overlay {
+  position: fixed;
+  z-index: 1001;
+  background: hsl(var(--color-bg-primary));
+  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 1rem;
+  overflow: visible;
+  /* Removed backdrop-filter as requested */
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.inputWrapper {
+  position: relative;
+  height: 5rem;
+  /* 80px (2x height of sidebar item) */
+  display: flex;
+  align-items: center;
+  background: hsl(var(--color-bg-secondary));
+  /* Solid background, no transparency */
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+  /* 8px * 2 */
+  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+}
+
+.input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 1.8rem;
+  font-weight: normal;
+  letter-spacing: normal;
+  /* 0.9rem * 2 */
+  padding: 0;
+  color: hsl(var(--color-text-primary));
+  /* Ensure high contrast */
+  outline: none;
+}
+
+.svgOverlay {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  /* 8px * 2 */
+  width: calc(100% - 32px);
+  height: 100%;
+  pointer-events: none;
+}
+
+
+.guideRect {
+  fill: none;
+  stroke: hsl(var(--color-text-secondary) / 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.btn {
+  background: hsl(var(--color-bg-subtle));
+  border: 1px solid hsl(var(--color-text-secondary) / 0.2);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  color: hsl(var(--color-text-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:hover {
+  background: hsl(var(--color-text-secondary) / 0.1);
+  color: hsl(var(--color-text-primary));
+}
+
+.confirm {
+  background: hsl(var(--color-accent));
+  color: hsl(var(--color-accent-text));
+  border-color: transparent;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 0.5rem 1.25rem;
+}
+
+.confirm:hover {
+  background: hsl(var(--color-accent-hover));
+  color: hsl(var(--color-accent-text));
+}
