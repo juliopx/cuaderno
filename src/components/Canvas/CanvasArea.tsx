@@ -583,7 +583,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 });
 
 export const CanvasArea = () => {
-  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages } = useFileSystemStore();
+  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages, activePath } = useFileSystemStore();
   const parentRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -594,8 +594,9 @@ export const CanvasArea = () => {
 
   // Show empty state when no page is selected
   if (!activePageId) {
+    const sidebarColumns = isSidebarOpen ? activePath.length + 2 : 0;
     return (
-      <div className={styles.wrapper}>
+      <div className={styles.wrapper} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
         {!isSidebarOpen && (
           <div className={styles.topBar}>
             <button className={styles.iconButton} onClick={toggleSidebar}>
@@ -617,8 +618,10 @@ export const CanvasArea = () => {
     );
   }
 
+  const sidebarColumns = isSidebarOpen ? activePath.length + 2 : 0;
+
   return (
-    <div className={styles.wrapper} ref={parentRef}>
+    <div className={styles.wrapper} ref={parentRef} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
       <Tldraw
         persistenceKey={`cuaderno-${activePageId}`}
         hideUi
