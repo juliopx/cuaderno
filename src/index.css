@@ -7,6 +7,8 @@
   --color-accent: 215 90% 50%;
   --color-accent-soft: 215 90% 95%;
   --color-border: 0 0% 90%;
+  --color-danger: 0 84% 60%;
+  --color-danger-soft: 0 84% 94%;
 
   --color-selection-bg: 215 90% 50%;
   --color-selection-text: 0 0% 100%;
@@ -51,6 +53,8 @@
   --color-accent: 215 100% 60%;
   --color-selection-bg: 215 100% 55%;
   --color-selection-hover: 215 100% 45%;
+  --color-danger: 0 84% 65%;
+  --color-danger-soft: 0 84% 12%;
 }
 
 
@@ -69,6 +73,8 @@
     --color-accent: 215 100% 60%;
     --color-selection-bg: 215 100% 55%;
     --color-selection-hover: 215 100% 45%;
+    --color-danger: 0 84% 65%;
+    --color-danger-soft: 0 84% 12%;
   }
 }
 

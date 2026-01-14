@@ -12,7 +12,6 @@ export const opfs = {
       const writable = await fileHandle.createWritable();
       await writable.write(content);
       await writable.close();
-      console.log(`Saved ${filename}`);
     } catch (e) {
       console.error(`Error saving ${filename}`, e);
     }
@@ -43,5 +42,25 @@ export const opfs = {
       files.push(name);
     }
     return files;
+  },
+
+  async clearAll() {
+    try {
+      const root = await this.getRoot();
+      const files = await this.listFiles();
+
+      console.log(`🗑️ Deleting ${files.length} files from OPFS...`);
+
+      for (const filename of files) {
+        await root.removeEntry(filename);
+        console.log(`  ✓ Deleted ${filename}`);
+      }
+
+      console.log('✅ OPFS cleared successfully!');
+      return { success: true, deletedCount: files.length };
+    } catch (e) {
+      console.error('❌ Error clearing OPFS:', e);
+      return { success: false, error: e };
+    }
   }
 };

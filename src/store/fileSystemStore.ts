@@ -3,6 +3,8 @@ import { create } from 'zustand';
 import type { Notebook, Folder, Page } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { opfs } from '../lib/opfs';
+import { useSyncStore } from './syncStore';
+import { diskLog, syncLog } from '../lib/debugLog';
 
 const METADATA_FILE = 'metadata.json';
 
@@ -15,8 +17,11 @@ interface FileSystemState {
   activeNotebookId: string | null;
   activePath: string[]; // Array of IDs starting from notebook -> folder -> subfolder
   activePageId: string | null;
+  activeStateUpdatedAt: number;
+  activeStateModifier: string;
   isSidebarOpen: boolean;
   theme: 'auto' | 'light' | 'dark';
+  deletedItemIds: string[]; // Tombstones for sync
 
   // Actions
   toggleSidebar: () => void;
@@ -41,39 +46,67 @@ interface FileSystemState {
   // Persistence
   load: () => Promise<void>;
   save: () => Promise<void>;
-
   reorderNotebooks: (activeId: string, overId: string) => void;
   moveNode: (activeId: string, overId: string, isContainer?: boolean) => void;
+  markPageDirty: (pageId: string) => void;
+
+  // Sync helpers
+  clearDirtyFlags: () => void;
+  mergeRemoteData: (remoteData: any) => void;
+
+  // New: Force save mechanism for sync
+  forceSaveActivePage: (() => Promise<void>) | null;
+  registerActivePageSaver: (saver: () => Promise<void>) => void;
 }
 
 export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   notebooks: [],
   folders: {},
   pages: {},
+  deletedItemIds: [],
 
   activeNotebookId: null,
   activePath: [],
   activePageId: null,
+  activeStateUpdatedAt: 0,
+  activeStateModifier: '',
   isSidebarOpen: true,
   theme: (localStorage.getItem('cuaderno-theme') as any) || 'auto',
 
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  forceSaveActivePage: null,
+  registerActivePageSaver: (saver) => set({ forceSaveActivePage: saver }),
+
+  toggleSidebar: () => {
+    const newState = !useFileSystemStore.getState().isSidebarOpen;
+    diskLog(`💾 [FileSystem] ${newState ? 'Opened' : 'Closed'} sidebar`);
+    set((state) => ({ isSidebarOpen: !state.isSidebarOpen }));
+  },
   setTheme: (theme) => {
+    diskLog(`💾 [FileSystem] Changed theme to "${theme}"`);
     localStorage.setItem('cuaderno-theme', theme);
     set({ theme });
   },
 
 
   createNotebook: (name) => {
+    const clientId = useSyncStore.getState().clientId;
+    const maxOrder = get().notebooks.length > 0 ? Math.max(...get().notebooks.map(n => n.order || 0)) : 0;
     const newNotebook: Notebook = {
       id: uuidv4(),
       name,
       createdAt: Date.now(),
+      order: maxOrder + 10000,
+      version: 1,
+      dirty: true,
+      lastModifier: clientId,
     };
-    set((state) => ({ notebooks: [...state.notebooks, newNotebook] }));
+    syncLog(`🔶 [FileSystem] Created notebook "${name}" (${newNotebook.id}) - dirty`);
+    set((state) => ({ notebooks: [...state.notebooks, newNotebook].sort((a, b) => (a.order || 0) - (b.order || 0)) }));
+    setTimeout(() => get().save(), 0);
   },
 
   createFolder: (name, parentId, notebookId) => {
+    const clientId = useSyncStore.getState().clientId;
     set((state) => {
       // Calculate max order for siblings
       const siblings = Object.values(state.folders).filter(f => f.parentId === parentId)
@@ -88,14 +121,19 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
         notebookId,
         createdAt: Date.now(),
         order: maxOrder + 10000, // Add at end with gap
+        version: 1,
+        dirty: true,
+        lastModifier: clientId,
       };
 
+      syncLog(`🔶 [FileSystem] Created folder "${name}" (${newFolder.id}) - dirty`);
       setTimeout(() => get().save(), 0); // Trigger save
       return { folders: { ...state.folders, [newFolder.id]: newFolder } };
     });
   },
 
   createPage: (name, parentId, notebookId) => {
+    const clientId = useSyncStore.getState().clientId;
     set((state) => {
       const siblings = Object.values(state.folders).filter(f => f.parentId === parentId)
         .concat(Object.values(state.pages).filter(p => p.parentId === parentId) as any[]);
@@ -110,7 +148,15 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
         createdAt: Date.now(),
         updatedAt: Date.now(),
         order: maxOrder + 10000, // Add at end
+        version: 1,
+        dirty: true,
+        lastModifier: clientId,
       };
+      syncLog(`🔶 [FileSystem] Created page "${name}" (${newPage.id}) - dirty`);
+
+      // Initialize OPFS file with empty object to ensure sync finds it
+      opfs.saveFile(`page-${newPage.id}.tldr`, '{}');
+
       const nextState = { pages: { ...state.pages, [newPage.id]: newPage } };
       // Trigger save
       setTimeout(() => get().save(), 0);
@@ -119,22 +165,42 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   },
 
   navigatePath: (path: string[]) => {
-    set({ activePath: path, activePageId: null });
+    const clientId = useSyncStore.getState().clientId;
+    diskLog(`💾 [FileSystem] Navigated to path:`, path);
+    set({
+      activePath: path,
+      activePageId: null,
+      activeStateUpdatedAt: Date.now(),
+      activeStateModifier: clientId
+    });
     setTimeout(() => get().save(), 0);
   },
 
-  setActiveNotebook: (id) => {
-    set({ activeNotebookId: id, activePath: [], activePageId: null });
+  setActiveNotebook: (id: string) => {
+    const state = get();
+    const clientId = useSyncStore.getState().clientId;
+    const notebook = state.notebooks.find(n => n.id === id);
+    diskLog(`💾 [FileSystem] Selected notebook "${notebook?.name || 'Unknown'}" (${id})`);
+    set({
+      activeNotebookId: id,
+      activePath: [],
+      activePageId: null,
+      activeStateUpdatedAt: Date.now(),
+      activeStateModifier: clientId
+    });
     setTimeout(() => get().save(), 0);
   },
 
   openFolder: (id) => set((state) => {
-    // Logic to ensure path correctness could go here
+    const folder = state.folders[id];
+    diskLog(`💾 [FileSystem] Opened folder "${folder?.name || 'Unknown'}" (${id})`);
     return { activePath: [...state.activePath, id] };
   }),
-  closeFolder: (id) => set((state) => ({
-    activePath: state.activePath.filter(pathId => pathId !== id)
-  })), // Simplified, might need more robust logic to remove *subsequent* folders too if in a column view
+  closeFolder: (id) => set((state) => {
+    const folder = state.folders[id];
+    diskLog(`💾 [FileSystem] Closed folder "${folder?.name || 'Unknown'}" (${id})`);
+    return { activePath: state.activePath.filter(pathId => pathId !== id) };
+  }), // Simplified, might need more robust logic to remove *subsequent* folders too if in a column view
 
   selectPage: (id) => {
     const state = get();
@@ -155,28 +221,67 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       currentParentId = folder.parentId || null;
     }
 
+    const clientId = useSyncStore.getState().clientId;
     set({
       activePageId: id,
       activeNotebookId: notebookId,
-      activePath: path // Array of folder IDs
+      activePath: path, // Array of folder IDs
+      activeStateUpdatedAt: Date.now(),
+      activeStateModifier: clientId
     });
+    diskLog(`💾 [FileSystem] Selected page "${page.name}" (${id})`);
     setTimeout(() => get().save(), 0);
   },
 
 
   renameNode: (id, name, strokes) => {
+    const clientId = useSyncStore.getState().clientId;
     set((state) => {
       let notebooks = [...state.notebooks];
       let folders = { ...state.folders };
       let pages = { ...state.pages };
 
       const nbIdx = notebooks.findIndex(n => n.id === id);
-      if (nbIdx !== -1) notebooks[nbIdx] = { ...notebooks[nbIdx], name, nameStrokes: strokes };
+      if (nbIdx !== -1) {
+        notebooks[nbIdx] = {
+          ...notebooks[nbIdx],
+          name,
+          nameStrokes: strokes,
+          dirty: true,
+          lastModifier: clientId
+        };
+      }
 
-      if (folders[id]) folders[id] = { ...folders[id], name, nameStrokes: strokes };
-      if (pages[id]) pages[id] = { ...pages[id], name, nameStrokes: strokes };
+      if (folders[id]) {
+        folders[id] = {
+          ...folders[id],
+          name,
+          nameStrokes: strokes,
+          dirty: true,
+          lastModifier: clientId
+        };
+      }
+      if (pages[id]) {
+        pages[id] = {
+          ...pages[id],
+          name,
+          nameStrokes: strokes,
+          dirty: true,
+          lastModifier: clientId
+        };
+      }
 
       const nextState = { notebooks, folders, pages };
+
+      // Log what was renamed
+      if (nbIdx !== -1) {
+        syncLog(`🔶 [FileSystem] Renamed notebook "${name}" (${id}) - dirty`);
+      } else if (folders[id]) {
+        syncLog(`🔶 [FileSystem] Renamed folder "${name}" (${id}) - dirty`);
+      } else if (pages[id]) {
+        syncLog(`🔶 [FileSystem] Renamed page "${name}" (${id}) - dirty`);
+      }
+
       setTimeout(() => get().save(), 0);
       return nextState;
     });
@@ -189,19 +294,31 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const pages = { ...state.pages };
 
       // Recursive delete: find all folders and pages belonging to this notebook
+      const deletedIds: string[] = [id]; // Start with notebook ID
+
       Object.keys(folders).forEach(fid => {
-        if (folders[fid].notebookId === id) delete folders[fid];
+        if (folders[fid].notebookId === id) {
+          delete folders[fid];
+          deletedIds.push(fid);
+        }
       });
       Object.keys(pages).forEach(pid => {
-        if (pages[pid].notebookId === id) delete pages[pid];
+        if (pages[pid].notebookId === id) {
+          delete pages[pid];
+          deletedIds.push(pid);
+        }
       });
 
       const activeNotebookId = state.activeNotebookId === id ? null : state.activeNotebookId;
       const activePath = state.activeNotebookId === id ? [] : state.activePath;
       const activePageId = (state.activePageId && !pages[state.activePageId]) ? null : state.activePageId;
 
+      // Add to tombstones
+      const deletedItemIds = [...(state.deletedItemIds || []), ...deletedIds];
+
+      syncLog(`☁️ [FileSystem] Deleted notebook (${id}) and ${deletedIds.length - 1} child items. Total tombstones: ${deletedItemIds.length}`);
       setTimeout(() => get().save(), 0);
-      return { notebooks, folders, pages, activeNotebookId, activePath, activePageId };
+      return { notebooks, folders, pages, activeNotebookId, activePath, activePageId, deletedItemIds };
     });
   },
 
@@ -210,18 +327,26 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const folders = { ...state.folders };
       const pages = { ...state.pages };
 
+      const deletedIds: string[] = [id]; // Start with folder ID
+
       const deleteRecursive = (folderId: string) => {
         // Delete pages in this folder
         Object.keys(pages).forEach(pid => {
-          if (pages[pid].parentId === folderId) delete pages[pid];
+          if (pages[pid].parentId === folderId) {
+            delete pages[pid];
+            deletedIds.push(pid);
+          }
         });
         // Find subfolders
         Object.keys(folders).forEach(fid => {
           if (folders[fid].parentId === folderId) {
             deleteRecursive(fid);
+            // Folder ID added below when deleted
           }
         });
         delete folders[folderId];
+        // Ensure folder itself is added if not root call (root call added at top)
+        if (folderId !== id) deletedIds.push(folderId);
       };
 
       deleteRecursive(id);
@@ -231,8 +356,12 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const activePath = folderIdx !== -1 ? state.activePath.slice(0, folderIdx) : state.activePath;
       const activePageId = (state.activePageId && !pages[state.activePageId]) ? null : state.activePageId;
 
+      // Add to tombstones
+      const deletedItemIds = [...(state.deletedItemIds || []), ...deletedIds];
+
+      syncLog(`☁️ [FileSystem] Deleted folder (${id}) and ${deletedIds.length - 1} child items. Total tombstones: ${deletedItemIds.length}`);
       setTimeout(() => get().save(), 0);
-      return { folders, pages, activePath, activePageId };
+      return { folders, pages, activePath, activePageId, deletedItemIds };
     });
   },
 
@@ -242,8 +371,11 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       delete pages[id];
       const activePageId = state.activePageId === id ? null : state.activePageId;
 
+      const deletedItemIds = [...(state.deletedItemIds || []), id];
+
+      syncLog(`☁️ [FileSystem] Deleted page (${id}). Total tombstones: ${deletedItemIds.length}`);
       setTimeout(() => get().save(), 0);
-      return { pages, activePageId };
+      return { pages, activePageId, deletedItemIds };
     });
   },
 
@@ -258,8 +390,19 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const [moved] = newNotebooks.splice(oldIndex, 1);
       newNotebooks.splice(newIndex, 0, moved);
 
+      // Recalculate orders based on new array positions to ensure persistence
+      const updatedNotebooks = newNotebooks.map((n, idx) => {
+        const newOrder = (idx + 1) * 10000;
+        // Mark as dirty if order changed
+        if (n.order !== newOrder) {
+          return { ...n, order: newOrder, dirty: true, lastModifier: useSyncStore.getState().clientId };
+        }
+        return n;
+      });
+
+      syncLog(`☁️ [FileSystem] Reordered notebook "${moved.name}" and marked dirty for sync`);
       setTimeout(() => get().save(), 0);
-      return { notebooks: newNotebooks };
+      return { notebooks: updatedNotebooks };
     });
   },
 
@@ -356,7 +499,9 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
         ...activeItem,
         parentId: targetParentId,
         notebookId: targetNotebookId,
-        order: newOrder
+        order: newOrder,
+        dirty: true,
+        lastModifier: useSyncStore.getState().clientId
       };
 
       // If moving a folder to a new notebook, recursive update
@@ -367,44 +512,145 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       if (folders[activeId]) folders[activeId] = newItem as Folder;
       if (pages[activeId]) pages[activeId] = newItem as Page;
 
+      const itemType = folders[activeId] ? 'folder' : 'page';
+      const itemName = newItem.name || activeId;
+      syncLog(`🔶 [FileSystem] Moved ${itemType} "${itemName}" - dirty`);
 
       setTimeout(() => get().save(), 0);
       return { folders, pages };
     });
   },
 
+  markPageDirty: (pageId) => {
+    set((state) => {
+      const pages = { ...state.pages };
+      if (!pages[pageId]) return {};
+
+      const clientId = useSyncStore.getState().clientId;
+
+      pages[pageId] = {
+        ...pages[pageId],
+        dirty: true,
+        updatedAt: Date.now(),
+        lastModifier: clientId
+      };
+      return { pages };
+    });
+    get().save();
+  },
+
 
   save: async () => {
-    const { notebooks, folders, pages, activeNotebookId, activePath, activePageId } = get();
+    const { notebooks, folders, pages, activeNotebookId, activePath, activePageId, activeStateUpdatedAt, activeStateModifier } = get();
     // Persist active state along with data
     const data = {
       notebooks,
       folders,
       pages,
       activeNotebookId,
+      deletedItemIds: get().deletedItemIds,
       activePath,
-      activePageId
+      activePageId,
+      activeStateUpdatedAt,
+      activeStateModifier
     };
     await opfs.saveFile(METADATA_FILE, JSON.stringify(data));
+
+    // Notify sync store (if not already syncing/saving)
+    const syncStore = useSyncStore.getState();
+    if (syncStore.isEnabled && syncStore.status === 'idle') {
+      // Logic for triggering sync will be handled by the syncStore observer or manual trigger
+      // For now, let's just mark that a save happened
+      console.log("Metadata saved, sync could be triggered");
+    }
   },
 
   load: async () => {
     const json = await opfs.loadFile(METADATA_FILE);
+    const clientId = useSyncStore.getState().clientId;
     if (json) {
       try {
         const data = JSON.parse(json);
+
+        // Ensure versioning exists on loaded data and migrate from baseVersion to dirty
+        const notebooks = (data.notebooks || []).map((n: any, idx: number) => ({
+          ...n,
+          version: n.version || 1,
+          order: n.order !== undefined ? n.order : (idx + 1) * 10000,
+          // Migration: if baseVersion exists and differs from version, item is dirty
+          dirty: n.dirty !== undefined ? n.dirty : (n.baseVersion !== undefined ? n.version > n.baseVersion : false),
+          lastModifier: n.lastModifier || clientId
+        })).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+
+        const folders = { ...data.folders };
+        Object.keys(folders).forEach(id => {
+          const f = folders[id] as any;
+          folders[id] = {
+            ...f,
+            version: f.version || 1,
+            dirty: f.dirty !== undefined ? f.dirty : (f.baseVersion !== undefined ? f.version > f.baseVersion : false),
+            lastModifier: f.lastModifier || clientId
+          };
+        });
+
+        const pages = { ...data.pages };
+        Object.keys(pages).forEach(id => {
+          const p = pages[id] as any;
+          pages[id] = {
+            ...p,
+            version: p.version || 1,
+            dirty: p.dirty !== undefined ? p.dirty : (p.baseVersion !== undefined ? p.version > p.baseVersion : false),
+            lastModifier: p.lastModifier || clientId
+          };
+        });
+
         set({
-          notebooks: data.notebooks || [],
-          folders: data.folders || {},
-          pages: data.pages || {},
+          notebooks,
+          folders,
+          pages,
+          deletedItemIds: data.deletedItemIds || [],
           // Restore active state
           activeNotebookId: data.activeNotebookId || null,
           activePath: data.activePath || [],
-          activePageId: data.activePageId || null
+          activePageId: data.activePageId || null,
+          activeStateUpdatedAt: data.activeStateUpdatedAt || 0,
+          activeStateModifier: data.activeStateModifier || ''
         });
       } catch (e) {
         console.error("Failed to parse metadata", e);
       }
     }
+  },
+
+  clearDirtyFlags: () => {
+    set((state) => ({
+      notebooks: state.notebooks.map(n => ({ ...n, dirty: false })),
+      folders: Object.fromEntries(Object.entries(state.folders).map(([id, f]) => [id, { ...f, dirty: false }])),
+      pages: Object.fromEntries(Object.entries(state.pages).map(([id, p]) => [id, { ...p, dirty: false }])),
+    }));
+    get().save();
+  },
+
+  mergeRemoteData: (remoteData) => {
+    set((state) => {
+      // Very simple merge: replace all, but respect tombstones if passed in logic
+      // Ensure we track deleted items from remote if they exist
+      const deletedItemIds = remoteData.deletedItemIds || state.deletedItemIds || [];
+      const remoteActiveUpdatedAt = remoteData.activeStateUpdatedAt || 0;
+      const shouldUpdateActiveState = remoteActiveUpdatedAt > state.activeStateUpdatedAt;
+
+      return {
+        notebooks: (remoteData.notebooks || []).sort((a: any, b: any) => (a.order || 0) - (b.order || 0)),
+        folders: remoteData.folders,
+        pages: remoteData.pages,
+        deletedItemIds,
+        activeNotebookId: shouldUpdateActiveState ? remoteData.activeNotebookId : state.activeNotebookId,
+        activePageId: shouldUpdateActiveState ? remoteData.activePageId : state.activePageId,
+        activePath: shouldUpdateActiveState ? (remoteData.activePath || []) : state.activePath,
+        activeStateUpdatedAt: Math.max(state.activeStateUpdatedAt, remoteActiveUpdatedAt),
+        activeStateModifier: shouldUpdateActiveState ? (remoteData.activeStateModifier || '') : state.activeStateModifier
+      };
+    });
+    get().save();
   }
 }));

@@ -45,32 +45,7 @@ export const Layout = () => {
     init();
   }, [load]);
 
-  useEffect(() => {
-    const checkParams = async () => {
-      await new Promise(r => setTimeout(r, 200)); // Wait for OPFS/init
-      const state = useFileSystemStore.getState(); // Changed to get state once
-      const { notebooks, createNotebook, createPage, selectPage } = state; // Destructured from state
-      if (notebooks.length === 0) {
-        const nbName = "My First Notebook";
-        // Removed comment about getting ID
-        createNotebook(nbName);
-        // Wait a bit and select if possible
-        setTimeout(() => {
-          const s = useFileSystemStore.getState(); // Changed variable name
-          if (s.notebooks.length > 0) {
-            const nbId = s.notebooks[0].id;
-            createPage("First Page", nbId, nbId);
-            setTimeout(() => {
-              const fs = useFileSystemStore.getState(); // Changed variable name
-              const pageId = Object.keys(fs.pages)[0];
-              if (pageId) selectPage(pageId);
-            }, 100);
-          }
-        }, 100);
-      }
-    };
-    checkParams();
-  }, []);
+
 
 
   return (

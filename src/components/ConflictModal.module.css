@@ -1,0 +1,164 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 600px;
+  padding: 32px;
+  box-shadow: var(--shadow-xl);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.warningIcon {
+  color: hsl(var(--color-warning));
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: hsl(var(--color-text-primary));
+}
+
+.description {
+  color: hsl(var(--color-text-secondary));
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.optionCard {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.optionCard:hover {
+  border-color: hsl(var(--color-accent) / 0.3);
+  transform: translateY(-2px);
+}
+
+.optionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: hsl(var(--color-text-primary));
+}
+
+.optionHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.optionDescription {
+  font-size: 0.85rem;
+  color: hsl(var(--color-text-secondary));
+  line-height: 1.5;
+  margin-bottom: 20px;
+  flex-grow: 1;
+}
+
+.button {
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.localButton {
+  background: hsl(var(--color-accent-soft));
+  color: hsl(var(--color-accent));
+}
+
+.localButton:hover {
+  background: hsl(var(--color-accent));
+  color: white;
+}
+
+.remoteButton {
+  background: hsl(var(--color-accent));
+  color: white;
+}
+
+.remoteButton:hover {
+  filter: brightness(1.1);
+}
+
+.footer {
+  text-align: center;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 20px;
+}
+
+.footerNote {
+  font-size: 0.8rem;
+  color: hsl(var(--color-text-secondary));
+  margin: 0;
+  font-style: italic;
+}
+
+@media (max-width: 600px) {
+  .options {
+    grid-template-columns: 1fr;
+  }
+}

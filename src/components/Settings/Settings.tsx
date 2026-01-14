@@ -1,11 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings as SettingsIcon, Sun, Moon, Monitor } from 'lucide-react';
+import { Settings as SettingsIcon, Sun, Moon, Monitor, LogOut, RefreshCw } from 'lucide-react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
+import { useSyncStore } from '../../store/syncStore';
 import styles from './Settings.module.css';
 import clsx from 'clsx';
 
 export const Settings = () => {
   const { theme, setTheme } = useFileSystemStore();
+  const {
+    isConfigured,
+    isEnabled,
+    setIsEnabled,
+    authenticate,
+    sync,
+    status: syncStatus,
+    lastSync,
+    logout,
+    user
+  } = useSyncStore();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -19,11 +31,19 @@ export const Settings = () => {
     return () => window.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleLogout = async () => {
+    const deleteData = window.confirm('Do you want to delete all saved data in Google Drive before logging out?');
+    await logout(deleteData);
+    setIsOpen(false);
+  };
+
   const themes = [
     { id: 'auto', icon: Monitor, label: 'Auto' },
     { id: 'light', icon: Sun, label: 'Light' },
     { id: 'dark', icon: Moon, label: 'Dark' },
   ];
+
+  const isSyncing = syncStatus === 'syncing' || syncStatus === 'saving-to-disk';
 
   return (
     <div className={styles.wrapper} ref={menuRef}>
@@ -54,6 +74,65 @@ export const Settings = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className={styles.divider} />
+
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>Cloud Sync</div>
+            {!isConfigured ? (
+              <div className={styles.syncSection}>
+                <button
+                  className={styles.authButton}
+                  onClick={() => authenticate()}
+                  title="Connect to Google Drive to sync your notebooks across devices."
+                >
+                  <img src="/google-drive.svg" alt="Google Drive" />
+                  <span>Connect Google Drive</span>
+                </button>
+              </div>
+            ) : (
+              <div className={styles.syncSection}>
+                {user && (
+                  <button
+                    className={styles.userInfoButton}
+                    onClick={handleLogout}
+                    title="Click to Log Out"
+                  >
+                    <img src={user.photo} alt={user.name} className={styles.userPhoto} />
+                    <div className={styles.userName}>{user.name}</div>
+                    <div className={styles.logoutIconWrapper}>
+                      <LogOut size={18} />
+                    </div>
+                  </button>
+                )}
+
+                <div className={styles.toggleWrapper}>
+                  <div className={styles.toggleLabel}>Auto-sync</div>
+                  <div
+                    className={clsx(styles.toggle, isEnabled && styles.toggleActive)}
+                    onClick={() => setIsEnabled(!isEnabled)}
+                  >
+                    <div className={styles.toggleCircle} />
+                  </div>
+                </div>
+
+                <button
+                  className={clsx(styles.authButton, isSyncing && styles.authButtonSyncing)}
+                  onClick={() => sync(true)}
+                  disabled={isSyncing}
+                >
+                  <RefreshCw size={18} className={clsx(isSyncing && styles.spin)} />
+                  <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+                </button>
+
+                {lastSync && (
+                  <div className={styles.lastSync}>
+                    Last sync: {new Date(lastSync).toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

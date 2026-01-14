@@ -36,16 +36,18 @@ interface SortableItemProps {
   onDoubleClick: (e: React.MouseEvent) => void;
   onDelete?: (id: string) => void;
   styles: any;
+  activeDragItem: Notebook | Folder | Page | null;
 }
 
-const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, styles }: SortableItemProps) => {
+const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, styles, activeDragItem }: SortableItemProps) => {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-    isDragging
+    isDragging,
+    isOver
   } = useSortable({ id: item.id, data: { item } });
 
   const style = {
@@ -59,6 +61,27 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
   const isNotebook = !(item as any).notebookId;
   const isFolder = !isNotebook && !(item as Page).updatedAt;
   const isPage = !isNotebook && !isFolder;
+
+  // Determine if this item should highlight as a drop target
+  const canReceiveDrop = useMemo(() => {
+    if (!isOver || !activeDragItem || isDragging) return false;
+
+    // Check if the dragged item is a notebook (notebooks can't be moved into folders)
+    const isDraggingNotebook = !(activeDragItem as any).notebookId;
+    if (isDraggingNotebook) return false;
+
+    // Notebooks can always receive drops (they are never siblings with content)
+    if (isNotebook) return true;
+
+    // Folders can receive drops if the active item is NOT a sibling
+    if (isFolder) {
+      const activeParentId = (activeDragItem as any).parentId;
+      const overParentId = (item as any).parentId;
+      return activeParentId !== overParentId;
+    }
+
+    return false;
+  }, [isOver, activeDragItem, isDragging, isNotebook, isFolder, item]);
 
   let Icon = File;
   if (isNotebook) Icon = Book;
@@ -83,7 +106,7 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
       style={style}
       {...attributes}
       {...listeners}
-      className={clsx(styles.item, isActive && styles.itemActive)}
+      className={clsx(styles.item, isActive && styles.itemActive, canReceiveDrop && styles.itemOver)}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest(`.${styles.itemActions}`)) return;
         onSelect(item);
@@ -151,10 +174,11 @@ interface ColumnProps {
   onRename: (id: string, name: string, strokes?: string) => void;
   onDelete?: (id: string) => void;
   type: 'notebook' | 'content';
+  activeDragItem: Notebook | Folder | Page | null;
 }
 
 
-const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRename, onDelete, type }: ColumnProps) => {
+const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRename, onDelete, type, activeDragItem }: ColumnProps) => {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -193,6 +217,7 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 }}
                 onDelete={onDelete}
                 styles={styles}
+                activeDragItem={activeDragItem}
               />
 
               {editingId === item.id && anchorRect && (
@@ -321,8 +346,18 @@ export const Sidebar = () => {
             // Dropped content onto a Notebook Item -> Move Into (Container Drop)
             moveNode(active.id as string, overIdString, true);
           } else {
-            // Dropped onto another content item -> Reorder
-            moveNode(active.id as string, over.id as string, false);
+            // Check if it's a folder and NOT a sibling
+            const overItem = folders[overIdString] || pages[overIdString];
+            const isOverFolder = folders[overIdString];
+            const activeItem = folders[active.id] || pages[active.id];
+
+            if (isOverFolder && activeItem && activeItem.parentId !== overItem.parentId) {
+              // Non-sibling folder -> Move Into
+              moveNode(active.id as string, overIdString, true);
+            } else {
+              // Sibling or over a page -> Reorder
+              moveNode(active.id as string, overIdString, false);
+            }
           }
         }
       }
@@ -369,6 +404,7 @@ export const Sidebar = () => {
         setPendingDelete({
           id,
           name: notebook.name,
+          nameStrokes: notebook.nameStrokes,
           type: 'notebook',
           itemCount: totalItems,
           onConfirm: () => {
@@ -538,6 +574,7 @@ export const Sidebar = () => {
             onRename={renameNode}
             onDelete={col.onDelete}
             type={col.type}
+            activeDragItem={activeDragItem}
           />
 
         ))}

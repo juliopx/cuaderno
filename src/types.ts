@@ -4,6 +4,11 @@ export interface Notebook {
   name: string;
   nameStrokes?: string; // SVG path data
   createdAt: number;
+  order: number;
+  version: number;
+  dirty?: boolean; // True if has local changes not yet synced
+  lastModifier: string;
+  driveFileId?: string;
 }
 
 export interface Folder {
@@ -14,6 +19,10 @@ export interface Folder {
   nameStrokes?: string; // SVG path data
   createdAt: number;
   order: number;
+  version: number;
+  dirty?: boolean; // True if has local changes not yet synced
+  lastModifier: string;
+  driveFileId?: string;
 }
 
 export interface Page {
@@ -26,6 +35,10 @@ export interface Page {
   // content is stored separately in OPFS, but we might track last modified here
   updatedAt: number;
   order: number;
+  version: number;
+  dirty?: boolean; // True if has local changes not yet synced
+  lastModifier: string;
+  driveFileId?: string;
 }
 
 export type FileSystemNode = Notebook | Folder | Page;

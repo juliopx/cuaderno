@@ -69,6 +69,12 @@
   color: hsl(var(--color-selection-text));
 }
 
+.itemOver {
+  outline: 2px solid hsl(var(--color-accent));
+  outline-offset: -2px;
+  background-color: hsl(var(--color-accent-soft) / 0.3);
+}
+
 
 .icon {
   width: 16px;

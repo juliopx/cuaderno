@@ -16,9 +16,11 @@ import { Bubble } from '../Bubble/Bubble';
 import { useState, useEffect, useRef } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
+import { useSyncStore } from '../../store/syncStore';
 import { useTextStyleStore } from '../../store/textStyleStore';
 import { opfs } from '../../lib/opfs';
 import { RichTextShapeUtil } from '../../shapes/RichTextShapeUtil';
+import { syncLog } from '../../lib/debugLog';
 
 const customShapeUtils = [RichTextShapeUtil];
 
@@ -30,7 +32,7 @@ interface CanvasInterfaceProps {
 
 
 // Main Component Logic (Reactive)
-const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfaceProps & { parentRef: React.RefObject<HTMLDivElement | null> }) => {
+const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null> }) => {
   const editor = useEditor();
   // State to prevent flickering when switching focus between text shapes
   const forceTextModeRef = useRef(false);
@@ -40,12 +42,16 @@ const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfacePro
   const { isSidebarOpen, toggleSidebar } = useFileSystemStore();
   const textStyles = useTextStyleStore();
 
+  const lastLoadRef = useRef<{ pageId: string | null; version: number | null }>({ pageId: null, version: null });
+  const isLoadingRef = useRef(false);
 
   // Load Snapshot
   useEffect(() => {
     if (!pageId) return;
 
     const loadPage = async () => {
+      isLoadingRef.current = true; // Prevent saves during load
+
       const json = await opfs.loadFile(`page-${pageId}.tldr`);
       if (json) {
         try {
@@ -53,10 +59,7 @@ const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfacePro
           editor.loadSnapshot(snapshot);
 
           // 💡 RESET defaults (User requested M by default, overrides snapshot persistence)
-          // If no selection, we should also update Tldraw's next shape style context
-          // as the primary fallback since the browser's insertion style might get lost
           editor.setStyleForNextShapes(DefaultColorStyle, 'black');
-          // Sync to Zustand global store
           textStyles.updateStyles({ color: 'black' });
           editor.setStyleForNextShapes(DefaultSizeStyle, 'm');
           textStyles.updateStyles({ size: 'm' });
@@ -68,32 +71,91 @@ const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfacePro
           console.error("Failed to load snapshot", e);
         }
       }
-      // The Tldraw component's inferDarkMode prop will use the data-theme
-      // attribute on the document element or system settings.
-    };
-    loadPage();
-  }, [editor, pageId]);
 
-  // Flag to prevent flickering (Ref version deprecated, using State)
-  // const isSwitchingTextFocus = useRef(false);
+      // Delay to ensure all load-related events have settled
+      // 500ms provides a safer buffer against false-positive auto-saves
+      setTimeout(() => {
+        isLoadingRef.current = false;
+      }, 500);
+    };
+
+    const isNewPage = pageId !== lastLoadRef.current.pageId;
+    // Reload if: 1. It's a version change AND (modifier is different OR modifier is unknown)
+    const isRemoteChange = !isNewPage && pageVersion !== lastLoadRef.current.version && (!lastModifier || lastModifier !== clientId);
+
+    console.log(`[Canvas] Reload Check:
+      PageId: ${pageId} (Last: ${lastLoadRef.current.pageId})
+      Version: ${pageVersion} (Last: ${lastLoadRef.current.version})
+      Modifier: ${lastModifier?.slice(0, 8)} (Client: ${clientId?.slice(0, 8)})
+      -> isNew: ${isNewPage}, isRmChg: ${isRemoteChange}
+    `);
+
+    if (isNewPage || isRemoteChange) {
+      console.log('[Canvas] ♻️ Triggering Reload...');
+      loadPage();
+      lastLoadRef.current = { pageId, version: pageVersion };
+    }
+
+  }, [editor, pageId, pageVersion, lastModifier, clientId]);
+
+  // Save Snapshot Listener
+  const hasUnsavedChangesRef = useRef(false);
 
   // Save Snapshot Listener
   useEffect(() => {
     if (!pageId) return;
 
     const save = async () => {
+      // If triggered by sync (forced), ONLY save if we actually have unsaved changes.
+      // This prevents "dirtying" a clean page just because sync was clicked.
+      if (!hasUnsavedChangesRef.current) {
+        return;
+      }
+
       const snapshot = editor.getSnapshot();
       await opfs.saveFile(`page-${pageId}.tldr`, JSON.stringify(snapshot));
+
+      // Update page version in store so sync picks it up
+      useFileSystemStore.getState().markPageDirty(pageId);
+
+      // Log that page was marked dirty
+      syncLog(`🔶 [Canvas] Saved page ${pageId} - dirty`);
+
+      // Reset changes flag
+      hasUnsavedChangesRef.current = false;
     };
+
+    // Register this save function to be called before sync
+    useFileSystemStore.getState().registerActivePageSaver(save);
 
     let timeout: any;
     const handleSave = () => {
+      hasUnsavedChangesRef.current = true; // Mark that we have pending changes
       clearTimeout(timeout);
-      timeout = setTimeout(save, 1000);
+      // Reduce debounce to 200ms to minimize risk of syncing stale content
+      timeout = setTimeout(save, 200);
     };
 
     const cleanup = editor.store.listen((event) => {
-      handleSave();
+      // Ignore events during page load
+      if (isLoadingRef.current) return;
+
+      // Only trigger auto-save if there are actual content changes from user
+      if (event.source === 'user') {
+        const { added, updated, removed } = event.changes;
+
+        // Check if any shapes were actually modified (not just selection/camera changes)
+        const hasShapeChanges = Object.keys(added).length > 0 ||
+          Object.keys(removed).length > 0 ||
+          Object.values(updated).some(([_, to]: any) => {
+            // Ignore changes to instance state (selection, camera, etc)
+            return to.typeName === 'shape';
+          });
+
+        if (hasShapeChanges) {
+          handleSave();
+        }
+      }
 
       const { updated } = event.changes;
       Object.values(updated).forEach(([, to]: any) => {
@@ -157,13 +219,6 @@ const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfacePro
     }
   }, [isEmulatedTextTool, isLockingUI, editingShapeId]);
 
-  // Tool Change Log (Audit)
-  useEffect(() => {
-    // Audit removed
-  }, [activeTool, currentToolId, editingShapeId]);
-
-  // No-op version of hysteresis (Testing without timeouts)
-  // We'll rely on the capture phase lock to prevent flicker during switches
 
   const handleSelectTool = (tool: string) => {
     manualToolRef.current = tool;
@@ -211,9 +266,6 @@ const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfacePro
           // Explicitly set tool back to 'text' to ensure it's "sticky"
           editor.setEditingShape(shape.id);
         });
-
-        // Safety Unlock: Use a slightly longer delay or none at all if Auto-Unlock is robust
-        // Removing premature requestAnimationFrame safety unlock
 
         e.stopPropagation();
         return;
@@ -336,8 +388,6 @@ const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfacePro
       handleToolChange();
     }
   }, [editor.getCurrentToolId()]);
-
-  // No-op (Testing without sticky timeouts)
 
 
   // Interaction state
@@ -531,10 +581,14 @@ const CanvasInterface = track(({ pageId, isDark, parentRef }: CanvasInterfacePro
 });
 
 export const CanvasArea = () => {
-  const { activePageId, isSidebarOpen, toggleSidebar, theme } = useFileSystemStore();
+  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages } = useFileSystemStore();
   const parentRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  const currentVersion = activePageId ? (pages[activePageId]?.version || 0) : 0;
+  const lastModifier = activePageId ? pages[activePageId]?.lastModifier : undefined;
+  const clientId = useSyncStore.getState().clientId;
 
   // Show empty state when no page is selected
   if (!activePageId) {
@@ -567,7 +621,14 @@ export const CanvasArea = () => {
         inferDarkMode={isDark}
         shapeUtils={customShapeUtils}
       >
-        <CanvasInterface pageId={activePageId} isDark={isDark} parentRef={parentRef} />
+        <CanvasInterface
+          pageId={activePageId}
+          pageVersion={currentVersion}
+          lastModifier={lastModifier}
+          clientId={clientId}
+          isDark={isDark}
+          parentRef={parentRef}
+        />
       </Tldraw>
     </div>
   );
