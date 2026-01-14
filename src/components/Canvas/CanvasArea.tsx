@@ -620,6 +620,7 @@ export const CanvasArea = () => {
         hideUi
         inferDarkMode={isDark}
         shapeUtils={customShapeUtils}
+        licenseKey={import.meta.env.VITE_TLDRAW_LICENSE}
       >
         <CanvasInterface
           pageId={activePageId}
