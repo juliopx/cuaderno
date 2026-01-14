@@ -4,6 +4,7 @@ import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore';
 import styles from './Settings.module.css';
 import clsx from 'clsx';
+import googleDriveIcon from '../../assets/google-drive.svg';
 
 export const Settings = () => {
   const { theme, setTheme } = useFileSystemStore();
@@ -87,7 +88,7 @@ export const Settings = () => {
                   onClick={() => authenticate()}
                   title="Connect to Google Drive to sync your notebooks across devices."
                 >
-                  <img src="/google-drive.svg" alt="Google Drive" />
+                  <img src={googleDriveIcon} alt="Google Drive" />
                   <span>Connect Google Drive</span>
                 </button>
               </div>
