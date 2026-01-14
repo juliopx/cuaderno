@@ -1,12 +1,41 @@
 .sidebar {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  bottom: 0.75rem;
   display: flex;
-  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  background-color: hsl(var(--color-bg-secondary));
-  border-right: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  background-color: hsl(var(--color-bg-panel));
+  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   transition: width 0.3s ease;
-  z-index: 10;
+  z-index: 100;
+}
+
+.closeButton {
+  position: fixed;
+  top: 1rem;
+  left: calc(250px * var(--sidebar-columns, 1) + 1rem + 0.75rem);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  background: hsl(var(--color-bg-panel));
+  color: hsl(var(--color-text-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+  z-index: 101;
+}
+
+.closeButton:hover {
+  background-color: hsl(var(--color-text-secondary) / 0.15);
+  color: hsl(var(--color-text-primary));
 }
 
 .column {
@@ -14,9 +43,12 @@
   min-width: 250px;
   height: 100%;
   overflow-y: auto;
-  border-right: 1px solid hsl(var(--color-text-secondary) / 0.1);
   display: flex;
   flex-direction: column;
+}
+
+.column:not(:last-child) {
+  border-right: 1px solid hsl(var(--color-text-secondary) / 0.1);
 }
 
 .header {
@@ -49,7 +81,7 @@
 }
 
 .item:hover {
-  background-color: hsl(var(--color-text-secondary) / 0.1);
+  background-color: hsl(var(--color-text-secondary) / 0.15);
 }
 
 .itemActive {
@@ -92,6 +124,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+  background-color: hsl(var(--color-bg-panel));
 }
 
 .iconButton {
@@ -117,6 +150,25 @@
 }
 
 .iconButton:hover {
+  background-color: hsl(var(--color-text-secondary) / 0.1);
+  color: hsl(var(--color-text-primary));
+}
+
+.toolbarButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: hsl(var(--color-text-secondary));
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.toolbarButton:hover {
   background-color: hsl(var(--color-text-secondary) / 0.1);
   color: hsl(var(--color-text-primary));
 }

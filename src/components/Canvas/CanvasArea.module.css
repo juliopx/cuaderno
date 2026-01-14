@@ -14,14 +14,16 @@
 .iconButton {
   background: hsl(var(--color-bg-panel));
   border: 1px solid hsl(var(--color-text-secondary) / 0.1);
-  border-radius: var(--radius-md);
+  border-radius: 50%;
   padding: 0.5rem;
   cursor: pointer;
   color: hsl(var(--color-text-secondary));
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 40px;
+  height: 40px;
 }
 
 .iconButton:hover {

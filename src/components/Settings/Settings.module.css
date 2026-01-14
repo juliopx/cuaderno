@@ -1,7 +1,7 @@
 .wrapper {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 1rem;
+  right: 1rem;
   z-index: 1000;
 }
 
@@ -9,8 +9,8 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
+  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  background: hsl(var(--color-bg-panel));
   backdrop-filter: blur(12px);
   color: hsl(var(--color-text-secondary));
   display: flex;
@@ -18,7 +18,7 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .gearButton:hover {
@@ -27,8 +27,8 @@
 }
 
 .gearButton.active {
-  color: hsl(var(--color-accent));
-  background: hsl(var(--color-accent-soft));
+  color: hsl(var(--color-selection-text));
+  background: hsl(var(--color-selection-bg));
   transform: rotate(90deg);
 }
 
@@ -37,9 +37,9 @@
   top: 50px;
   right: 0;
   width: 220px;
-  background: var(--glass-bg);
+  background: hsl(var(--color-bg-panel));
   backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
   border-radius: var(--radius-md);
   padding: 16px;
   box-shadow: var(--shadow-md);
@@ -95,12 +95,17 @@
 }
 
 .themeItem:hover {
-  background: hsla(var(--color-text-secondary) / 0.1);
+  background-color: hsl(var(--color-text-secondary) / 0.15);
 }
 
 .themeItemActive {
-  background: hsl(var(--color-accent-soft));
-  color: hsl(var(--color-accent));
+  background: hsl(var(--color-selection-bg));
+  color: hsl(var(--color-selection-text));
+}
+
+.themeItemActive:hover {
+  background: hsl(var(--color-selection-hover));
+  color: hsl(var(--color-selection-text));
 }
 
 .divider {
@@ -120,7 +125,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px;
-  background: hsla(var(--color-text-secondary) / 0.05);
+  background: hsla(var(--color-text-secondary) / 0.15);
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
@@ -131,9 +136,8 @@
 }
 
 .userInfoButton:hover {
-  background: hsl(var(--color-danger-soft));
+  background-color: hsla(var(--color-text-secondary) / 0.25);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px hsla(var(--color-danger) / 0.1);
 }
 
 .userInfoButton:active {
@@ -158,6 +162,10 @@
   text-overflow: ellipsis;
 }
 
+.userInfoButton:hover .userName {
+  color: hsl(var(--color-text-primary));
+}
+
 .logoutIconWrapper {
   display: flex;
   align-items: center;
@@ -168,7 +176,7 @@
 }
 
 .userInfoButton:hover .logoutIconWrapper {
-  color: hsl(var(--color-danger));
+  color: hsl(var(--color-text-primary));
   opacity: 1;
 }
 
@@ -228,13 +236,11 @@
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
-  box-shadow: 0 4px 12px hsla(var(--color-accent) / 0.2);
 }
 
 .authButton:hover:not(:disabled) {
   background: hsl(215 90% 60%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px hsla(var(--color-accent) / 0.25);
 }
 
 .authButton:active:not(:disabled) {

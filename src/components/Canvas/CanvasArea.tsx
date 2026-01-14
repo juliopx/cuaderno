@@ -568,11 +568,13 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
   return (
     <div className={styles.canvasContainer}>
-      <div className={styles.topBar}>
-        <button className={styles.iconButton} onClick={toggleSidebar}>
-          {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-        </button>
-      </div>
+      {!isSidebarOpen && (
+        <div className={styles.topBar}>
+          <button className={styles.iconButton} onClick={toggleSidebar}>
+            <PanelLeftOpen size={20} />
+          </button>
+        </div>
+      )}
 
       <Toolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
       <Bubble activeTool={activeTool} />
@@ -594,11 +596,13 @@ export const CanvasArea = () => {
   if (!activePageId) {
     return (
       <div className={styles.wrapper}>
-        <div className={styles.topBar}>
-          <button className={styles.iconButton} onClick={toggleSidebar}>
-            {isSidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-          </button>
-        </div>
+        {!isSidebarOpen && (
+          <div className={styles.topBar}>
+            <button className={styles.iconButton} onClick={toggleSidebar}>
+              <PanelLeftOpen size={20} />
+            </button>
+          </div>
+        )}
         <div style={{
           display: 'flex',
           alignItems: 'center',

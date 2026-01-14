@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import type { Notebook, Folder, Page } from '../../types';
 import styles from './Sidebar.module.css';
-import { Folder as FolderIcon, File, Book, Plus, ChevronRight, Trash2 } from 'lucide-react';
+import { Folder as FolderIcon, File, Book, Plus, ChevronRight, Trash2, PanelLeftClose } from 'lucide-react';
 import clsx from 'clsx';
 import { RenameOverlayV2 } from './RenameOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -238,20 +238,23 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
       </div>
       <div className={styles.toolbar}>
         {type === 'notebook' && (
-          <button className={styles.iconButton} onClick={onAddNotebook} title="New Notebook">
+          <button className={styles.toolbarButton} onClick={onAddNotebook} title="New Notebook">
             <Plus size={16} />
+            <span>New Notebook</span>
           </button>
         )}
         {type === 'content' && (
           <>
             {onAddFolder && (
-              <button className={styles.iconButton} onClick={onAddFolder} title="New Folder">
-                <FolderIcon size={16} /> <Plus size={8} className={styles.iconBadge} />
+              <button className={styles.toolbarButton} onClick={onAddFolder} title="New Folder">
+                <FolderIcon size={16} />
+                <span>New Folder</span>
               </button>
             )}
             {onAddPage && (
-              <button className={styles.iconButton} onClick={onAddPage} title="New Page">
-                <File size={16} /> <Plus size={8} className={styles.iconBadge} />
+              <button className={styles.toolbarButton} onClick={onAddPage} title="New Page">
+                <File size={16} />
+                <span>New Page</span>
               </button>
             )}
           </>
@@ -266,7 +269,7 @@ export const Sidebar = () => {
     notebooks, folders, pages, activePath, activeNotebookId, activePageId,
     createNotebook, createFolder, createPage,
     deleteNotebook, deleteFolder, deletePage,
-    setActiveNotebook, selectPage, isSidebarOpen, renameNode,
+    setActiveNotebook, selectPage, isSidebarOpen, toggleSidebar, renameNode,
     reorderNotebooks, moveNode
   } = useFileSystemStore();
 
@@ -559,7 +562,10 @@ export const Sidebar = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={styles.sidebar}>
+      <div className={styles.sidebar} style={{ '--sidebar-columns': columns.length } as React.CSSProperties}>
+        <button className={styles.closeButton} onClick={toggleSidebar} title="Close sidebar">
+          <PanelLeftClose size={18} />
+        </button>
         {columns.map((col) => (
           <Column
             key={col.id}

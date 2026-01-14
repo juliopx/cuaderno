@@ -10,7 +10,7 @@
   background: hsl(var(--color-bg-panel));
   border: 1px solid hsl(var(--color-text-secondary) / 0.1);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--shadow-md);
   z-index: 100;
 }
 

@@ -1,12 +1,12 @@
 :root {
-  --color-bg-primary: 0 0% 100%;
-  --color-bg-secondary: 0 0% 98%;
-  --color-bg-panel: 0 0% 100%;
-  --color-text-primary: 0 0% 10%;
-  --color-text-secondary: 0 0% 45%;
+  --color-bg-primary: 0 0% 85%;
+  --color-bg-secondary: 0 0% 90%;
+  --color-bg-panel: 0 0% 88%;
+  --color-text-primary: 0 0% 15%;
+  --color-text-secondary: 0 0% 50%;
   --color-accent: 215 90% 50%;
   --color-accent-soft: 215 90% 95%;
-  --color-border: 0 0% 90%;
+  --color-border: 0 0% 85%;
   --color-danger: 0 84% 60%;
   --color-danger-soft: 0 84% 94%;
 
@@ -16,38 +16,37 @@
 
   --glass-bg: hsla(0 0% 100% / 0.85);
   --glass-border: hsla(0 0% 100% / 0.3);
-  --color-bg-panel: 0 0% 100%;
   /* Default for light */
 
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
   --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 24px 48px -12px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 
 /* Light Theme Override */
 [data-theme='light'] {
-  --color-bg-primary: 0 0% 100%;
-  --color-bg-secondary: 0 0% 98%;
-  --color-bg-panel: 0 0% 100%;
-  --color-text-primary: 0 0% 10%;
-  --color-text-secondary: 0 0% 45%;
-  --color-border: 0 0% 90%;
+  --color-bg-primary: 0 0% 85%;
+  --color-bg-secondary: 0 0% 90%;
+  --color-bg-panel: 0 0% 88%;
+  --color-text-primary: 0 0% 15%;
+  --color-text-secondary: 0 0% 50%;
+  --color-border: 0 0% 85%;
   --glass-bg: hsla(0 0% 100% / 0.85);
 }
 
 /* Dark Theme Override */
 [data-theme='dark'] {
-  --color-bg-primary: 0 0% 0%;
-  --color-bg-secondary: 220 15% 5%;
-  --color-bg-panel: 220 15% 10%;
+  --color-bg-primary: 0 0% 8%;
+  --color-bg-secondary: 220 15% 12%;
+  --color-bg-panel: 220 15% 16%;
   /* Lighter than black for buttons */
-  --color-text-primary: 0 0% 95%;
-  --color-text-secondary: 220 10% 65%;
-  --color-border: 220 15% 15%;
-  --glass-bg: hsla(220 15% 5% / 0.9);
+  --color-text-primary: 0 0% 92%;
+  --color-text-secondary: 220 10% 60%;
+  --color-border: 220 15% 20%;
+  --glass-bg: hsla(220 15% 12% / 0.9);
   --glass-border: hsla(0 0% 100% / 0.08);
 
   --color-accent: 215 100% 60%;
@@ -61,13 +60,13 @@
 /* System Preference (Default fallback if no data-theme) */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-bg-primary: 0 0% 0%;
-    --color-bg-secondary: 220 15% 5%;
-    --color-bg-panel: 220 15% 10%;
-    --color-text-primary: 0 0% 95%;
-    --color-text-secondary: 220 10% 65%;
-    --color-border: 220 15% 15%;
-    --glass-bg: hsla(220 15% 5% / 0.9);
+    --color-bg-primary: 0 0% 8%;
+    --color-bg-secondary: 220 15% 12%;
+    --color-bg-panel: 220 15% 16%;
+    --color-text-primary: 0 0% 92%;
+    --color-text-secondary: 220 10% 60%;
+    --color-border: 220 15% 20%;
+    --glass-bg: hsla(220 15% 12% / 0.9);
     --glass-border: hsla(0 0% 100% / 0.08);
 
     --color-accent: 215 100% 60%;
@@ -130,7 +129,33 @@ body {
 [data-theme='dark'] .tl-canvas,
 [data-theme='dark'] .tl-background,
 [data-theme='dark'] .tl-background__inner {
-  background-color: #000000 !important;
+  background-color: #141414 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .tl-container,
+  :root:not([data-theme='light']) .tl-canvas,
+  :root:not([data-theme='light']) .tl-background,
+  :root:not([data-theme='light']) .tl-background__inner {
+    background-color: #141414 !important;
+  }
+}
+
+/* Light mode overrides for Tldraw */
+[data-theme='light'] .tl-container,
+[data-theme='light'] .tl-canvas,
+[data-theme='light'] .tl-background,
+[data-theme='light'] .tl-background__inner {
+  background-color: #d9d9d9 !important;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .tl-container,
+  :root:not([data-theme='dark']) .tl-canvas,
+  :root:not([data-theme='dark']) .tl-background,
+  :root:not([data-theme='dark']) .tl-background__inner {
+    background-color: #d9d9d9 !important;
+  }
 }
 
 /* Hybrid strokes brightness inversion (preserving color) */
@@ -142,4 +167,16 @@ body {
   /* Boost brightness and contrast for "almost black" -> "almost white" conversion */
   filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
   opacity: 1 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) [class*="strokeOverlay"],
+  :root:not([data-theme='light']) [class*="nameStrokes"],
+  :root:not([data-theme='light']) [class*="svgOverlay"] {
+    /* Use absolute black as base so invert(1) produces absolute white. */
+    color: #000000 !important;
+    /* Boost brightness and contrast for "almost black" -> "almost white" conversion */
+    filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
+    opacity: 1 !important;
+  }
 }
