@@ -1,8 +1,9 @@
 .wrapper {
   position: fixed;
   top: 1rem;
-  right: 1rem;
-  z-index: 1000;
+  right: var(--settings-right, 1rem);
+  left: var(--settings-left, auto);
+  z-index: 2040;
 }
 
 .gearButton {
@@ -36,7 +37,8 @@
 .menu {
   position: absolute;
   top: 50px;
-  right: 0;
+  right: var(--menu-right, 0);
+  left: var(--menu-left, auto);
   width: 220px;
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
@@ -44,7 +46,7 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: 16px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-xl);
   animation: slideIn 0.2s ease-out;
 }
 

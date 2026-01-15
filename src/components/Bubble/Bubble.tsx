@@ -8,6 +8,7 @@ import {
 } from 'tldraw';
 import styles from './Bubble.module.css';
 import { useTextStyleStore } from '../../store/textStyleStore';
+import { useFileSystemStore } from '../../store/fileSystemStore';
 import clsx from 'clsx';
 import { UIPortal } from '../UIPortal';
 
@@ -410,7 +411,9 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   // Increase height for text tool (has font row)
   const height = isCollapsed ? 48 : (activeTool === 'text' ? 240 : 170);
 
-  const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: window.innerWidth / 2 - 150, y: 100 }, width, height);
+  const { leftHandedMode } = useFileSystemStore();
+  const initialX = leftHandedMode ? 100 : window.innerWidth / 2 - 150;
+  const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: initialX, y: 100 }, width, height);
 
   // Custom "Smart Double Click" handler
   const lastClickTime = useRef(0);

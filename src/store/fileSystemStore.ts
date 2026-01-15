@@ -21,11 +21,13 @@ interface FileSystemState {
   activeStateModifier: string;
   isSidebarOpen: boolean;
   theme: 'auto' | 'light' | 'dark';
+  leftHandedMode: boolean;
   deletedItemIds: string[]; // Tombstones for sync
 
   // Actions
   toggleSidebar: () => void;
   setTheme: (theme: 'auto' | 'light' | 'dark') => void;
+  setLeftHandedMode: (leftHandedMode: boolean) => void;
 
   createNotebook: (name: string) => void;
   createFolder: (name: string, parentId: string, notebookId: string) => void;
@@ -72,6 +74,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   activeStateModifier: '',
   isSidebarOpen: true,
   theme: (localStorage.getItem('cuaderno-theme') as any) || 'auto',
+  leftHandedMode: localStorage.getItem('cuaderno-left-handed') === 'true',
 
   forceSaveActivePage: null,
   registerActivePageSaver: (saver) => set({ forceSaveActivePage: saver }),
@@ -85,6 +88,11 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
     diskLog(`💾 [FileSystem] Changed theme to "${theme}"`);
     localStorage.setItem('cuaderno-theme', theme);
     set({ theme });
+  },
+  setLeftHandedMode: (leftHandedMode) => {
+    diskLog(`💾 [FileSystem] Changed left-handed mode to "${leftHandedMode}"`);
+    localStorage.setItem('cuaderno-left-handed', String(leftHandedMode));
+    set({ leftHandedMode });
   },
 
 

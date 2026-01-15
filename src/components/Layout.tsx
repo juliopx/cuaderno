@@ -5,9 +5,10 @@ import { CanvasArea } from './Canvas/CanvasArea';
 import { Settings } from './Settings/Settings';
 import { useEffect } from 'react';
 import { useFileSystemStore } from '../store/fileSystemStore';
+import clsx from 'clsx';
 
 export const Layout = () => {
-  const { load, theme } = useFileSystemStore(); // Added 'theme'
+  const { load, theme, leftHandedMode } = useFileSystemStore(); // Added 'leftHandedMode'
 
   // Theme observer
   useEffect(() => {
@@ -48,7 +49,7 @@ export const Layout = () => {
 
 
   return (
-    <div className={styles.container}>
+    <div className={clsx(styles.container, leftHandedMode && styles.containerLeftHanded)}>
       <Sidebar />
       <main className={styles.main}>
         <Settings /> {/* Added Settings component */}

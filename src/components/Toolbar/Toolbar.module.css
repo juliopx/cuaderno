@@ -1,6 +1,7 @@
 .toolbar {
   position: absolute;
-  right: 1rem;
+  right: var(--toolbar-right, 1rem);
+  left: var(--toolbar-left, auto);
   top: 50%;
   transform: translateY(-50%);
   display: flex;

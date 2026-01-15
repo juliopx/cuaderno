@@ -1,7 +1,8 @@
 .sidebar {
   position: fixed;
   top: 0.75rem;
-  left: 0.75rem;
+  left: var(--sidebar-left, 0.75rem);
+  right: var(--sidebar-right, auto);
   bottom: 0.75rem;
   display: flex;
   overflow-x: auto;
@@ -19,7 +20,8 @@
 .closeButton {
   position: fixed;
   top: 1rem;
-  left: calc(250px * var(--sidebar-columns, 1) + 0.75rem + 12px);
+  left: var(--close-left, calc(250px * var(--sidebar-columns, 1) + 0.75rem + 12px));
+  right: var(--close-right, auto);
   width: 40px;
   height: 40px;
   border-radius: 50%;

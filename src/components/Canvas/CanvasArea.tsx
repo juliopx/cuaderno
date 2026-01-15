@@ -118,7 +118,7 @@ interface CanvasInterfaceProps {
 
 
 // Main Component Logic (Reactive)
-const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef, sidebarColumns }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number }) => {
+const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef, sidebarColumns, leftHandedMode }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number, leftHandedMode: boolean }) => {
   const editor = useEditor();
   // State to prevent flickering when switching focus between text shapes
   const forceTextModeRef = useRef(false);
@@ -147,7 +147,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           // Denormalize camera: Restore position relative to the center of the NEW viewport
           if (snapshot.camera) {
             const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-            const viewportCenter = (window.innerWidth + sidebarWidth) / 2;
+            const viewportCenter = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
             const viewportHalfHeight = window.innerHeight / 2;
 
             // visualX = diskX + (center / zoom)
@@ -181,7 +181,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       } else {
         // New page: Center on origin (0,0) taking sidebar into account
         const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-        const viewportHalfWidth = (window.innerWidth + sidebarWidth) / 2;
+        const viewportHalfWidth = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
         const viewportHalfHeight = window.innerHeight / 2;
         const centerX = viewportHalfWidth;
         const centerY = viewportHalfHeight;
@@ -224,7 +224,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
 
       const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-      const viewportCenter = (window.innerWidth + sidebarWidth) / 2;
+      const viewportCenter = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
       const viewportHalfHeight = window.innerHeight / 2;
 
       const fullSnapshot = editor.getSnapshot();
@@ -702,7 +702,9 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
     const { x, y, z } = editor.getCamera();
     // Shift camera by half the diff / zoom to keep content centered in the remaining visible space
-    editor.setCamera({ x: x + (diff / 2) / z, y, z }, { animation: { duration: 300 } });
+    // If sidebar on RIGHT expands, shift camera to the LEFT (invert diff)
+    const shiftX = leftHandedMode ? -diff : diff;
+    editor.setCamera({ x: x + (shiftX / 2) / z, y, z }, { animation: { duration: 300 } });
 
     lastSidebarColumnsRef.current = sidebarColumns;
   }, [editor, sidebarColumns]);
@@ -728,10 +730,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         title="Centrar (Click: Origen | Doble click: Ajustar todo)"
         onClick={() => {
           const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-          const viewportHalfWidth = (window.innerWidth + sidebarWidth) / 2;
+          const viewportCenter = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
           const viewportHalfHeight = window.innerHeight / 2;
           const { z } = editor.getCamera();
-          editor.setCamera({ x: viewportHalfWidth / z, y: viewportHalfHeight / z, z }, { animation: { duration: 300 } });
+          editor.setCamera({ x: viewportCenter / z, y: viewportHalfHeight / z, z }, { animation: { duration: 300 } });
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -751,7 +753,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           const z = Math.min(zoomX, zoomY, 1);
 
           // Target screen center (offset by sidebar)
-          const targetX = sidebarWidth + (window.innerWidth - sidebarWidth) / 2;
+          const targetX = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : sidebarWidth + (window.innerWidth - sidebarWidth) / 2;
           const targetY = window.innerHeight / 2;
 
           // camera.x = target_screen_x / zoom - target_page_x
@@ -768,7 +770,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 });
 
 export const CanvasArea = () => {
-  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages, activePath } = useFileSystemStore();
+  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages, activePath, leftHandedMode } = useFileSystemStore();
   const parentRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -797,10 +799,10 @@ export const CanvasArea = () => {
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
-          paddingLeft: `${sidebarWidth}px`,
+          [leftHandedMode ? 'paddingRight' : 'paddingLeft']: `${sidebarWidth}px`,
           color: 'hsl(var(--color-text-secondary))',
           fontSize: '1.125rem',
-          transition: 'padding-left 0.3s ease'
+          transition: 'padding 0.3s ease'
         }}>
           Select a page to start drawing
         </div>
@@ -826,6 +828,7 @@ export const CanvasArea = () => {
           isDark={isDark}
           parentRef={parentRef}
           sidebarColumns={sidebarColumns}
+          leftHandedMode={leftHandedMode}
         />
       </Tldraw>
     </div>

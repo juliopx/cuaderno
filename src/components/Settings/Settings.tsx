@@ -7,7 +7,7 @@ import clsx from 'clsx';
 import googleDriveIcon from '../../assets/google-drive.svg';
 
 export const Settings = () => {
-  const { theme, setTheme } = useFileSystemStore();
+  const { theme, setTheme, leftHandedMode, setLeftHandedMode } = useFileSystemStore();
   const {
     isConfigured,
     isEnabled,
@@ -47,7 +47,14 @@ export const Settings = () => {
   const isSyncing = syncStatus === 'syncing' || syncStatus === 'saving-to-disk';
 
   return (
-    <div className={styles.wrapper} ref={menuRef}>
+    <div
+      className={styles.wrapper}
+      ref={menuRef}
+      style={{
+        '--settings-right': leftHandedMode ? 'auto' : '1rem',
+        '--settings-left': leftHandedMode ? '1rem' : 'auto',
+      } as React.CSSProperties}
+    >
       <button
         className={clsx(styles.gearButton, isOpen && styles.active)}
         onClick={() => setIsOpen(!isOpen)}
@@ -57,7 +64,13 @@ export const Settings = () => {
       </button>
 
       {isOpen && (
-        <div className={styles.menu}>
+        <div
+          className={styles.menu}
+          style={{
+            '--menu-right': leftHandedMode ? 'auto' : '0',
+            '--menu-left': leftHandedMode ? '0' : 'auto',
+          } as React.CSSProperties}
+        >
           <div className={styles.section}>
             <div className={styles.sectionTitle}>Theme</div>
             <div className={styles.themeGrid}>
@@ -74,6 +87,21 @@ export const Settings = () => {
                   <span>{t.label}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className={styles.divider} />
+
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>Accessibility</div>
+            <div className={styles.toggleWrapper}>
+              <div className={styles.toggleLabel}>Modo Zurdo</div>
+              <div
+                className={clsx(styles.toggle, leftHandedMode && styles.toggleActive)}
+                onClick={() => setLeftHandedMode(!leftHandedMode)}
+              >
+                <div className={styles.toggleCircle} />
+              </div>
             </div>
           </div>
 

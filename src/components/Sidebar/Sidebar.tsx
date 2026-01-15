@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import type { Notebook, Folder, Page } from '../../types';
 import styles from './Sidebar.module.css';
-import { Folder as FolderIcon, File, Book, Plus, ChevronRight, Trash2, PanelLeftClose } from 'lucide-react';
+import { Folder as FolderIcon, File, Book, Plus, ChevronRight, Trash2, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import clsx from 'clsx';
 import { RenameOverlayV2 } from './RenameOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -270,7 +270,7 @@ export const Sidebar = () => {
     createNotebook, createFolder, createPage,
     deleteNotebook, deleteFolder, deletePage,
     setActiveNotebook, selectPage, isSidebarOpen, toggleSidebar, renameNode,
-    reorderNotebooks, moveNode
+    reorderNotebooks, moveNode, leftHandedMode
   } = useFileSystemStore();
 
   const [activeDragItem, setActiveDragItem] = useState<Notebook | Folder | Page | null>(null);
@@ -564,7 +564,11 @@ export const Sidebar = () => {
     >
       <div
         className={styles.sidebar}
-        style={{ '--sidebar-columns': columns.length } as React.CSSProperties}
+        style={{
+          '--sidebar-columns': columns.length,
+          '--sidebar-left': leftHandedMode ? 'auto' : '0.75rem',
+          '--sidebar-right': leftHandedMode ? '0.75rem' : 'auto',
+        } as React.CSSProperties}
       >
         {columns.map((col) => (
           <Column
@@ -589,9 +593,13 @@ export const Sidebar = () => {
         className={styles.closeButton}
         onClick={toggleSidebar}
         title="Close sidebar"
-        style={{ '--sidebar-columns': columns.length } as React.CSSProperties}
+        style={{
+          '--sidebar-columns': columns.length,
+          '--close-left': leftHandedMode ? 'auto' : `calc(250px * ${columns.length} + 0.75rem + 12px)`,
+          '--close-right': leftHandedMode ? `calc(250px * ${columns.length} + 0.75rem + 12px)` : 'auto',
+        } as React.CSSProperties}
       >
-        <PanelLeftClose size={18} />
+        {leftHandedMode ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
       </button>
 
       <DragOverlay dropAnimation={dropAnimation}>
