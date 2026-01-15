@@ -25,6 +25,9 @@ import { syncLog } from '../../lib/debugLog';
 const customShapeUtils = [RichTextShapeUtil];
 
 const CenterMark = track(() => {
+  const isDebug = new URLSearchParams(window.location.search).get('debug') === 'true';
+  if (!isDebug) return null;
+
   const editor = useEditor();
   const screenPoint = editor.pageToScreen({ x: 0, y: 0 });
 
