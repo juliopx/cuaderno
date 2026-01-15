@@ -21,6 +21,7 @@ import { useTextStyleStore } from '../../store/textStyleStore';
 import { opfs } from '../../lib/opfs';
 import { RichTextShapeUtil } from '../../shapes/RichTextShapeUtil';
 import { syncLog } from '../../lib/debugLog';
+import { CanvasTitle } from './CanvasTitle';
 
 const customShapeUtils = [RichTextShapeUtil];
 
@@ -715,6 +716,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           <button className={styles.iconButton} onClick={toggleSidebar}>
             <PanelLeftOpen size={20} />
           </button>
+          <CanvasTitle />
         </div>
       )}
 
@@ -787,6 +789,7 @@ export const CanvasArea = () => {
             <button className={styles.iconButton} onClick={toggleSidebar}>
               <PanelLeftOpen size={20} />
             </button>
+            <CanvasTitle />
           </div>
         )}
         <div style={{

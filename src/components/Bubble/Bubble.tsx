@@ -36,22 +36,25 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
 
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only left click
-    if (e.button !== 0) return;
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Only left click for mouse; all pointer types for touch/pen
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-    e.preventDefault();
+    // e.preventDefault(); // Don't prevent default on pointerdown or clicks might break
     isDragging.current = true;
     setIsDraggingState(true);
     hasMoved.current = false;
     startPos.current = { x: e.clientX, y: e.clientY };
     itemStartPos.current = position;
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+
+    // Capture the pointer to ensure we get events even if it leaves the element
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handlePointerMove = (e: PointerEvent) => {
     if (!isDragging.current) return;
 
     const dx = e.clientX - startPos.current.x;
@@ -68,11 +71,17 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
     setPosition({ x: newX, y: newY });
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: PointerEvent) => {
     isDragging.current = false;
     setIsDraggingState(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    document.removeEventListener('pointermove', handlePointerMove);
+    document.removeEventListener('pointerup', handlePointerUp);
+
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) {
+      // Ignore if already released or invalid
+    }
   };
 
   // Adjust position on resize OR dimension change (e.g. collapse/expand) to keep it in bounds
@@ -95,7 +104,7 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
     return () => window.removeEventListener('resize', handleResize);
   }, [width, height]);
 
-  return { position, setPosition, handleMouseDown, hasMoved, isDragging: isDraggingState };
+  return { position, setPosition, handlePointerDown, hasMoved, isDragging: isDraggingState };
 };
 
 interface BubbleProps {
@@ -401,7 +410,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   // Increase height for text tool (has font row)
   const height = isCollapsed ? 48 : (activeTool === 'text' ? 240 : 170);
 
-  const { position, setPosition, handleMouseDown, hasMoved, isDragging } = useDraggableWithBounds({ x: window.innerWidth / 2 - 150, y: 100 }, width, height);
+  const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: window.innerWidth / 2 - 150, y: 100 }, width, height);
 
   // Custom "Smart Double Click" handler
   const lastClickTime = useRef(0);
@@ -621,8 +630,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
             backgroundColor: 'var(--glass-bg)',
             pointerEvents: 'auto'
           }}
-          onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e); }}
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e); }}
           onClick={handleExpandCheck}
           data-is-ui="true"
         >
@@ -654,7 +662,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
       <div
         className={clsx(styles.bubble, isDragging && styles.dragging)}
         style={{ left: position.x, top: position.y, pointerEvents: 'auto' }}
-        onMouseDown={handleMouseDown}
+        onPointerDown={handlePointerDown}
         onClick={handleSmartClick}
         data-is-ui="true"
       >

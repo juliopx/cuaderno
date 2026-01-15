@@ -5,7 +5,6 @@ import { CanvasArea } from './Canvas/CanvasArea';
 import { Settings } from './Settings/Settings';
 import { useEffect } from 'react';
 import { useFileSystemStore } from '../store/fileSystemStore';
-import { CanvasTitle } from './Canvas/CanvasTitle';
 
 export const Layout = () => {
   const { load, theme } = useFileSystemStore(); // Added 'theme'
@@ -52,7 +51,6 @@ export const Layout = () => {
     <div className={styles.container}>
       <Sidebar />
       <main className={styles.main}>
-        <CanvasTitle />
         <Settings /> {/* Added Settings component */}
         <CanvasArea />
       </main>

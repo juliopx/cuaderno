@@ -14,9 +14,9 @@
   --color-selection-text: 0 0% 100%;
   --color-selection-hover: 215 90% 60%;
 
-  --glass-bg: hsla(0, 0%, 100%, 0.15);
-  --glass-border: hsla(0, 0%, 100%, 0.1);
-  --glass-blur: 40px;
+  --glass-bg: hsla(0, 0%, 100%, 0.1);
+  --glass-border: hsla(0, 0%, 100%, 0.15);
+  --glass-blur: 16px;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -34,7 +34,7 @@
   --color-text-primary: 0 0% 15%;
   --color-text-secondary: 0 0% 50%;
   --color-border: 0 0% 85%;
-  --glass-bg: hsla(0 0% 100% / 0.85);
+  --glass-bg: hsla(0 0% 100% / 0.35);
 }
 
 /* Dark Theme Override */
@@ -66,7 +66,7 @@
     --color-text-primary: 0 0% 92%;
     --color-text-secondary: 220 10% 60%;
     --color-border: 220 15% 20%;
-    --glass-bg: hsla(220 15% 12% / 0.9);
+    --glass-bg: hsla(220 15% 12% / 0.5);
     --glass-border: hsla(0 0% 100% / 0.08);
 
     --color-accent: 215 100% 60%;
