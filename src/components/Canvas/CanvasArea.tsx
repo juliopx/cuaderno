@@ -14,7 +14,7 @@ import styles from './CanvasArea.module.css';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
 import { useState, useEffect, useRef } from 'react';
-import { PanelLeftOpen } from 'lucide-react';
+import { PanelLeftOpen, Focus } from 'lucide-react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore';
 import { useTextStyleStore } from '../../store/textStyleStore';
@@ -24,6 +24,88 @@ import { syncLog } from '../../lib/debugLog';
 
 const customShapeUtils = [RichTextShapeUtil];
 
+const CenterMark = track(() => {
+  const editor = useEditor();
+  const screenPoint = editor.pageToScreen({ x: 0, y: 0 });
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: screenPoint.x,
+        top: screenPoint.y,
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'none',
+        zIndex: 999,
+        opacity: 0.8,
+        color: '#ff0000',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <line x1="12" y1="4" x2="12" y2="20" />
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <circle cx="12" cy="12" r="3" fill="currentColor" />
+      </svg>
+    </div>
+  );
+});
+
+const DebugOverlay = track(({ sidebarColumns }: { sidebarColumns: number }) => {
+  const isDebug = new URLSearchParams(window.location.search).get('debug') === 'true';
+  if (!isDebug) return null;
+
+  const editor = useEditor();
+  const { x, y, z } = editor.getCamera();
+  const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
+
+  useEffect(() => {
+    const handleResize = () => setScreen({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const columnWidth = 250;
+  const margin = 12;
+  const sidebarWidth = sidebarColumns > 0 ? (columnWidth * sidebarColumns + margin * 2) : 0;
+  const viewportCenter = (screen.w + sidebarWidth) / 2;
+
+  // Normalized X: 0 means perfectly centered in the available space
+  const normalizedX = x - (viewportCenter / z);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: '1rem',
+        right: '4.5rem',
+        zIndex: 1000,
+        background: 'var(--glass-bg)',
+        backdropFilter: 'blur(var(--glass-blur))',
+        WebkitBackdropFilter: 'blur(var(--glass-blur))',
+        padding: '0.4rem 0.8rem',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--glass-border)',
+        fontSize: '11px',
+        color: 'hsl(var(--color-text-secondary))',
+        fontFamily: 'monospace',
+        pointerEvents: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+        boxShadow: 'var(--shadow-md)'
+      }}
+    >
+      <div title="Actual Camera">CAM: {x.toFixed(0)}, {y.toFixed(0)}, {z.toFixed(2)}</div>
+      <div title="Normalized (Universal) Camera" style={{ color: 'var(--color-accent)' }}>NORM: {normalizedX.toFixed(0)}</div>
+      <div>WIN: {screen.w}x{screen.h}</div>
+      <div>SIDE: {sidebarWidth}px</div>
+    </div>
+  );
+});
+
 
 interface CanvasInterfaceProps {
   pageId: string;
@@ -32,7 +114,7 @@ interface CanvasInterfaceProps {
 
 
 // Main Component Logic (Reactive)
-const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null> }) => {
+const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef, sidebarColumns }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number }) => {
   const editor = useEditor();
   // State to prevent flickering when switching focus between text shapes
   const forceTextModeRef = useRef(false);
@@ -58,7 +140,29 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           const snapshot = JSON.parse(json);
           editor.loadSnapshot(snapshot);
 
-          // 💡 RESET defaults (User requested M by default, overrides snapshot persistence)
+          // Denormalize camera: Restore position relative to the center of the NEW viewport
+          if (snapshot.camera) {
+            const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+            const viewportCenter = (window.innerWidth + sidebarWidth) / 2;
+            const viewportHalfHeight = window.innerHeight / 2;
+
+            // visualX = diskX + (center / zoom)
+            const actualX = snapshot.camera.x + (viewportCenter / snapshot.camera.z);
+            const actualY = snapshot.camera.y + (viewportHalfHeight / snapshot.camera.z);
+
+            syncLog(`📥 [CENTERING] Restoring: DiskX ${snapshot.camera.x.toFixed(0)} -> VisualX ${actualX.toFixed(0)}`);
+            editor.setCamera({ x: actualX, y: actualY, z: snapshot.camera.z });
+          } else {
+            // Document exists but no camera? Default to centered origin
+            const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+            const viewportHalfWidth = (window.innerWidth + sidebarWidth) / 2;
+            const viewportHalfHeight = window.innerHeight / 2;
+            const centerX = viewportHalfWidth;
+            const centerY = viewportHalfHeight;
+            editor.setCamera({ x: centerX, y: centerY, z: 1 });
+          }
+
+          // 💡 RESET defaults
           editor.setStyleForNextShapes(DefaultColorStyle, 'black');
           textStyles.updateStyles({ color: 'black' });
           editor.setStyleForNextShapes(DefaultSizeStyle, 'm');
@@ -70,6 +174,14 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         } catch (e) {
           console.error("Failed to load snapshot", e);
         }
+      } else {
+        // New page: Center on origin (0,0) taking sidebar into account
+        const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+        const viewportHalfWidth = (window.innerWidth + sidebarWidth) / 2;
+        const viewportHalfHeight = window.innerHeight / 2;
+        const centerX = viewportHalfWidth;
+        const centerY = viewportHalfHeight;
+        editor.setCamera({ x: centerX, y: centerY, z: 1 });
       }
 
       // Delay to ensure all load-related events have settled
@@ -83,45 +195,74 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     // Reload if: 1. It's a version change AND (modifier is different OR modifier is unknown)
     const isRemoteChange = !isNewPage && pageVersion !== lastLoadRef.current.version && (!lastModifier || lastModifier !== clientId);
 
-    console.log(`[Canvas] Reload Check:
-      PageId: ${pageId} (Last: ${lastLoadRef.current.pageId})
-      Version: ${pageVersion} (Last: ${lastLoadRef.current.version})
-      Modifier: ${lastModifier?.slice(0, 8)} (Client: ${clientId?.slice(0, 8)})
-      -> isNew: ${isNewPage}, isRmChg: ${isRemoteChange}
-    `);
-
     if (isNewPage || isRemoteChange) {
-      console.log('[Canvas] ♻️ Triggering Reload...');
       loadPage();
       lastLoadRef.current = { pageId, version: pageVersion };
     }
 
-  }, [editor, pageId, pageVersion, lastModifier, clientId]);
+  }, [editor, pageId, pageVersion, lastModifier, clientId]); // sidebarColumns intentionally omitted to prevent reloads on toggle
 
   // Save Snapshot Listener
   const hasUnsavedChangesRef = useRef(false);
-
-  // Save Snapshot Listener
+  const lastCameraRef = useRef({ x: 0, y: 0, z: 1 });
   useEffect(() => {
     if (!pageId) return;
 
     const save = async () => {
-      // If triggered by sync (forced), ONLY save if we actually have unsaved changes.
-      // This prevents "dirtying" a clean page just because sync was clicked.
+      // No guardar mientras se está cargando para evitar pisotear datos
+      if (isLoadingRef.current) {
+        syncLog(`[CENTERING] 🚫 Guardado cancelado: Cargando página.`);
+        return;
+      }
+
       if (!hasUnsavedChangesRef.current) {
         return;
       }
 
-      const snapshot = editor.getSnapshot();
-      await opfs.saveFile(`page-${pageId}.tldr`, JSON.stringify(snapshot));
+      const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+      const viewportCenter = (window.innerWidth + sidebarWidth) / 2;
+      const viewportHalfHeight = window.innerHeight / 2;
 
-      // Update page version in store so sync picks it up
-      useFileSystemStore.getState().markPageDirty(pageId);
+      const fullSnapshot = editor.getSnapshot();
 
-      // Log that page was marked dirty
-      syncLog(`🔶 [Canvas] Saved page ${pageId} - dirty`);
+      // Obtener todos los registros directamente del store (método más fiable en v4)
+      const allRecordsArray = editor.store.allRecords();
 
-      // Reset changes flag
+      // Filtramos records transitorios
+      const filteredRecords = allRecordsArray.filter(r =>
+        r.typeName !== 'instance' &&
+        r.typeName !== 'pointer' &&
+        r.typeName !== 'camera'
+      );
+
+      // Convertimos el array de nuevo a un objeto Record<ID, Record>
+      const filteredStore = Object.fromEntries(filteredRecords.map(r => [r.id, r]));
+
+      const { x, y, z } = editor.getCamera();
+      // Normalización de cámara
+      const normalizedX = x - (viewportCenter / z);
+      const normalizedY = y - (viewportHalfHeight / z);
+
+      // Creamos el snapshot con la estructura que tldraw espera
+      // Si fullSnapshot tiene 'store' y 'schema', seguimos ese patrón
+      const filteredSnapshot = {
+        store: filteredStore,
+        schema: (fullSnapshot as any).schema || (editor.store as any).schema?.serialize() || {},
+        camera: { x: normalizedX, y: normalizedY, z }
+      };
+
+      try {
+        const serialized = JSON.stringify(filteredSnapshot);
+        await opfs.saveFile(`page-${pageId}.tldr`, serialized);
+
+        // Señalizar cambio para sincronización
+        useFileSystemStore.getState().markPageDirty(pageId);
+
+        syncLog(`🔶 [CENTERING] Disco guardado: ${filteredRecords.length} reg. Pos: {x: ${normalizedX.toFixed(0)}, y: ${normalizedY.toFixed(0)}}`);
+      } catch (err) {
+        console.error(`[CENTERING] ❌ ERROR AL ESCRIBIR EN DISCO:`, err);
+      }
+
       hasUnsavedChangesRef.current = false;
     };
 
@@ -130,34 +271,48 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
     let timeout: any;
     const handleSave = () => {
-      hasUnsavedChangesRef.current = true; // Mark that we have pending changes
+      hasUnsavedChangesRef.current = true;
       clearTimeout(timeout);
-      // Reduce debounce to 200ms to minimize risk of syncing stale content
-      timeout = setTimeout(save, 200);
+      timeout = setTimeout(save, 500);
     };
 
     const cleanup = editor.store.listen((event) => {
       // Ignore events during page load
       if (isLoadingRef.current) return;
 
-      // Only trigger auto-save if there are actual content changes from user
-      if (event.source === 'user') {
-        const { added, updated, removed } = event.changes;
+      const { added, updated, removed } = event.changes;
 
-        // Check if any shapes were actually modified (not just selection/camera changes)
-        const hasShapeChanges = Object.keys(added).length > 0 ||
-          Object.keys(removed).length > 0 ||
-          Object.values(updated).some(([_, to]: any) => {
-            // Ignore changes to instance state (selection, camera, etc)
-            return to.typeName === 'shape';
-          });
+      // LOG EVERYTHING for debugging
+      // Object.values(updated).forEach(([, to]: any) => console.log(`[CENTERING] 📝 Record update: ${to.typeName}`));
 
-        if (hasShapeChanges) {
-          handleSave();
-        }
+      // Check if any relevant records (shapes or camera) were modified
+      const hasRelevantChanges = Object.keys(added).length > 0 ||
+        Object.keys(removed).length > 0 ||
+        Object.values(updated).some(([, to]: any) => {
+          const type = to.typeName;
+
+          if (type === 'shape' && event.source === 'user') {
+            return true;
+          }
+
+          if (type === 'camera') {
+            const cam = to;
+            const moved = cam.x !== lastCameraRef.current.x || cam.y !== lastCameraRef.current.y || cam.z !== lastCameraRef.current.z;
+            if (moved) {
+              lastCameraRef.current = { x: cam.x, y: cam.y, z: cam.z };
+              return true;
+            }
+          }
+
+          // Instance: We ignore this for auto-save as it triggers on every mouse move (cursor tracking)
+          // The 'camera' record above is sufficient for panning and zoom persistence.
+          return false;
+        });
+
+      if (hasRelevantChanges) {
+        handleSave();
       }
 
-      const { updated } = event.changes;
       Object.values(updated).forEach(([, to]: any) => {
         if (to.type === 'text' || to.type === 'rich-text') {
           // Log prop changes to trace alignment/style issues
@@ -165,11 +320,16 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         }
       });
     });
+
     return () => {
       cleanup();
+      // If we have unsaved changes when the component or pageId changes, trigger one last save
+      if (hasUnsavedChangesRef.current) {
+        save();
+      }
       clearTimeout(timeout);
     };
-  }, [editor, pageId]);
+  }, [editor, pageId, sidebarColumns]);
 
   // Derived Active Tool State (Reactive via track)
   const currentToolId = editor.getCurrentToolId();
@@ -398,17 +558,16 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   let previousTool = 'select';
 
   // --- Event Handlers ---
+  // --- Interaction Engine ---
   useEffect(() => {
     const container = editor.getContainer();
     if (!container) return;
 
     const handleContextMenu = (e: MouseEvent) => {
-      // Prevent native context menu to allow right-click panning
       e.preventDefault();
     };
 
     const handlePointerDown = (e: PointerEvent) => {
-      // Right-click (button 2) OR Middle-click (button 1) -> Start Panning
       if (e.button === 2 || e.button === 1) {
         isPanning = true;
         lastPoint = { x: e.clientX, y: e.clientY };
@@ -416,8 +575,6 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         e.preventDefault();
         return;
       }
-
-      // Control + Left-click (button 0) -> Start Zooming
       if (e.button === 0 && e.ctrlKey) {
         isZooming = true;
         lastPoint = { x: e.clientX, y: e.clientY };
@@ -432,35 +589,23 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         const deltaX = e.clientX - lastPoint.x;
         const deltaY = e.clientY - lastPoint.y;
         lastPoint = { x: e.clientX, y: e.clientY };
-
-        // Pan the camera
         const { x, y, z } = editor.getCamera();
         editor.setCamera({ x: x + deltaX / z, y: y + deltaY / z, z });
         return;
       }
-
       if (isZooming) {
         const deltaY = e.clientY - lastPoint.y;
         lastPoint = { x: e.clientX, y: e.clientY };
-
-        // Drag Up -> Zoom In
         const zoomRate = 0.01;
         const { z } = editor.getCamera();
         const factor = 1 - deltaY * zoomRate;
         const newZoom = Math.max(0.1, Math.min(5, z * factor));
-
-        // Center zoom on pointer
         const p = editor.screenToPage({ x: e.clientX, y: e.clientY });
-
-        // Calculate local coordinates
         const rect = container.getBoundingClientRect();
         const localX = e.clientX - rect.left;
         const localY = e.clientY - rect.top;
-
-        // Manual zoom calculation
         const newX = (localX / newZoom) - p.x;
         const newY = (localY / newZoom) - p.y;
-
         editor.setCamera({ x: newX, y: newY, z: newZoom });
         return;
       }
@@ -475,64 +620,41 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
 
     const handleWheel = (e: WheelEvent) => {
-      // "Rueda de ratón" (Mouse Wheel) -> Zoom
       if (e.ctrlKey) return;
-
       e.preventDefault();
       e.stopPropagation();
-
       const { clientX, clientY, deltaY } = e;
       const { z } = editor.getCamera();
-
-      // Zoom factor
       const zoomDetails = 0.001;
       const factor = 1 - deltaY * zoomDetails;
       const safeFactor = Math.max(0.1, Math.min(8, z * factor));
-
       const p = editor.screenToPage({ x: clientX, y: clientY });
-
-      // Calculate local coordinates relative to the container for correct camera math
       const rect = container.getBoundingClientRect();
       const localX = clientX - rect.left;
       const localY = clientY - rect.top;
-
       const newX = (localX / safeFactor) - p.x;
       const newY = (localY / safeFactor) - p.y;
-
       editor.setCamera({ x: newX, y: newY, z: safeFactor });
     };
 
-    // Space Key Logic for Panning
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Avoid triggering while typing
       const activeEl = document.activeElement;
       const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA';
       const isEditingText = activeEl && 'isContentEditable' in activeEl && (activeEl as HTMLElement).isContentEditable;
       if (isInput || isEditingText) return;
 
-      // 1. Delete / Backspace -> Delete selected shapes
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const isEditingShape = !!editor.getEditingShapeId();
         if (isEditingShape || isInput || isEditingText) return;
-
         const selectedIds = editor.getSelectedShapeIds();
         if (selectedIds.length > 0) {
-          console.log('[CanvasArea] Deleting selected:', selectedIds);
           editor.deleteShapes(selectedIds);
           e.preventDefault();
         }
         return;
       }
 
-      // 2. Space -> Hand Tool (Panning)
-      if (
-        e.code === 'Space' &&
-        !e.repeat &&
-        !e.ctrlKey &&
-        !e.shiftKey &&
-        !e.altKey &&
-        editor.getCurrentToolId() !== 'hand'
-      ) {
+      if (e.code === 'Space' && !e.repeat && !e.ctrlKey && !e.shiftKey && !e.altKey && editor.getCurrentToolId() !== 'hand') {
         previousTool = editor.getCurrentToolId();
         editor.setCurrentTool('hand');
       }
@@ -544,12 +666,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
     };
 
-    // Attach listeners
     container.addEventListener('contextmenu', handleContextMenu);
     container.addEventListener('pointerdown', handlePointerDown);
     container.addEventListener('pointermove', handlePointerMove);
     container.addEventListener('pointerup', handlePointerUp);
-    // Use capture to preempt Tldraw's default scroll handling
     container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -565,9 +685,28 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
   }, [editor]);
 
+  // --- Sidebar Panning Transition ---
+  const lastSidebarColumnsRef = useRef(sidebarColumns);
+  useEffect(() => {
+    if (lastSidebarColumnsRef.current === sidebarColumns) return;
+
+    const columnWidth = 250;
+    const margin = 12;
+    const prevWidth = lastSidebarColumnsRef.current > 0 ? (columnWidth * lastSidebarColumnsRef.current + margin * 2) : 0;
+    const currWidth = sidebarColumns > 0 ? (columnWidth * sidebarColumns + margin * 2) : 0;
+    const diff = currWidth - prevWidth;
+
+    const { x, y, z } = editor.getCamera();
+    // Shift camera by half the diff / zoom to keep content centered in the remaining visible space
+    editor.setCamera({ x: x + (diff / 2) / z, y, z }, { animation: { duration: 300 } });
+
+    lastSidebarColumnsRef.current = sidebarColumns;
+  }, [editor, sidebarColumns]);
 
   return (
     <div className={styles.canvasContainer}>
+      <DebugOverlay sidebarColumns={sidebarColumns} />
+      <CenterMark />
       {!isSidebarOpen && (
         <div className={styles.topBar}>
           <button className={styles.iconButton} onClick={toggleSidebar}>
@@ -578,6 +717,47 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
       <Toolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
       <Bubble activeTool={activeTool} />
+
+      <button
+        className={styles.recenterButton}
+        title="Centrar (Click: Origen | Doble click: Ajustar todo)"
+        onClick={() => {
+          const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+          const viewportHalfWidth = (window.innerWidth + sidebarWidth) / 2;
+          const viewportHalfHeight = window.innerHeight / 2;
+          const { z } = editor.getCamera();
+          editor.setCamera({ x: viewportHalfWidth / z, y: viewportHalfHeight / z, z }, { animation: { duration: 300 } });
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          const bounds = editor.getCurrentPageBounds();
+          if (!bounds) return;
+
+          const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+          const padding = 64;
+          const availableWidth = window.innerWidth - sidebarWidth - padding;
+          const availableHeight = window.innerHeight - padding;
+
+          if (availableWidth <= 0 || availableHeight <= 0) return;
+
+          // Calculate ideal zoom (clamped to max 1 for clarity)
+          const zoomX = availableWidth / bounds.w;
+          const zoomY = availableHeight / bounds.h;
+          const z = Math.min(zoomX, zoomY, 1);
+
+          // Target screen center (offset by sidebar)
+          const targetX = sidebarWidth + (window.innerWidth - sidebarWidth) / 2;
+          const targetY = window.innerHeight / 2;
+
+          // camera.x = target_screen_x / zoom - target_page_x
+          const camX = (targetX / z) - (bounds.x + bounds.w / 2);
+          const camY = (targetY / z) - (bounds.y + bounds.h / 2);
+
+          editor.setCamera({ x: camX, y: camY, z }, { animation: { duration: 300 } });
+        }}
+      >
+        <Focus size={20} />
+      </button>
     </div>
   );
 });
@@ -595,6 +775,8 @@ export const CanvasArea = () => {
   // Show empty state when no page is selected
   if (!activePageId) {
     const sidebarColumns = isSidebarOpen ? activePath.length + 2 : 0;
+    const sidebarWidth = sidebarColumns > 0 ? (sidebarColumns * 250 + 24) : 0;
+
     return (
       <div className={styles.wrapper} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
         {!isSidebarOpen && (
@@ -609,8 +791,10 @@ export const CanvasArea = () => {
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
+          paddingLeft: `${sidebarWidth}px`,
           color: 'hsl(var(--color-text-secondary))',
-          fontSize: '1.125rem'
+          fontSize: '1.125rem',
+          transition: 'padding-left 0.3s ease'
         }}>
           Select a page to start drawing
         </div>
@@ -623,7 +807,6 @@ export const CanvasArea = () => {
   return (
     <div className={styles.wrapper} ref={parentRef} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
       <Tldraw
-        persistenceKey={`cuaderno-${activePageId}`}
         hideUi
         inferDarkMode={isDark}
         shapeUtils={customShapeUtils}
@@ -636,6 +819,7 @@ export const CanvasArea = () => {
           clientId={clientId}
           isDark={isDark}
           parentRef={parentRef}
+          sidebarColumns={sidebarColumns}
         />
       </Tldraw>
     </div>

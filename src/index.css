@@ -1,7 +1,7 @@
 :root {
   --color-bg-primary: 0 0% 85%;
   --color-bg-secondary: 0 0% 90%;
-  --color-bg-panel: 0 0% 88%;
+  --color-bg-panel: hsla(0, 0%, 88%, 0.15);
   --color-text-primary: 0 0% 15%;
   --color-text-secondary: 0 0% 50%;
   --color-accent: 215 90% 50%;
@@ -14,9 +14,9 @@
   --color-selection-text: 0 0% 100%;
   --color-selection-hover: 215 90% 60%;
 
-  --glass-bg: hsla(0 0% 100% / 0.85);
-  --glass-border: hsla(0 0% 100% / 0.3);
-  /* Default for light */
+  --glass-bg: hsla(0, 0%, 100%, 0.15);
+  --glass-border: hsla(0, 0%, 100%, 0.1);
+  --glass-blur: 40px;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -30,7 +30,7 @@
 [data-theme='light'] {
   --color-bg-primary: 0 0% 85%;
   --color-bg-secondary: 0 0% 90%;
-  --color-bg-panel: 0 0% 88%;
+  --color-bg-panel: hsla(0, 0%, 88%, 0.15);
   --color-text-primary: 0 0% 15%;
   --color-text-secondary: 0 0% 50%;
   --color-border: 0 0% 85%;
@@ -41,13 +41,13 @@
 [data-theme='dark'] {
   --color-bg-primary: 0 0% 8%;
   --color-bg-secondary: 220 15% 12%;
-  --color-bg-panel: 220 15% 16%;
+  --color-bg-panel: hsla(220, 15%, 16%, 0.15);
   /* Lighter than black for buttons */
   --color-text-primary: 0 0% 92%;
   --color-text-secondary: 220 10% 60%;
   --color-border: 220 15% 20%;
-  --glass-bg: hsla(220 15% 12% / 0.9);
-  --glass-border: hsla(0 0% 100% / 0.08);
+  --glass-bg: hsla(220, 15%, 12%, 0.2);
+  --glass-border: hsla(0, 0%, 100%, 0.05);
 
   --color-accent: 215 100% 60%;
   --color-selection-bg: 215 100% 55%;
@@ -62,7 +62,7 @@
   :root:not([data-theme='light']) {
     --color-bg-primary: 0 0% 8%;
     --color-bg-secondary: 220 15% 12%;
-    --color-bg-panel: 220 15% 16%;
+    --color-bg-panel: hsla(220, 15%, 16%, 0.15);
     --color-text-primary: 0 0% 92%;
     --color-text-secondary: 220 10% 60%;
     --color-border: 220 15% 20%;
@@ -74,6 +74,10 @@
     --color-selection-hover: 215 100% 45%;
     --color-danger: 0 84% 65%;
     --color-danger-soft: 0 84% 12%;
+  }
+
+  :root:not([data-theme='light']) body {
+    background-color: #141414;
   }
 }
 
@@ -88,7 +92,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  background-color: hsl(var(--color-bg-primary));
+  background-color: #d9d9d9;
   color: hsl(var(--color-text-primary));
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -133,6 +137,7 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
+
   :root:not([data-theme='light']) .tl-container,
   :root:not([data-theme='light']) .tl-canvas,
   :root:not([data-theme='light']) .tl-background,
@@ -150,6 +155,7 @@ body {
 }
 
 @media (prefers-color-scheme: light) {
+
   :root:not([data-theme='dark']) .tl-container,
   :root:not([data-theme='dark']) .tl-canvas,
   :root:not([data-theme='dark']) .tl-background,
@@ -170,6 +176,7 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
+
   :root:not([data-theme='light']) [class*="strokeOverlay"],
   :root:not([data-theme='light']) [class*="nameStrokes"],
   :root:not([data-theme='light']) [class*="svgOverlay"] {

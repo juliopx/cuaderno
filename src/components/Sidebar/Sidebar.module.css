@@ -6,8 +6,10 @@
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
-  background-color: hsl(var(--color-bg-panel));
-  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   transition: width 0.3s ease;
@@ -17,12 +19,14 @@
 .closeButton {
   position: fixed;
   top: 1rem;
-  left: calc(250px * var(--sidebar-columns, 1) + 1rem + 0.75rem);
+  left: calc(250px * var(--sidebar-columns, 1) + 0.75rem + 12px);
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
-  background: hsl(var(--color-bg-panel));
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   color: hsl(var(--color-text-secondary));
   display: flex;
   align-items: center;
@@ -124,7 +128,9 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  background-color: hsl(var(--color-bg-panel));
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .iconButton {

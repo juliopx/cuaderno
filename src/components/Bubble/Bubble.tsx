@@ -9,6 +9,7 @@ import {
 import styles from './Bubble.module.css';
 import { useTextStyleStore } from '../../store/textStyleStore';
 import clsx from 'clsx';
+import { UIPortal } from '../UIPortal';
 
 import {
   Bold,
@@ -27,6 +28,7 @@ const Scribble = ({ strokeWidth, color = 'currentColor' }: { strokeWidth: number
 
 const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width: number, height: number) => {
   const [position, setPosition] = useState(initialPosition);
+  const [isDraggingState, setIsDraggingState] = useState(false);
   const isDragging = useRef(false);
   const hasMoved = useRef(false); // Track if significant movement occurred
   const startPos = useRef({ x: 0, y: 0 });
@@ -40,6 +42,7 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
 
     e.preventDefault();
     isDragging.current = true;
+    setIsDraggingState(true);
     hasMoved.current = false;
     startPos.current = { x: e.clientX, y: e.clientY };
     itemStartPos.current = position;
@@ -67,6 +70,7 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
 
   const handleMouseUp = () => {
     isDragging.current = false;
+    setIsDraggingState(false);
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
   };
@@ -91,7 +95,7 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
     return () => window.removeEventListener('resize', handleResize);
   }, [width, height]);
 
-  return { position, setPosition, handleMouseDown, hasMoved };
+  return { position, setPosition, handleMouseDown, hasMoved, isDragging: isDraggingState };
 };
 
 interface BubbleProps {
@@ -397,7 +401,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   // Increase height for text tool (has font row)
   const height = isCollapsed ? 48 : (activeTool === 'text' ? 240 : 170);
 
-  const { position, setPosition, handleMouseDown, hasMoved } = useDraggableWithBounds({ x: window.innerWidth / 2 - 150, y: 100 }, width, height);
+  const { position, setPosition, handleMouseDown, hasMoved, isDragging } = useDraggableWithBounds({ x: window.innerWidth / 2 - 150, y: 100 }, width, height);
 
   // Custom "Smart Double Click" handler
   const lastClickTime = useRef(0);
@@ -608,193 +612,198 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
   if (isCollapsed) {
     return (
-      <div
-        className={clsx(styles.bubble, styles.collapsed)}
-        style={{
-          left: position.x,
-          top: position.y,
-          backgroundColor: 'var(--glass-bg)',
-        }}
-        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e); }}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={handleExpandCheck}
-        data-is-ui="true"
-      >
-        {activeTool === 'text' || isEditingRichText ? (
-          <div style={{
-            fontFamily: `var(--tl - font - ${currentFont})`,
-            color: activeColorHex,
-            fontSize: '24px',
-            fontWeight: richStats.bold ? 'bold' : 'normal',
-            fontStyle: richStats.italic ? 'italic' : 'normal',
-            textDecoration: [
-              richStats.underline ? 'underline' : '',
-              richStats.strike ? 'line-through' : ''
-            ].filter(Boolean).join(' ') || 'none',
-            pointerEvents: 'none'
-          }}>
-            A
-          </div>
-        ) : (
-          <Scribble strokeWidth={sizeMap[currentSize] || 2.5} color={activeColorHex} />
-        )}
-      </div>
+      <UIPortal>
+        <div
+          className={clsx(styles.bubble, styles.collapsed, isDragging && styles.dragging)}
+          style={{
+            left: position.x,
+            top: position.y,
+            backgroundColor: 'var(--glass-bg)',
+            pointerEvents: 'auto'
+          }}
+          onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e); }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleExpandCheck}
+          data-is-ui="true"
+        >
+          {activeTool === 'text' || isEditingRichText ? (
+            <div style={{
+              fontFamily: `var(--tl - font - ${currentFont})`,
+              color: activeColorHex,
+              fontSize: '24px',
+              fontWeight: richStats.bold ? 'bold' : 'normal',
+              fontStyle: richStats.italic ? 'italic' : 'normal',
+              textDecoration: [
+                richStats.underline ? 'underline' : '',
+                richStats.strike ? 'line-through' : ''
+              ].filter(Boolean).join(' ') || 'none',
+              pointerEvents: 'none'
+            }}>
+              A
+            </div>
+          ) : (
+            <Scribble strokeWidth={sizeMap[currentSize] || 2.5} color={activeColorHex} />
+          )}
+        </div>
+      </UIPortal>
     );
   }
 
   return (
-    <div
-      className={styles.bubble}
-      style={{ left: position.x, top: position.y }}
-      onMouseDown={handleMouseDown}
-      onClick={handleSmartClick}
-      data-is-ui="true"
-    >
-      {(activeTool === 'text' || (activeTool === 'select' && isEditingRichText)) && (
-        <div className={styles.textSettings}>
-          <div className={styles.dropdownRow}>
-            <CustomDropdown
-              value={currentFont}
-              options={['draw', 'sans', 'serif', 'mono']}
-              labels={{ draw: 'Draw', sans: 'Sans', serif: 'Serif', mono: 'Mono' }}
-              onChange={(val: string) => setStyle(DefaultFontStyle, val)}
-              isOpen={activeDropdown === 'font'}
-              onToggle={() => {
-                if (!hasMoved.current) setActiveDropdown(activeDropdown === 'font' ? null : 'font');
-              }}
-              applyFontToLabel={true}
-              hasMoved={hasMoved}
-            />
-            <CustomDropdown
-              value={currentSize}
-              options={['s', 'm', 'l', 'xl']}
-              labels={{ s: 'S', m: 'M', l: 'L', xl: 'XL' }}
-              onChange={(val: string) => setStyle(DefaultSizeStyle, val)}
-              isOpen={activeDropdown === 'size'}
-              onToggle={() => {
-                if (!hasMoved.current) setActiveDropdown(activeDropdown === 'size' ? null : 'size');
-              }}
-              width="80px"
-              hasMoved={hasMoved}
-            />
-          </div>
-          <div className={styles.toolsRow}>
-            <div className={styles.styleGroup}>
-              <button
-                className={clsx(styles.iconBtn, richStats.bold && styles.active)}
-                onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('bold'); }}
-                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              >
-                <Bold size={16} />
-              </button>
-              <button
-                className={clsx(styles.iconBtn, richStats.italic && styles.active)}
-                onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('italic'); }}
-                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              >
-                <Italic size={16} />
-              </button>
-              <button
-                className={clsx(styles.iconBtn, richStats.underline && styles.active)}
-                onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('underline'); }}
-                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              >
-                <Underline size={16} />
-              </button>
-              <button
-                className={clsx(styles.iconBtn, richStats.strike && styles.active)}
-                onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('strikethrough'); }}
-                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              >
-                <Strikethrough size={16} />
-              </button>
+    <UIPortal>
+      <div
+        className={clsx(styles.bubble, isDragging && styles.dragging)}
+        style={{ left: position.x, top: position.y, pointerEvents: 'auto' }}
+        onMouseDown={handleMouseDown}
+        onClick={handleSmartClick}
+        data-is-ui="true"
+      >
+        {(activeTool === 'text' || (activeTool === 'select' && isEditingRichText)) && (
+          <div className={styles.textSettings}>
+            <div className={styles.dropdownRow}>
+              <CustomDropdown
+                value={currentFont}
+                options={['draw', 'sans', 'serif', 'mono']}
+                labels={{ draw: 'Draw', sans: 'Sans', serif: 'Serif', mono: 'Mono' }}
+                onChange={(val: string) => setStyle(DefaultFontStyle, val)}
+                isOpen={activeDropdown === 'font'}
+                onToggle={() => {
+                  if (!hasMoved.current) setActiveDropdown(activeDropdown === 'font' ? null : 'font');
+                }}
+                applyFontToLabel={true}
+                hasMoved={hasMoved}
+              />
+              <CustomDropdown
+                value={currentSize}
+                options={['s', 'm', 'l', 'xl']}
+                labels={{ s: 'S', m: 'M', l: 'L', xl: 'XL' }}
+                onChange={(val: string) => setStyle(DefaultSizeStyle, val)}
+                isOpen={activeDropdown === 'size'}
+                onToggle={() => {
+                  if (!hasMoved.current) setActiveDropdown(activeDropdown === 'size' ? null : 'size');
+                }}
+                width="80px"
+                hasMoved={hasMoved}
+              />
             </div>
-            <div className={styles.styleGroup}>
-              {['start', 'middle', 'end', 'justify'].filter(h => {
-                if (h === 'justify') {
-                  const isAuto = (editingShape as any)?.props?.autoSize ?? true;
-                  return !isAuto;
-                }
-                return true;
-              }).map((h) => {
-                const isActive = isEditingRichText ? richStats.align === h : getStyle(DefaultTextAlignStyle, 'start') === h;
-                return (
-                  <button
-                    key={h}
-                    className={clsx(styles.iconBtn, isActive && styles.active)}
-                    onClick={() => {
-                      if (!hasMoved.current) {
-                        setStyle(DefaultTextAlignStyle, h);
-                      }
-                    }}
-                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                    title={`Align ${h} `}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <rect x="2" y="4" width="12" height="1.5" rx="0.75" />
-                      <rect
-                        x={h === 'start' ? 2 : (h === 'middle' ? 4 : (h === 'end' ? 6 : 2))}
-                        y="7.25"
-                        width={h === 'justify' ? 12 : 8} height="1.5" rx="0.75"
-                      />
-                      <rect
-                        x={h === 'start' ? 2 : (h === 'middle' ? 3 : (h === 'end' ? 4 : 2))}
-                        y="10.5"
-                        width={h === 'justify' ? 12 : 10} height="1.5" rx="0.75"
-                      />
-                    </svg>
-                  </button>
-                );
-              })}
+            <div className={styles.toolsRow}>
+              <div className={styles.styleGroup}>
+                <button
+                  className={clsx(styles.iconBtn, richStats.bold && styles.active)}
+                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('bold'); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <Bold size={16} />
+                </button>
+                <button
+                  className={clsx(styles.iconBtn, richStats.italic && styles.active)}
+                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('italic'); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <Italic size={16} />
+                </button>
+                <button
+                  className={clsx(styles.iconBtn, richStats.underline && styles.active)}
+                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('underline'); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <Underline size={16} />
+                </button>
+                <button
+                  className={clsx(styles.iconBtn, richStats.strike && styles.active)}
+                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('strikethrough'); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <Strikethrough size={16} />
+                </button>
+              </div>
+              <div className={styles.styleGroup}>
+                {['start', 'middle', 'end', 'justify'].filter(h => {
+                  if (h === 'justify') {
+                    const isAuto = (editingShape as any)?.props?.autoSize ?? true;
+                    return !isAuto;
+                  }
+                  return true;
+                }).map((h) => {
+                  const isActive = isEditingRichText ? richStats.align === h : getStyle(DefaultTextAlignStyle, 'start') === h;
+                  return (
+                    <button
+                      key={h}
+                      className={clsx(styles.iconBtn, isActive && styles.active)}
+                      onClick={() => {
+                        if (!hasMoved.current) {
+                          setStyle(DefaultTextAlignStyle, h);
+                        }
+                      }}
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      title={`Align ${h} `}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <rect x="2" y="4" width="12" height="1.5" rx="0.75" />
+                        <rect
+                          x={h === 'start' ? 2 : (h === 'middle' ? 4 : (h === 'end' ? 6 : 2))}
+                          y="7.25"
+                          width={h === 'justify' ? 12 : 8} height="1.5" rx="0.75"
+                        />
+                        <rect
+                          x={h === 'start' ? 2 : (h === 'middle' ? 3 : (h === 'end' ? 4 : 2))}
+                          y="10.5"
+                          width={h === 'justify' ? 12 : 10} height="1.5" rx="0.75"
+                        />
+                      </svg>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
+        )}
+        {activeTool === 'draw' && (
+          <div className={styles.sizeRow}>
+            <button
+              className={clsx(styles.sizeBtn, currentSize === 's' && styles.active)}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 's')}
+            >
+              <Scribble strokeWidth={1.5} color={activeColorHex} />
+            </button>
+            <button
+              className={clsx(styles.sizeBtn, currentSize === 'm' && styles.active)}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'm')}
+            >
+              <Scribble strokeWidth={2.5} color={activeColorHex} />
+            </button>
+            <button
+              className={clsx(styles.sizeBtn, currentSize === 'l' && styles.active)}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'l')}
+            >
+              <Scribble strokeWidth={4} color={activeColorHex} />
+            </button>
+            <button
+              className={clsx(styles.sizeBtn, currentSize === 'xl' && styles.active)}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xl')}
+            >
+              <Scribble strokeWidth={6} color={activeColorHex} />
+            </button>
+          </div>
+        )}
+        <div className={styles.colorsRow}>
+          {colors.map(c => (
+            <button
+              key={c}
+              className={clsx(styles.colorSwatch, currentColor === c && styles.activeColor)}
+              style={{
+                backgroundColor: colorsMap[c],
+              }}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={() => !hasMoved.current && setStyle(DefaultColorStyle, c)}
+            />
+          ))}
         </div>
-      )}
-      {activeTool === 'draw' && (
-        <div className={styles.sizeRow}>
-          <button
-            className={clsx(styles.sizeBtn, currentSize === 's' && styles.active)}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 's')}
-          >
-            <Scribble strokeWidth={1.5} color={activeColorHex} />
-          </button>
-          <button
-            className={clsx(styles.sizeBtn, currentSize === 'm' && styles.active)}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'm')}
-          >
-            <Scribble strokeWidth={2.5} color={activeColorHex} />
-          </button>
-          <button
-            className={clsx(styles.sizeBtn, currentSize === 'l' && styles.active)}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'l')}
-          >
-            <Scribble strokeWidth={4} color={activeColorHex} />
-          </button>
-          <button
-            className={clsx(styles.sizeBtn, currentSize === 'xl' && styles.active)}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xl')}
-          >
-            <Scribble strokeWidth={6} color={activeColorHex} />
-          </button>
-        </div>
-      )}
-      <div className={styles.colorsRow}>
-        {colors.map(c => (
-          <button
-            key={c}
-            className={clsx(styles.colorSwatch, currentColor === c && styles.activeColor)}
-            style={{
-              backgroundColor: colorsMap[c],
-            }}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onClick={() => !hasMoved.current && setStyle(DefaultColorStyle, c)}
-          />
-        ))}
       </div>
-    </div>
+    </UIPortal>
   );
 });

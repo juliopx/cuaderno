@@ -562,10 +562,10 @@ export const Sidebar = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={styles.sidebar} style={{ '--sidebar-columns': columns.length } as React.CSSProperties}>
-        <button className={styles.closeButton} onClick={toggleSidebar} title="Close sidebar">
-          <PanelLeftClose size={18} />
-        </button>
+      <div
+        className={styles.sidebar}
+        style={{ '--sidebar-columns': columns.length } as React.CSSProperties}
+      >
         {columns.map((col) => (
           <Column
             key={col.id}
@@ -582,96 +582,104 @@ export const Sidebar = () => {
             type={col.type}
             activeDragItem={activeDragItem}
           />
-
         ))}
-
-        <DragOverlay dropAnimation={dropAnimation}>
-          {activeDragItem ? (() => {
-            // Logic copied from SortableItem to render the preview
-            const isNotebook = !(activeDragItem as any).notebookId;
-            const isFolder = !isNotebook && !(activeDragItem as Page).updatedAt;
-            const isPage = !isNotebook && !isFolder;
-
-            let Icon = File;
-            if (isNotebook) Icon = Book;
-            if (isFolder) Icon = FolderIcon;
-            if (isPage) Icon = File;
-
-            const nameStrokes = (activeDragItem as any).nameStrokes;
-            let svgWidth = 250;
-            let viewBox = "0 0 250 40";
-            if (nameStrokes) {
-              const bbox = getSvgPathBoundingBox(nameStrokes);
-              if (bbox && !bbox.isEmpty) {
-                const w = Math.max(250, bbox.x + bbox.width);
-                svgWidth = w;
-                viewBox = `0 0 ${w} 40`;
-              }
-            }
-
-            return (
-              <div
-                className={clsx(styles.item)}
-                style={{
-                  background: 'hsl(var(--color-bg-secondary))',
-                  color: 'hsl(var(--color-text-primary))',
-                  border: '1px solid hsl(var(--color-text-secondary) / 0.2)',
-                  borderRadius: '6px',
-                  opacity: 1,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                }}
-              >
-                <Icon className={styles.icon} />
-                <div className={styles.nameContainer}>
-                  <span className={styles.nameText}>{activeDragItem.name}</span>
-                  {nameStrokes && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: '8px',
-                        width: `${svgWidth}px`,
-                        minWidth: `${svgWidth}px`,
-                        maxWidth: 'none',
-                        height: '100%',
-                        pointerEvents: 'none',
-                        overflow: 'visible'
-                      }}
-                    >
-                      <svg
-                        viewBox={viewBox}
-                        width={svgWidth}
-                        height={40}
-                        style={{ display: 'block' }}
-                      >
-                        <path d={nameStrokes} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.itemActions}>
-                  {(isNotebook || isFolder) && <ChevronRight size={14} style={{ opacity: 0.5 }} />}
-                </div>
-              </div>
-            );
-          })() : null}
-        </DragOverlay>
-
-        <DeleteConfirmModal
-          isOpen={!!pendingDelete}
-          itemName={pendingDelete?.name || ''}
-          itemStrokes={pendingDelete?.nameStrokes}
-          itemType={pendingDelete?.type || 'page'}
-          itemCount={pendingDelete?.itemCount}
-          onConfirm={() => {
-            pendingDelete?.onConfirm();
-          }}
-
-          onCancel={() => setPendingDelete(null)}
-        />
-
       </div>
-    </DndContext>
+
+      <button
+        className={styles.closeButton}
+        onClick={toggleSidebar}
+        title="Close sidebar"
+        style={{ '--sidebar-columns': columns.length } as React.CSSProperties}
+      >
+        <PanelLeftClose size={18} />
+      </button>
+
+      <DragOverlay dropAnimation={dropAnimation}>
+        {activeDragItem ? (() => {
+          // Logic copied from SortableItem to render the preview
+          const isNotebook = !(activeDragItem as any).notebookId;
+          const isFolder = !isNotebook && !(activeDragItem as Page).updatedAt;
+          const isPage = !isNotebook && !isFolder;
+
+          let Icon = File;
+          if (isNotebook) Icon = Book;
+          if (isFolder) Icon = FolderIcon;
+          if (isPage) Icon = File;
+
+          const nameStrokes = (activeDragItem as any).nameStrokes;
+          let svgWidth = 250;
+          let viewBox = "0 0 250 40";
+          if (nameStrokes) {
+            const bbox = getSvgPathBoundingBox(nameStrokes);
+            if (bbox && !bbox.isEmpty) {
+              const w = Math.max(250, bbox.x + bbox.width);
+              svgWidth = w;
+              viewBox = `0 0 ${w} 40`;
+            }
+          }
+
+          return (
+            <div
+              className={clsx(styles.item)}
+              style={{
+                background: 'hsl(var(--color-bg-secondary))',
+                color: 'hsl(var(--color-text-primary))',
+                border: '1px solid hsl(var(--color-text-secondary) / 0.2)',
+                borderRadius: '6px',
+                opacity: 1,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}
+            >
+              <Icon className={styles.icon} />
+              <div className={styles.nameContainer}>
+                <span className={styles.nameText}>{activeDragItem.name}</span>
+                {nameStrokes && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: '8px',
+                      width: `${svgWidth}px`,
+                      minWidth: `${svgWidth}px`,
+                      maxWidth: 'none',
+                      height: '100%',
+                      pointerEvents: 'none',
+                      overflow: 'visible'
+                    }}
+                  >
+                    <svg
+                      viewBox={viewBox}
+                      width={svgWidth}
+                      height={40}
+                      style={{ display: 'block' }}
+                    >
+                      <path d={nameStrokes} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className={styles.itemActions}>
+                {(isNotebook || isFolder) && <ChevronRight size={14} style={{ opacity: 0.5 }} />}
+              </div>
+            </div>
+          );
+        })() : null}
+      </DragOverlay>
+
+      <DeleteConfirmModal
+        isOpen={!!pendingDelete}
+        itemName={pendingDelete?.name || ''}
+        itemStrokes={pendingDelete?.nameStrokes}
+        itemType={pendingDelete?.type || 'page'}
+        itemCount={pendingDelete?.itemCount}
+        onConfirm={() => {
+          pendingDelete?.onConfirm();
+        }}
+
+        onCancel={() => setPendingDelete(null)}
+      />
+
+    </DndContext >
   );
 };
 
