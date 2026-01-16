@@ -201,3 +201,13 @@ body {
     filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
   }
 }
+
+/* Tldraw Accent Color Overrides */
+.tl-theme__light,
+.tl-theme__dark {
+  --tl-color-selected: var(--color-accent) !important;
+  --tl-color-selection-stroke: var(--color-accent) !important;
+  --tl-color-selection-fill: var(--color-accent-soft) !important;
+  --tl-color-hint: var(--color-accent) !important;
+  --tl-color-interaction-user: var(--color-accent) !important;
+}

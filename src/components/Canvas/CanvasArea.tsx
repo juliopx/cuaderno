@@ -410,6 +410,9 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       const target = e.target as HTMLElement;
       if (target.closest('[data-is-ui="true"]')) return;
 
+      // Allow panning with middle/right click (ignore if not left click)
+      if (e.button !== 0) return;
+
       const toolId = editor.getCurrentToolId();
       if (toolId !== 'text') return;
 
