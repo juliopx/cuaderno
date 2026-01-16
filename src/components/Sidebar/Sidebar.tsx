@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import type { Notebook, Folder, Page } from '../../types';
 import styles from './Sidebar.module.css';
-import { FolderPlus, FilePlus, BookPlus, Folder as FolderIcon, File, Book, Plus, ChevronRight, Trash2, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { FolderPlus, FilePlus, BookPlus, Folder as FolderIcon, File, Book, ChevronRight, Trash2, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import clsx from 'clsx';
 import { RenameOverlayV2 } from './RenameOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -37,7 +37,8 @@ interface SortableItemProps {
   item: Notebook | Folder | Page;
   isActive: boolean;
   onSelect: (item: Notebook | Folder | Page) => void;
-  onDoubleClick: (e: React.MouseEvent) => void;
+  onDoubleClick: (e: React.MouseEvent | React.PointerEvent) => void;
+  onPointerDown?: (e: React.PointerEvent) => void;
   onDelete?: (id: string) => void;
   styles: any;
   activeDragItem: Notebook | Folder | Page | null;
@@ -48,7 +49,7 @@ interface SortableItemProps {
   isDarkMode: boolean; // Add this
 }
 
-const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, styles, activeDragItem, isRtl, folders, pages, notebooks, isDarkMode }: SortableItemProps) => {
+const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, onDelete, styles, activeDragItem, isRtl, folders, pages, notebooks, isDarkMode }: SortableItemProps) => {
   const {
     attributes,
     listeners,
@@ -136,6 +137,7 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
         onSelect(item);
       }}
       onDoubleClick={onDoubleClick}
+      onPointerDown={onPointerDown}
     >
       <Icon
         className={styles.icon}
@@ -222,6 +224,7 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [pointerType, setPointerType] = useState<string>('mouse');
 
   // Use Droppable for the column itself (for dropping into empty space)
   const { setNodeRef, isOver } = useDroppable({
@@ -249,6 +252,7 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 item={item}
                 isActive={item.id === activeId}
                 onSelect={onSelect}
+                onPointerDown={(e) => setPointerType(e.pointerType)}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -270,6 +274,7 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                   initialName={item.name}
                   initialStrokes={(item as any).nameStrokes}
                   initialColor={(item as any).color}
+                  initialPointerType={pointerType}
                   onSave={(name, strokes, color) => {
                     onRename(item.id, name, strokes, color);
                     setEditingId(null);
@@ -326,19 +331,6 @@ export const Sidebar = () => {
 
   // Update global accent color based on active item
   useEffect(() => {
-    const activeItemId = activePageId || activeNotebookId;
-    // Note: activeNotebookId is always set if we are in a notebook, but activePageId is more specific.
-    // If we have activePageId, use that.
-    // If NOT activePageId, but activeNotebookId is set... actually activeNotebookId might be set even if we are "in" a folder path?
-    // If we are navigating folders, activeNotebookId is set.
-    // The "active item" visually in sidebar is the selected one.
-    // Use activePageId if present.
-    // If no page is selected, checking if a folder is selected is harder because 'activePath' is just a path, not a single selection state (unless we infer it).
-    // The Sidebar logic highlights 'activeId' in columns.
-    // The columns logic:
-    // in root column: activeId = activeNotebookId
-    // in folder columns: activeId = next folder ID in path OR activePageId
-
     // To simplify: resolve color based on the most specific active entity.
     // If activePageId is set, use it.
     // If not, use the last item in activePath (folder).

@@ -12,9 +12,10 @@ interface RenameOverlayProps {
   onSave: (name: string, strokes?: string, color?: string) => void;
   onCancel: () => void;
   anchorRect: DOMRect;
+  initialPointerType?: string;
 }
 
-export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onSave, onCancel, anchorRect }: RenameOverlayProps) => {
+export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onSave, onCancel, anchorRect, initialPointerType = 'mouse' }: RenameOverlayProps) => {
   const [name, setName] = useState(initialName);
   const [paths, setPaths] = useState<string[]>(initialStrokes ? [initialStrokes] : []);
   const [currentPath, setCurrentPath] = useState<string>("");
@@ -72,6 +73,7 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
   }, [name, paths, selectedColor, onCancel, onSave]);
 
   const handleScroll = (e: React.UIEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     const sl = e.currentTarget.scrollLeft;
     setScrollLeft(sl);
     if (scrollGroupRef.current) {
@@ -80,13 +82,14 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
   };
 
   const startDrawing = (e: React.PointerEvent) => {
-    if (e.pointerType !== 'pen' && e.pointerType !== 'touch') return;
+    // Only allow drawing with pen
+    if (e.pointerType !== 'pen') return;
 
     // For pen/touch, we prevent default to stop focus/text selection on the input below
     e.preventDefault();
     e.stopPropagation();
 
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     isDrawing.current = true;
     const pos = getPos(e);
     // pos.x is relative to inputWrapper padding start now
@@ -94,18 +97,24 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
   };
 
   const draw = (e: React.PointerEvent) => {
+    e.stopPropagation();
     setLastPointerType(e.pointerType);
     if (!isDrawing.current) return;
+    if (e.pointerType === 'pen') e.preventDefault();
     const pos = getPos(e);
     setCurrentPath(prev => `${prev} L ${pos.x} ${pos.y}`);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e: React.PointerEvent) => {
+    e.stopPropagation();
     if (isDrawing.current && currentPath) {
       setPaths(prev => [...prev, currentPath]);
     }
     isDrawing.current = false;
     setCurrentPath("");
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch (err) { }
   };
 
   const getPos = (e: React.PointerEvent) => {
@@ -161,21 +170,40 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
             onPointerDown={startDrawing}
             onPointerMove={draw}
             onPointerUp={stopDrawing}
-            onPointerLeave={stopDrawing}
-            onPointerEnter={(e) => setLastPointerType(e.pointerType)}
+            onPointerLeave={(e) => {
+              if (e.pointerType !== 'pen') stopDrawing(e);
+            }}
+            onPointerEnter={(e) => {
+              e.stopPropagation();
+              setLastPointerType(e.pointerType);
+            }}
             style={{
               cursor: lastPointerType === 'pen' ? 'crosshair' : 'text',
               direction: 'ltr', /* Force LTR for the coordinate system to match SVG, but handle visual RTL via CSS */
-            }}
+              userSelect: initialPointerType === 'pen' ? 'none' : 'auto',
+              WebkitUserSelect: initialPointerType === 'pen' ? 'none' : 'auto',
+            } as React.CSSProperties}
           >
             <input
               ref={inputRef}
               autoFocus
               className={styles.input}
               value={name}
+              readOnly={initialPointerType === 'pen'}
+              onFocus={(e) => {
+                if (initialPointerType === 'pen') {
+                  // For pen, we don't want to select text or show keyboard / focus cursor necessarily
+                  e.target.blur();
+                } else {
+                  e.target.select();
+                }
+              }}
               onChange={(e) => setName(e.target.value)}
               onScroll={handleScroll}
-              style={{ cursor: 'inherit', textAlign: 'start' }}
+              style={{
+                cursor: initialPointerType === 'pen' ? 'default' : 'text',
+                textAlign: 'start'
+              }}
             />
             <svg className={styles.svgOverlay} viewBox="0 0 2000 40" preserveAspectRatio="xMinYMin slice">
               {/* The strokes AND the guide move with the text scroll */}
@@ -208,7 +236,10 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
                       ? `0 0 0 2px hsl(var(--color-bg-primary)), 0 0 0 4px ${hex}`
                       : undefined
                   }}
-                  onClick={() => setSelectedColor(key)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedColor(key);
+                  }}
                   title={key === 'auto' ? 'Auto' : key}
                 >
                   {/* Visual cue for auto handled by box-shadow or just plain */}
