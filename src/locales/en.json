@@ -21,6 +21,7 @@
   "select_page_to_start": "Select a page to start drawing",
   "tool_selection": "Selection",
   "tool_pencil": "Pencil",
+  "tool_eraser": "Eraser",
   "tool_text": "Text",
   "font_size_s": "Small",
   "font_size_m": "Medium",

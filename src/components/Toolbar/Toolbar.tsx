@@ -1,5 +1,5 @@
 import styles from './Toolbar.module.css';
-import { MousePointer2, Pencil, Type } from 'lucide-react';
+import { MousePointer2, Pencil, Eraser, Type } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { UIPortal } from '../UIPortal';
@@ -39,6 +39,13 @@ export const Toolbar = ({ activeTool, onSelectTool }: ToolbarProps) => {
           title={t('tool_pencil')}
         >
           <Pencil size={20} />
+        </button>
+        <button
+          className={clsx(styles.button, activeTool === 'eraser' && styles.active)}
+          onClick={() => onSelectTool('eraser')}
+          title={t('tool_eraser')}
+        >
+          <Eraser size={20} />
         </button>
         <button
           className={clsx(styles.button, activeTool === 'text' && styles.active)}
