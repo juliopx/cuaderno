@@ -53,7 +53,8 @@
   letter-spacing: normal;
   /* 0.9rem * 2 */
   padding: 0;
-  color: hsl(var(--color-text-primary));
+  color: inherit;
+  /* inherit from wrapper which gets color from prop */
   /* Ensure high contrast */
   outline: none;
 }
@@ -111,15 +112,46 @@
 }
 
 .confirm {
-  background: hsl(var(--color-accent));
-  color: hsl(var(--color-accent-text));
+  background: var(--color-accent);
+  color: #ffffff;
   border-color: transparent;
   font-weight: bold;
   font-size: 0.9rem;
   padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
 }
 
 .confirm:hover {
-  background: hsl(var(--color-accent-hover));
-  color: hsl(var(--color-accent-text));
+  filter: brightness(0.9);
+}
+
+/* Color Picker Styles */
+.colorsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+
+.colorSwatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  padding: 0;
+}
+
+[data-theme='dark'] .colorSwatch {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.colorSwatch:hover {
+  transform: scale(1.1);
 }

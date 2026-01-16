@@ -16,6 +16,16 @@ function App() {
     loadFs();
     initSync();
 
+    // Sync language from store to i18n/DOM on mount
+    const { language } = useFileSystemStore.getState();
+    if (language) {
+      import('./i18n').then(i18n => {
+        i18n.default.changeLanguage(language);
+        document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = language;
+      });
+    }
+
     // Expose global debug utilities
     (window as any).cleardb = async () => {
       const confirmLocal = confirm('⚠️ DELETE LOCAL DATA? This cannot be undone.');

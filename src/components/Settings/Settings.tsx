@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings as SettingsIcon, Sun, Moon, Monitor, LogOut, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, Sun, Moon, Monitor, LogOut, RefreshCw, ChevronDown, Check } from 'lucide-react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore';
+import { useTranslation } from 'react-i18next';
 import styles from './Settings.module.css';
 import clsx from 'clsx';
 import googleDriveIcon from '../../assets/google-drive.svg';
 
 export const Settings = () => {
-  const { theme, setTheme, leftHandedMode, setLeftHandedMode } = useFileSystemStore();
+  const { theme, setTheme, dominantHand, setDominantHand, language, setLanguage } = useFileSystemStore();
+  const { t } = useTranslation();
+  const leftHandedMode = dominantHand === 'left';
   const {
     isConfigured,
     isEnabled,
@@ -20,12 +23,20 @@ export const Settings = () => {
     user
   } = useSyncStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const langMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      // Close main settings menu
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setIsLanguageOpen(false);
+      }
+      // Close language dropdown if clicked outside of it
+      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+        setIsLanguageOpen(false);
       }
     };
     window.addEventListener('mousedown', handleClickOutside);
@@ -33,16 +44,39 @@ export const Settings = () => {
   }, []);
 
   const handleLogout = async () => {
-    const deleteData = window.confirm('Do you want to delete all saved data in Google Drive before logging out?');
+    const deleteData = window.confirm(t('confirm_logout_delete_data'));
     await logout(deleteData);
     setIsOpen(false);
   };
 
   const themes = [
-    { id: 'auto', icon: Monitor, label: 'Auto' },
-    { id: 'light', icon: Sun, label: 'Light' },
-    { id: 'dark', icon: Moon, label: 'Dark' },
+    { id: 'auto', icon: Monitor, label: t('theme_auto') },
+    { id: 'light', icon: Sun, label: t('theme_light') },
+    { id: 'dark', icon: Moon, label: t('theme_dark') },
   ];
+
+  const languages = [
+    { code: 'ar', label: 'العربية' },
+    { code: 'ca', label: 'Català' },
+    { code: 'de', label: 'Deutsch' },
+    { code: 'en', label: 'English' },
+    { code: 'es', label: 'Español' },
+    { code: 'eu', label: 'Euskera' },
+    { code: 'fr', label: 'Français' },
+    { code: 'gl', label: 'Galego' },
+    { code: 'it', label: 'Italiano' },
+    { code: 'nl', label: 'Nederlands' },
+    { code: 'pl', label: 'Polski' },
+    { code: 'pt', label: 'Português' },
+    { code: 'ru', label: 'Русский' },
+    { code: 'sv', label: 'Svenska' },
+    { code: 'tr', label: 'Türkçe' },
+    { code: 'zh', label: '中文 (简体)' },
+    { code: 'ja', label: '日本語' },
+    { code: 'ko', label: '한국어' },
+  ];
+
+  const activeLanguageLabel = languages.find(l => l.code === language)?.label || 'English';
 
   const isSyncing = syncStatus === 'syncing' || syncStatus === 'saving-to-disk';
 
@@ -58,7 +92,7 @@ export const Settings = () => {
       <button
         className={clsx(styles.gearButton, isOpen && styles.active)}
         onClick={() => setIsOpen(!isOpen)}
-        title="Settings"
+        title={t('settings')}
       >
         <SettingsIcon size={20} />
       </button>
@@ -72,7 +106,40 @@ export const Settings = () => {
           } as React.CSSProperties}
         >
           <div className={styles.section}>
-            <div className={styles.sectionTitle}>Theme</div>
+            <div className={styles.sectionTitle}>{t('language')}</div>
+            <div className={styles.languageDropdownWrapper} ref={langMenuRef}>
+              <button
+                className={clsx(styles.dropdownTrigger, isLanguageOpen && styles.active)}
+                onClick={() => setIsLanguageOpen(!isLanguageOpen)}
+              >
+                <span>{activeLanguageLabel}</span>
+                <ChevronDown size={14} className={clsx(styles.chevron, isLanguageOpen && styles.rotate)} />
+              </button>
+
+              {isLanguageOpen && (
+                <div className={styles.languageDropdown}>
+                  {languages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      className={clsx(styles.languageOption, language === lang.code && styles.selected)}
+                      onClick={() => {
+                        setLanguage(lang.code as any);
+                        setIsLanguageOpen(false);
+                      }}
+                    >
+                      <span>{lang.label}</span>
+                      {language === lang.code && <Check size={14} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.divider} />
+
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>{t('theme')}</div>
             <div className={styles.themeGrid}>
               {themes.map((t) => (
                 <button
@@ -93,31 +160,36 @@ export const Settings = () => {
           <div className={styles.divider} />
 
           <div className={styles.section}>
-            <div className={styles.sectionTitle}>Accessibility</div>
-            <div className={styles.toggleWrapper}>
-              <div className={styles.toggleLabel}>Modo Zurdo</div>
-              <div
-                className={clsx(styles.toggle, leftHandedMode && styles.toggleActive)}
-                onClick={() => setLeftHandedMode(!leftHandedMode)}
+            <div className={styles.sectionTitle}>{t('dominant_hand')}</div>
+            <div className={styles.handGrid}>
+              <button
+                className={clsx(styles.handItem, dominantHand === 'left' && styles.handItemActive)}
+                onClick={() => setDominantHand('left')}
               >
-                <div className={styles.toggleCircle} />
-              </div>
+                <span>{t('hand_left')}</span>
+              </button>
+              <button
+                className={clsx(styles.handItem, dominantHand === 'right' && styles.handItemActive)}
+                onClick={() => setDominantHand('right')}
+              >
+                <span>{t('hand_right')}</span>
+              </button>
             </div>
           </div>
 
           <div className={styles.divider} />
 
           <div className={styles.section}>
-            <div className={styles.sectionTitle}>Cloud Sync</div>
+            <div className={styles.sectionTitle}>{t('cloud_sync')}</div>
             {!isConfigured ? (
               <div className={styles.syncSection}>
                 <button
                   className={styles.authButton}
                   onClick={() => authenticate()}
-                  title="Connect to Google Drive to sync your notebooks across devices."
+                  title={t('connect_google_drive')}
                 >
                   <img src={googleDriveIcon} alt="Google Drive" />
-                  <span>Connect Google Drive</span>
+                  <span>{t('connect_google_drive')}</span>
                 </button>
               </div>
             ) : (
@@ -126,7 +198,7 @@ export const Settings = () => {
                   <button
                     className={styles.userInfoButton}
                     onClick={handleLogout}
-                    title="Click to Log Out"
+                    title={t('log_out')}
                   >
                     <img src={user.photo} alt={user.name} className={styles.userPhoto} />
                     <div className={styles.userName}>{user.name}</div>
@@ -137,7 +209,7 @@ export const Settings = () => {
                 )}
 
                 <div className={styles.toggleWrapper}>
-                  <div className={styles.toggleLabel}>Auto-sync</div>
+                  <div className={styles.toggleLabel}>{t('auto_sync')}</div>
                   <div
                     className={clsx(styles.toggle, isEnabled && styles.toggleActive)}
                     onClick={() => setIsEnabled(!isEnabled)}
@@ -152,12 +224,12 @@ export const Settings = () => {
                   disabled={isSyncing}
                 >
                   <RefreshCw size={18} className={clsx(isSyncing && styles.spin)} />
-                  <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+                  <span>{isSyncing ? t('syncing') : t('sync_now')}</span>
                 </button>
 
                 {lastSync && (
                   <div className={styles.lastSync}>
-                    Last sync: {new Date(lastSync).toLocaleTimeString()}
+                    {t('last_sync', { time: new Date(lastSync).toLocaleTimeString() })}
                   </div>
                 )}
               </div>

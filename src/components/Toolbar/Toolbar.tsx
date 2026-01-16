@@ -1,5 +1,6 @@
 import styles from './Toolbar.module.css';
 import { MousePointer2, Pencil, Type } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { UIPortal } from '../UIPortal';
 import { useFileSystemStore } from '../../store/fileSystemStore';
@@ -10,7 +11,9 @@ interface ToolbarProps {
 }
 
 export const Toolbar = ({ activeTool, onSelectTool }: ToolbarProps) => {
-  const { leftHandedMode } = useFileSystemStore();
+  const { t } = useTranslation();
+  const { dominantHand } = useFileSystemStore();
+  const leftHandedMode = dominantHand === 'left';
 
   return (
     <UIPortal>
@@ -26,21 +29,21 @@ export const Toolbar = ({ activeTool, onSelectTool }: ToolbarProps) => {
         <button
           className={clsx(styles.button, activeTool === 'select' && styles.active)}
           onClick={() => onSelectTool('select')}
-          title="Selection"
+          title={t('tool_selection')}
         >
           <MousePointer2 size={20} />
         </button>
         <button
           className={clsx(styles.button, activeTool === 'draw' && styles.active)}
           onClick={() => onSelectTool('draw')}
-          title="Pencil"
+          title={t('tool_pencil')}
         >
           <Pencil size={20} />
         </button>
         <button
           className={clsx(styles.button, activeTool === 'text' && styles.active)}
           onClick={() => onSelectTool('text')}
-          title="Text"
+          title={t('tool_text')}
         >
           <Type size={20} />
         </button>

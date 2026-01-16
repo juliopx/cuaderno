@@ -21,13 +21,15 @@ interface FileSystemState {
   activeStateModifier: string;
   isSidebarOpen: boolean;
   theme: 'auto' | 'light' | 'dark';
-  leftHandedMode: boolean;
+  dominantHand: 'right' | 'left';
+  language: 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar' | 'ca' | 'gl' | 'eu' | 'ru' | 'it' | 'nl' | 'sv' | 'pl' | 'tr';
   deletedItemIds: string[]; // Tombstones for sync
 
   // Actions
   toggleSidebar: () => void;
   setTheme: (theme: 'auto' | 'light' | 'dark') => void;
-  setLeftHandedMode: (leftHandedMode: boolean) => void;
+  setDominantHand: (hand: 'right' | 'left') => void;
+  setLanguage: (lang: 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar' | 'ca' | 'gl' | 'eu' | 'ru' | 'it' | 'nl' | 'sv' | 'pl' | 'tr') => void;
 
   createNotebook: (name: string) => void;
   createFolder: (name: string, parentId: string, notebookId: string) => void;
@@ -38,7 +40,7 @@ interface FileSystemState {
   openFolder: (id: string) => void; // Adds to path
   closeFolder: (id: string) => void; // Removes from path (and children)
   selectPage: (id: string) => void;
-  renameNode: (id: string, name: string, strokes?: string) => void;
+  renameNode: (id: string, name: string, strokes?: string, color?: string) => void;
 
   deleteNotebook: (id: string) => void;
   deleteFolder: (id: string) => void;
@@ -74,7 +76,9 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   activeStateModifier: '',
   isSidebarOpen: true,
   theme: (localStorage.getItem('cuaderno-theme') as any) || 'auto',
-  leftHandedMode: localStorage.getItem('cuaderno-left-handed') === 'true',
+  dominantHand: (localStorage.getItem('cuaderno-dominant-hand') as any) ||
+    (localStorage.getItem('cuaderno-left-handed') === 'true' ? 'left' : 'right'),
+  language: (localStorage.getItem('i18nextLng') as any) || 'en',
 
   forceSaveActivePage: null,
   registerActivePageSaver: (saver) => set({ forceSaveActivePage: saver }),
@@ -89,10 +93,15 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
     localStorage.setItem('cuaderno-theme', theme);
     set({ theme });
   },
-  setLeftHandedMode: (leftHandedMode) => {
-    diskLog(`💾 [FileSystem] Changed left-handed mode to "${leftHandedMode}"`);
-    localStorage.setItem('cuaderno-left-handed', String(leftHandedMode));
-    set({ leftHandedMode });
+  setDominantHand: (hand) => {
+    diskLog(`💾 [FileSystem] Changed dominant hand to "${hand}"`);
+    localStorage.setItem('cuaderno-dominant-hand', hand);
+    set({ dominantHand: hand });
+  },
+  setLanguage: (lang) => {
+    diskLog(`💾 [FileSystem] Changed language to "${lang}"`);
+    set({ language: lang });
+    import('../i18n').then(m => m.default.changeLanguage(lang));
   },
 
 
@@ -242,7 +251,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   },
 
 
-  renameNode: (id, name, strokes) => {
+  renameNode: (id, name, strokes, color) => {
     const clientId = useSyncStore.getState().clientId;
     set((state) => {
       let notebooks = [...state.notebooks];
@@ -255,6 +264,8 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
           ...notebooks[nbIdx],
           name,
           nameStrokes: strokes,
+          // Only update color if provided (undefined means no change, but 'auto' is a valid change)
+          ...(color !== undefined ? { color } : {}),
           dirty: true,
           lastModifier: clientId
         };
@@ -265,6 +276,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
           ...folders[id],
           name,
           nameStrokes: strokes,
+          ...(color !== undefined ? { color } : {}),
           dirty: true,
           lastModifier: clientId
         };
@@ -274,6 +286,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
           ...pages[id],
           name,
           nameStrokes: strokes,
+          ...(color !== undefined ? { color } : {}),
           dirty: true,
           lastModifier: clientId
         };

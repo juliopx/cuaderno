@@ -1,13 +1,15 @@
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import type { Notebook, Folder, Page } from '../../types';
 import styles from './Sidebar.module.css';
-import { Folder as FolderIcon, File, Book, Plus, ChevronRight, Trash2, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { FolderPlus, FilePlus, BookPlus, Folder as FolderIcon, File, Book, Plus, ChevronRight, Trash2, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import clsx from 'clsx';
 import { RenameOverlayV2 } from './RenameOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { getSvgPathBoundingBox } from '../../lib/svgUtils';
+import { resolveItemColor, getThemeColorHex } from '../../lib/colorUtils';
+import { useThemeColorHex } from '../../hooks/useThemeColor';
 import {
   DndContext,
   pointerWithin,
@@ -28,6 +30,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useTranslation } from 'react-i18next';
 
 interface SortableItemProps {
   item: Notebook | Folder | Page;
@@ -37,9 +40,14 @@ interface SortableItemProps {
   onDelete?: (id: string) => void;
   styles: any;
   activeDragItem: Notebook | Folder | Page | null;
+  isRtl: boolean;
+  folders: Record<string, Folder>;
+  pages: Record<string, Page>;
+  notebooks: Notebook[];
+  isDarkMode: boolean; // Add this
 }
 
-const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, styles, activeDragItem }: SortableItemProps) => {
+const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, styles, activeDragItem, isRtl, folders, pages, notebooks, isDarkMode }: SortableItemProps) => {
   const {
     attributes,
     listeners,
@@ -49,6 +57,10 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
     isDragging,
     isOver
   } = useSortable({ id: item.id, data: { item } });
+
+  // Resolve effective color with inheritance
+  const itemColorName = useMemo(() => resolveItemColor(item.id, folders, pages, notebooks), [item.id, folders, pages, notebooks, (item as any).color, (item as any).parentId]);
+  const itemColorHex = useThemeColorHex(itemColorName, isDarkMode);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -91,10 +103,14 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
   const nameStrokes = (item as any).nameStrokes;
   let svgWidth = 250;
   let viewBox = "0 0 250 40";
+  let drawingWidth = 0;
+  let bbox: any = null;
+
   if (nameStrokes) {
-    const bbox = getSvgPathBoundingBox(nameStrokes);
+    bbox = getSvgPathBoundingBox(nameStrokes);
     if (bbox && !bbox.isEmpty) {
-      const w = Math.max(250, bbox.x + bbox.width);
+      drawingWidth = bbox.x + bbox.width;
+      const w = Math.max(250, drawingWidth);
       svgWidth = w;
       viewBox = `0 0 ${w} 40`;
     }
@@ -103,7 +119,14 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        // Use HEX values directly
+        '--item-accent-color': itemColorHex,
+        '--item-icon-color': itemColorHex,
+        backgroundColor: isActive ? itemColorHex : undefined,
+        color: isActive ? '#fff' : undefined
+      } as React.CSSProperties}
       {...attributes}
       {...listeners}
       className={clsx(styles.item, isActive && styles.itemActive, canReceiveDrop && styles.itemOver)}
@@ -113,7 +136,10 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
       }}
       onDoubleClick={onDoubleClick}
     >
-      <Icon className={styles.icon} />
+      <Icon
+        className={styles.icon}
+        style={{ color: !isActive ? itemColorHex : undefined }}
+      />
       <div className={styles.nameContainer}>
         <span className={styles.nameText}>{item.name}</span>
         {nameStrokes && (
@@ -121,7 +147,7 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
             style={{
               position: 'absolute',
               top: 0,
-              left: '8px',
+              insetInlineStart: '8px',
               width: `${svgWidth}px`,
               minWidth: `${svgWidth}px`,
               maxWidth: 'none',
@@ -136,7 +162,14 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
               height={40}
               style={{ display: 'block' }}
             >
-              <path d={nameStrokes} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d={nameStrokes}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                transform={isRtl ? `translate(${svgWidth - (bbox?.x + bbox?.width || 0)}, 0)` : undefined}
+              />
             </svg>
           </div>
         )}
@@ -171,14 +204,20 @@ interface ColumnProps {
   onAddFolder?: () => void;
   onAddPage?: () => void;
   onAddNotebook?: () => void;
-  onRename: (id: string, name: string, strokes?: string) => void;
+  onRename: (id: string, name: string, strokes?: string, color?: string) => void;
   onDelete?: (id: string) => void;
   type: 'notebook' | 'content';
   activeDragItem: Notebook | Folder | Page | null;
+  folders: Record<string, Folder>;
+  pages: Record<string, Page>;
+  notebooks: Notebook[];
+  isDarkMode: boolean;
 }
 
 
-const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRename, onDelete, type, activeDragItem }: ColumnProps) => {
+const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRename, onDelete, type, activeDragItem, folders, pages, notebooks, isDarkMode }: ColumnProps) => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.dir() === 'rtl';
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -218,14 +257,20 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 onDelete={onDelete}
                 styles={styles}
                 activeDragItem={activeDragItem}
+                isRtl={isRtl}
+                folders={folders}
+                pages={pages}
+                notebooks={notebooks}
+                isDarkMode={isDarkMode}
               />
 
               {editingId === item.id && anchorRect && (
                 <RenameOverlayV2
                   initialName={item.name}
                   initialStrokes={(item as any).nameStrokes}
-                  onSave={(name, strokes) => {
-                    onRename(item.id, name, strokes);
+                  initialColor={(item as any).color}
+                  onSave={(name, strokes, color) => {
+                    onRename(item.id, name, strokes, color);
                     setEditingId(null);
                   }}
                   onCancel={() => setEditingId(null)}
@@ -238,23 +283,23 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
       </div>
       <div className={styles.toolbar}>
         {type === 'notebook' && (
-          <button className={styles.toolbarButton} onClick={onAddNotebook} title="New Notebook">
-            <Plus size={16} />
-            <span>New Notebook</span>
+          <button className={styles.toolbarButton} onClick={onAddNotebook} title={t('new_notebook')}>
+            <BookPlus size={16} />
+            <span>{t('new_notebook')}</span>
           </button>
         )}
         {type === 'content' && (
           <>
             {onAddFolder && (
-              <button className={styles.toolbarButton} onClick={onAddFolder} title="New Folder">
-                <FolderIcon size={16} />
-                <span>New Folder</span>
+              <button className={styles.toolbarButton} onClick={onAddFolder} title={t('new_folder')}>
+                <FolderPlus size={16} />
+                <span>{t('new_folder')}</span>
               </button>
             )}
             {onAddPage && (
-              <button className={styles.toolbarButton} onClick={onAddPage} title="New Page">
-                <File size={16} />
-                <span>New Page</span>
+              <button className={styles.toolbarButton} onClick={onAddPage} title={t('new_page')}>
+                <FilePlus size={16} />
+                <span>{t('new_page')}</span>
               </button>
             )}
           </>
@@ -265,13 +310,62 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
 };
 
 export const Sidebar = () => {
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.dir() === 'rtl';
+  const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
+    (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
   const {
     notebooks, folders, pages, activePath, activeNotebookId, activePageId,
     createNotebook, createFolder, createPage,
     deleteNotebook, deleteFolder, deletePage,
     setActiveNotebook, selectPage, isSidebarOpen, toggleSidebar, renameNode,
-    reorderNotebooks, moveNode, leftHandedMode
+    reorderNotebooks, moveNode, dominantHand
   } = useFileSystemStore();
+
+  // Update global accent color based on active item
+  useEffect(() => {
+    const activeItemId = activePageId || activeNotebookId;
+    // Note: activeNotebookId is always set if we are in a notebook, but activePageId is more specific.
+    // If we have activePageId, use that.
+    // If NOT activePageId, but activeNotebookId is set... actually activeNotebookId might be set even if we are "in" a folder path?
+    // If we are navigating folders, activeNotebookId is set.
+    // The "active item" visually in sidebar is the selected one.
+    // Use activePageId if present.
+    // If no page is selected, checking if a folder is selected is harder because 'activePath' is just a path, not a single selection state (unless we infer it).
+    // The Sidebar logic highlights 'activeId' in columns.
+    // The columns logic:
+    // in root column: activeId = activeNotebookId
+    // in folder columns: activeId = next folder ID in path OR activePageId
+
+    // To simplify: resolve color based on the most specific active entity.
+    // If activePageId is set, use it.
+    // If not, use the last item in activePath (folder).
+    // If activePath is empty (just notebook selected), use activeNotebookId.
+
+    let targetId = activePageId;
+    if (!targetId) {
+      // Check active path for latest folder
+      if (activePath.length > 0) {
+        targetId = activePath[activePath.length - 1]; // Last folder
+      } else {
+        targetId = activeNotebookId; // Notebook
+      }
+    }
+
+
+    const colorName = targetId ? resolveItemColor(targetId, folders, pages, notebooks) : 'blue';
+    const colorHex = getThemeColorHex(colorName, isDarkMode);
+
+    // Update CSS variable with HEX
+    document.documentElement.style.setProperty('--color-accent', colorHex);
+    // Also update selection background potentially?
+    // .itemActive uses hsl(var(--color-selection-bg)).
+    // Ideally we want the global accent to trigger everything.
+
+  }, [activePageId, activeNotebookId, activePath, folders, pages, notebooks, isDarkMode]);
+
+  const leftHandedMode = dominantHand === 'left';
 
   const [activeDragItem, setActiveDragItem] = useState<Notebook | Folder | Page | null>(null);
 
@@ -394,7 +488,7 @@ export const Sidebar = () => {
       onSelect: (item: any) => {
         setActiveNotebook(item.id);
       },
-      onAddNotebook: () => createNotebook("Untitled Notebook"),
+      onAddNotebook: () => createNotebook(t('untitled_notebook')),
       onDelete: (id: string) => {
         const notebook = notebooks.find(n => n.id === id);
         if (!notebook) return;
@@ -477,8 +571,8 @@ export const Sidebar = () => {
             // selectPage handles persistence internally now
           }
         },
-        onAddFolder: () => createFolder("New Folder", parentId, currentNotebookId),
-        onAddPage: () => createPage("New Page", parentId, currentNotebookId),
+        onAddFolder: () => createFolder(t('untitled_folder'), parentId, currentNotebookId),
+        onAddPage: () => createPage(t('untitled_page'), parentId, currentNotebookId),
         onDelete: (id: string) => {
           const isFolder = !!folders[id];
 
@@ -578,6 +672,11 @@ export const Sidebar = () => {
             items={col.items}
             activeId={col.activeId}
             onSelect={col.onSelect}
+            // ... pass down store maps
+            folders={folders}
+            pages={pages}
+            notebooks={notebooks}
+            isDarkMode={isDarkMode}
             onAddFolder={col.onAddFolder}
             onAddPage={col.onAddPage}
             onAddNotebook={col.onAddNotebook}
@@ -592,7 +691,7 @@ export const Sidebar = () => {
       <button
         className={styles.closeButton}
         onClick={toggleSidebar}
-        title="Close sidebar"
+        title={t('sidebar_close')}
         style={{
           '--sidebar-columns': columns.length,
           '--close-left': leftHandedMode ? 'auto' : `calc(250px * ${columns.length} + 0.75rem + 12px)`,
@@ -646,7 +745,7 @@ export const Sidebar = () => {
                     style={{
                       position: 'absolute',
                       top: 0,
-                      left: '8px',
+                      insetInlineStart: '8px',
                       width: `${svgWidth}px`,
                       minWidth: `${svgWidth}px`,
                       maxWidth: 'none',

@@ -8,7 +8,9 @@ import { useFileSystemStore } from '../store/fileSystemStore';
 import clsx from 'clsx';
 
 export const Layout = () => {
-  const { load, theme, leftHandedMode } = useFileSystemStore(); // Added 'leftHandedMode'
+  const { load, theme, dominantHand } = useFileSystemStore();
+  const leftHandedMode = dominantHand === 'left';
+  // Added 'leftHandedMode'
 
   // Theme observer
   useEffect(() => {

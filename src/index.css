@@ -4,15 +4,19 @@
   --color-bg-panel: hsla(0, 0%, 88%, 0.15);
   --color-text-primary: 0 0% 15%;
   --color-text-secondary: 0 0% 50%;
-  --color-accent: 215 90% 50%;
-  --color-accent-soft: 215 90% 95%;
+  /* Use HEX for accent default to allow direct override or keep HSL but ensure mix works */
+  /* Actually, to support HEX override from JS, we should default these to HEX or use color-mix which handles both */
+  --color-accent: #007AFF;
+  /* Default blue hex */
+  --color-accent-soft: color-mix(in srgb, var(--color-accent), transparent 85%);
+
   --color-border: 0 0% 85%;
   --color-danger: 0 84% 60%;
   --color-danger-soft: 0 84% 94%;
 
-  --color-selection-bg: 215 90% 50%;
+  --color-selection-bg: var(--color-accent);
   --color-selection-text: 0 0% 100%;
-  --color-selection-hover: 215 90% 60%;
+  --color-selection-hover: color-mix(in srgb, var(--color-accent), white 20%);
 
   --glass-bg: hsla(0, 0%, 100%, 0.1);
   --glass-border: hsla(0, 0%, 100%, 0.15);
@@ -49,9 +53,11 @@
   --glass-bg: hsla(220, 15%, 12%, 0.2);
   --glass-border: hsla(0, 0%, 100%, 0.05);
 
-  --color-accent: 215 100% 60%;
-  --color-selection-bg: 215 100% 55%;
-  --color-selection-hover: 215 100% 45%;
+  --color-accent: #5e92ff;
+  /* Default dark blue hex or similar? Lighter blue for dark mode */
+  --color-accent-soft: color-mix(in srgb, var(--color-accent), transparent 85%);
+  --color-selection-bg: var(--color-accent);
+  --color-selection-hover: color-mix(in srgb, var(--color-accent), black 20%);
   --color-danger: 0 84% 65%;
   --color-danger-soft: 0 84% 12%;
 }
@@ -69,9 +75,10 @@
     --glass-bg: hsla(220 15% 12% / 0.5);
     --glass-border: hsla(0 0% 100% / 0.08);
 
-    --color-accent: 215 100% 60%;
-    --color-selection-bg: 215 100% 55%;
-    --color-selection-hover: 215 100% 45%;
+    --color-accent: #5e92ff;
+    --color-accent-soft: color-mix(in srgb, var(--color-accent), transparent 85%);
+    --color-selection-bg: var(--color-accent);
+    --color-selection-hover: color-mix(in srgb, var(--color-accent), black 20%);
     --color-danger: 0 84% 65%;
     --color-danger-soft: 0 84% 12%;
   }
@@ -101,6 +108,15 @@ body {
   /* App-like feel */
   width: 100vw;
   height: 100vh;
+}
+
+:root:lang(ar) body,
+:root:lang(ar) button,
+:root:lang(ar) input,
+:root:lang(ar) textarea,
+:root:lang(ar) select {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-size: 120%;
 }
 
 #root {
@@ -172,7 +188,6 @@ body {
   color: #000000 !important;
   /* Boost brightness and contrast for "almost black" -> "almost white" conversion */
   filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
-  opacity: 1 !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -184,6 +199,5 @@ body {
     color: #000000 !important;
     /* Boost brightness and contrast for "almost black" -> "almost white" conversion */
     filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
-    opacity: 1 !important;
   }
 }

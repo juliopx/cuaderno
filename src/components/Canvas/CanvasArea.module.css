@@ -21,10 +21,20 @@
 }
 
 .topBar {
-  position: absolute;
+  position: fixed;
   top: 1rem;
-  left: 1rem;
-  z-index: 100;
+  left: var(--topbar-left, 1rem);
+  right: var(--topbar-right, auto);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-direction: var(--topbar-dir, row);
+  pointer-events: none;
+}
+
+.topBar>* {
+  pointer-events: auto;
 }
 
 .iconButton {
@@ -52,7 +62,8 @@
 .recenterButton {
   position: fixed;
   bottom: 1rem;
-  right: 1rem;
+  right: var(--recenter-right, 1rem);
+  left: var(--recenter-left, auto);
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -67,7 +78,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  z-index: 1000;
+  z-index: 2100;
   transition: all 0.2s ease;
   user-select: none;
 }

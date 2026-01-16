@@ -3,6 +3,7 @@ export interface Notebook {
   id: string;
   name: string;
   nameStrokes?: string; // SVG path data
+  color?: string;
   createdAt: number;
   order: number;
   version: number;
@@ -17,6 +18,7 @@ export interface Folder {
   parentId: string | null; // null if root of notebook (or we can have a generic root)
   name: string;
   nameStrokes?: string; // SVG path data
+  color?: string;
   createdAt: number;
   order: number;
   version: number;
@@ -31,6 +33,7 @@ export interface Page {
   parentId: string; // Folder ID or Notebook ID (if generic root)
   name: string;
   nameStrokes?: string; // SVG path data
+  color?: string;
   createdAt: number;
   // content is stored separately in OPFS, but we might track last modified here
   updatedAt: number;

@@ -6,6 +6,10 @@
   z-index: 2040;
 }
 
+:root:lang(ar) .wrapper {
+  font-size: 1.2em;
+}
+
 .gearButton {
   width: 40px;
   height: 40px;
@@ -30,7 +34,7 @@
 
 .gearButton.active {
   color: hsl(var(--color-selection-text));
-  background: hsl(var(--color-selection-bg));
+  background: var(--color-selection-bg);
   transform: rotate(90deg);
 }
 
@@ -72,9 +76,43 @@
   font-weight: 600;
   text-transform: uppercase;
   color: hsl(var(--color-text-secondary));
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   letter-spacing: 0.05em;
   opacity: 0.8;
+}
+
+.handGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.handItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: none;
+  background: hsla(var(--color-text-secondary) / 0.1);
+  color: hsl(var(--color-text-primary));
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.handItem:hover {
+  background-color: hsl(var(--color-text-secondary) / 0.15);
+}
+
+.handItemActive {
+  background: var(--color-selection-bg);
+  color: hsl(var(--color-selection-text));
+}
+
+.handItemActive:hover {
+  background: var(--color-selection-hover);
 }
 
 .themeGrid {
@@ -103,12 +141,12 @@
 }
 
 .themeItemActive {
-  background: hsl(var(--color-selection-bg));
+  background: var(--color-selection-bg);
   color: hsl(var(--color-selection-text));
 }
 
 .themeItemActive:hover {
-  background: hsl(var(--color-selection-hover));
+  background: var(--color-selection-hover);
   color: hsl(var(--color-selection-text));
 }
 
@@ -208,7 +246,7 @@
 }
 
 .toggleActive {
-  background: hsl(var(--color-accent));
+  background: var(--color-accent);
 }
 
 .toggleCircle {
@@ -232,7 +270,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: hsl(var(--color-accent));
+  background: var(--color-accent);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
@@ -243,7 +281,8 @@
 }
 
 .authButton:hover:not(:disabled) {
-  background: hsl(215 90% 60%);
+  /* Using color-mix for simpler lightening than HSL adjustment on HEX */
+  background: color-mix(in srgb, var(--color-accent), white 10%);
   transform: translateY(-1px);
 }
 
@@ -298,4 +337,104 @@
   opacity: 0.8;
   margin-top: -4px;
   font-style: italic;
+}
+
+/* Language Dropdown */
+.languageDropdownWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.dropdownTrigger {
+  width: 100%;
+  padding: 8px 12px;
+  background: hsla(var(--color-text-secondary) / 0.1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: hsl(var(--color-text-primary));
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdownTrigger:hover {
+  background: hsla(var(--color-text-secondary) / 0.15);
+}
+
+.dropdownTrigger.active {
+  background: hsla(var(--color-text-secondary) / 0.2);
+  border-color: var(--glass-border);
+}
+
+.chevron {
+  transition: transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.rotate {
+  transform: rotate(180deg);
+}
+
+.languageDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: hsl(var(--color-bg-primary));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  z-index: 10;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: fadeIn 0.15s ease-out;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.languageOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--color-text-primary));
+  font-size: 0.85rem;
+  text-align: left;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.languageOption:hover {
+  background-color: hsla(var(--color-text-secondary) / 0.1);
+}
+
+.languageOption.selected {
+  background-color: var(--color-accent-soft);
+  /* was hsl(var(--color-accent) / 0.1) but now we have soft mix */
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

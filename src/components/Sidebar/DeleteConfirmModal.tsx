@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Book, Folder as FolderIcon, File } from 'lucide-react';
 import styles from './DeleteConfirmModal.module.css';
 import { getSvgPathBoundingBox } from '../../lib/svgUtils';
@@ -60,14 +61,17 @@ export const DeleteConfirmModal = ({ isOpen, itemName, itemStrokes, itemType, it
   if (itemType === 'notebook') Icon = Book;
   if (itemType === 'folder') Icon = FolderIcon;
 
-  const itemDescription = itemType === 'notebook' ? 'notebook' : itemType === 'folder' ? 'folder' : 'page';
+  const { t } = useTranslation(); // Need to add hook usage at top component level
+  // Actually I need to add useTranslation import and hook usage first.
+  // Let's do a multi-edit for the whole file or just the render part.
+  const itemDescriptionKey = itemType === 'notebook' ? 'notebook' : itemType === 'folder' ? 'folder' : 'page';
 
   return createPortal(
     <div className={styles.backdrop} onClick={onCancel}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.message}>
-          Delete the following {itemDescription}?
-          {itemCount && itemCount > 0 ? <span style={{ display: 'block', fontSize: '0.9em', opacity: 0.7, marginTop: '4px' }}>(Contains {itemCount} items)</span> : null}
+          {t('delete_confirmation_message', { itemType: t(itemDescriptionKey) })}
+          {itemCount && itemCount > 0 ? <span style={{ display: 'block', fontSize: '0.9em', opacity: 0.7, marginTop: '4px' }}>{t('contains_items', { count: itemCount })}</span> : null}
         </div>
 
         <div className={styles.itemReplica}>
@@ -79,7 +83,13 @@ export const DeleteConfirmModal = ({ isOpen, itemName, itemStrokes, itemType, it
                 <svg
                   className={styles.nameStrokes}
                   viewBox={viewBox}
-                  style={svgStyle}
+                  style={{
+                    ...svgStyle,
+                    position: 'absolute',
+                    top: 0,
+                    insetInlineStart: '0',
+                    maxWidth: 'none'
+                  }}
                 >
                   <path d={itemStrokes} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
@@ -90,15 +100,14 @@ export const DeleteConfirmModal = ({ isOpen, itemName, itemStrokes, itemType, it
 
         <div className={styles.buttons}>
           <button className={styles.cancelBtn} onClick={onCancel}>
-            Cancel
+            {t('cancel')}
           </button>
           <button className={styles.confirmBtn} onClick={onConfirm}>
-            Delete
+            {t('delete')}
           </button>
         </div>
       </div>
     </div>,
     document.body
   );
-
 };

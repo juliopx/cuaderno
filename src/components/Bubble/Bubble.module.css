@@ -111,8 +111,7 @@
 .colorSwatch.activeColor {
   transform: scale(1.2);
   border-color: transparent;
-  /* Ring adapts to bg color */
-  box-shadow: 0 0 0 2px hsl(var(--color-bg-primary)), 0 0 0 4px hsl(var(--color-accent));
+  /* Ring adapts to bg color via inline style */
 }
 
 /* Dark mode specific overrides for better contrast */
@@ -185,8 +184,8 @@
 }
 
 .dropdownTrigger.open {
-  border-color: hsl(var(--color-accent));
-  box-shadow: 0 0 0 1px hsl(var(--color-accent));
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
 }
 
 .dropdownIcon {
@@ -238,8 +237,8 @@
 }
 
 .dropdownItem.selected {
-  background: hsl(var(--color-accent) / 0.1);
-  color: hsl(var(--color-accent));
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 /* Tools Row (Style + Alignment) */
@@ -275,8 +274,8 @@
 }
 
 .iconBtn.active {
-  background: hsl(var(--color-accent) / 0.15);
-  color: hsl(var(--color-accent));
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 .iconBtn.disabled {

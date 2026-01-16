@@ -36,12 +36,24 @@
 }
 
 .active {
-  background-color: hsl(var(--color-accent));
+  background-color: var(--color-accent);
   color: #ffffff;
 }
 
 .active:hover {
-  background-color: hsl(var(--color-accent));
+  background-color: var(--color-accent);
+  /* Keep same as active */
+  cursor: default;
+  /* Optional: show it's not clickable */
+}
+
+.toolButton:active {
+  transform: scale(0.95);
+  background-color: var(--color-accent);
+}
+
+.toolButton.active {
+  background-color: var(--color-accent);
   /* Keep same as active */
   cursor: default;
   /* Optional: show it's not clickable */

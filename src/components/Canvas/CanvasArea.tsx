@@ -14,7 +14,7 @@ import styles from './CanvasArea.module.css';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
 import { useState, useEffect, useRef } from 'react';
-import { PanelLeftOpen, Focus } from 'lucide-react';
+import { PanelRightOpen, Focus, PanelLeftOpen } from 'lucide-react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore';
 import { useTextStyleStore } from '../../store/textStyleStore';
@@ -22,6 +22,8 @@ import { opfs } from '../../lib/opfs';
 import { RichTextShapeUtil } from '../../shapes/RichTextShapeUtil';
 import { syncLog } from '../../lib/debugLog';
 import { CanvasTitle } from './CanvasTitle';
+import { UIPortal } from '../UIPortal';
+import { useTranslation } from 'react-i18next';
 
 const customShapeUtils = [RichTextShapeUtil];
 
@@ -119,6 +121,7 @@ interface CanvasInterfaceProps {
 
 // Main Component Logic (Reactive)
 const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef, sidebarColumns, leftHandedMode }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number, leftHandedMode: boolean }) => {
+  const { t } = useTranslation();
   const editor = useEditor();
   // State to prevent flickering when switching focus between text shapes
   const forceTextModeRef = useRef(false);
@@ -714,63 +717,79 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       <DebugOverlay sidebarColumns={sidebarColumns} />
       <CenterMark />
       {!isSidebarOpen && (
-        <div className={styles.topBar}>
-          <button className={styles.iconButton} onClick={toggleSidebar}>
-            <PanelLeftOpen size={20} />
-          </button>
+        <UIPortal>
+          <div
+            className={styles.topBar}
+            style={{
+              '--topbar-left': leftHandedMode ? 'auto' : '1rem',
+              '--topbar-right': leftHandedMode ? '1rem' : 'auto',
+            } as React.CSSProperties}
+          >
+            <button className={styles.iconButton} onClick={toggleSidebar}>
+              {leftHandedMode ? <PanelRightOpen size={20} /> : <PanelLeftOpen size={20} />}
+            </button>
+          </div>
           <CanvasTitle />
-        </div>
+        </UIPortal>
       )}
 
       <Toolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
       <Bubble activeTool={activeTool} />
 
-      <button
-        className={styles.recenterButton}
-        title="Centrar (Click: Origen | Doble click: Ajustar todo)"
-        onClick={() => {
-          const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-          const viewportCenter = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
-          const viewportHalfHeight = window.innerHeight / 2;
-          const { z } = editor.getCamera();
-          editor.setCamera({ x: viewportCenter / z, y: viewportHalfHeight / z, z }, { animation: { duration: 300 } });
-        }}
-        onDoubleClick={(e) => {
-          e.stopPropagation();
-          const bounds = editor.getCurrentPageBounds();
-          if (!bounds) return;
+      <UIPortal>
+        <button
+          className={styles.recenterButton}
+          title={t('recenter')}
+          style={{
+            '--recenter-right': leftHandedMode ? 'auto' : '1rem',
+            '--recenter-left': leftHandedMode ? '1rem' : 'auto',
+          } as React.CSSProperties}
+          onClick={() => {
+            const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+            const viewportCenter = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
+            const viewportHalfHeight = window.innerHeight / 2;
+            const { z } = editor.getCamera();
+            editor.setCamera({ x: viewportCenter / z, y: viewportHalfHeight / z, z }, { animation: { duration: 300 } });
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            const bounds = editor.getCurrentPageBounds();
+            if (!bounds) return;
 
-          const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-          const padding = 64;
-          const availableWidth = window.innerWidth - sidebarWidth - padding;
-          const availableHeight = window.innerHeight - padding;
+            const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+            const padding = 64;
+            const availableWidth = window.innerWidth - sidebarWidth - padding;
+            const availableHeight = window.innerHeight - padding;
 
-          if (availableWidth <= 0 || availableHeight <= 0) return;
+            if (availableWidth <= 0 || availableHeight <= 0) return;
 
-          // Calculate ideal zoom (clamped to max 1 for clarity)
-          const zoomX = availableWidth / bounds.w;
-          const zoomY = availableHeight / bounds.h;
-          const z = Math.min(zoomX, zoomY, 1);
+            // Calculate ideal zoom (clamped to max 1 for clarity)
+            const zoomX = availableWidth / bounds.w;
+            const zoomY = availableHeight / bounds.h;
+            const z = Math.min(zoomX, zoomY, 1);
 
-          // Target screen center (offset by sidebar)
-          const targetX = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : sidebarWidth + (window.innerWidth - sidebarWidth) / 2;
-          const targetY = window.innerHeight / 2;
+            // Target screen center (offset by sidebar)
+            const targetX = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : sidebarWidth + (window.innerWidth - sidebarWidth) / 2;
+            const targetY = window.innerHeight / 2;
 
-          // camera.x = target_screen_x / zoom - target_page_x
-          const camX = (targetX / z) - (bounds.x + bounds.w / 2);
-          const camY = (targetY / z) - (bounds.y + bounds.h / 2);
+            // camera.x = target_screen_x / zoom - target_page_x
+            const camX = (targetX / z) - (bounds.x + bounds.w / 2);
+            const camY = (targetY / z) - (bounds.y + bounds.h / 2);
 
-          editor.setCamera({ x: camX, y: camY, z }, { animation: { duration: 300 } });
-        }}
-      >
-        <Focus size={20} />
-      </button>
+            editor.setCamera({ x: camX, y: camY, z }, { animation: { duration: 300 } });
+          }}
+        >
+          <Focus size={20} />
+        </button>
+      </UIPortal>
     </div>
   );
 });
 
 export const CanvasArea = () => {
-  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages, activePath, leftHandedMode } = useFileSystemStore();
+  const { t } = useTranslation();
+  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages, activePath, dominantHand } = useFileSystemStore();
+  const leftHandedMode = dominantHand === 'left';
   const parentRef = useRef<HTMLDivElement>(null);
 
   const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -787,12 +806,20 @@ export const CanvasArea = () => {
     return (
       <div className={styles.wrapper} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
         {!isSidebarOpen && (
-          <div className={styles.topBar}>
-            <button className={styles.iconButton} onClick={toggleSidebar}>
-              <PanelLeftOpen size={20} />
-            </button>
+          <UIPortal>
+            <div
+              className={styles.topBar}
+              style={{
+                '--topbar-left': leftHandedMode ? 'auto' : '1rem',
+                '--topbar-right': leftHandedMode ? '1rem' : 'auto',
+              } as React.CSSProperties}
+            >
+              <button className={styles.iconButton} onClick={toggleSidebar}>
+                {leftHandedMode ? <PanelRightOpen size={20} /> : <PanelLeftOpen size={20} />}
+              </button>
+            </div>
             <CanvasTitle />
-          </div>
+          </UIPortal>
         )}
         <div style={{
           display: 'flex',
@@ -804,7 +831,7 @@ export const CanvasArea = () => {
           fontSize: '1.125rem',
           transition: 'padding 0.3s ease'
         }}>
-          Select a page to start drawing
+          {t('select_page_to_start')}
         </div>
       </div>
     );

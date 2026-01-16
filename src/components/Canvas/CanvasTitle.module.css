@@ -1,5 +1,5 @@
 .container {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -10,13 +10,13 @@
       hsl(var(--color-bg-primary) / 0.8) 55px,
       transparent 100%);
   pointer-events: none;
-  z-index: 5;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: var(--title-align, flex-start);
   padding: 0.75rem 1.5rem;
-  padding-left: 5rem;
-  gap: 0;
+  padding-left: var(--title-padding-left, 5rem);
+  padding-right: var(--title-padding-right, 1.5rem);
 }
 
 .breadcrumb {
@@ -29,7 +29,6 @@
   pointer-events: auto;
   cursor: pointer;
   width: fit-content;
-  /* Ensure the clickable area is vertically reasonable */
   height: 50px;
   margin-top: -4px;
 }
@@ -52,9 +51,9 @@
   opacity: 0.5;
 }
 
-/* Drawings stay more visible */
+/* Drawings follow text opacity */
 .breadcrumb .itemWrapper .strokeOverlay {
-  opacity: 0.8;
+  opacity: 0.5;
 }
 
 /* The last item (active page) should be prominent */
@@ -65,8 +64,10 @@
 }
 
 .container>.itemWrapper:last-of-type .nameText,
-.breadcrumb>.itemWrapper:last-of-type .nameText {
-  opacity: 0.9;
+.breadcrumb>.itemWrapper:last-of-type .nameText,
+.container>.itemWrapper:last-of-type .strokeOverlay,
+.breadcrumb>.itemWrapper:last-of-type .strokeOverlay {
+  opacity: 1;
 }
 
 .separator {
@@ -91,7 +92,9 @@
 .strokeOverlay {
   position: absolute;
   top: 0;
-  left: 0;
+  insetInlineStart: 0;
+  /* changed from left: 0 */
+  width: 100%;
   height: 100%;
   pointer-events: none;
   color: inherit;

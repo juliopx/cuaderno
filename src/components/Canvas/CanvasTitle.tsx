@@ -1,5 +1,6 @@
 import { useMemo, Fragment } from 'react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
+import { useTranslation } from 'react-i18next';
 import styles from './CanvasTitle.module.css';
 import { getSvgPathBoundingBox } from '../../lib/svgUtils';
 
@@ -9,7 +10,7 @@ interface PathItem {
   nameStrokes?: string;
 }
 
-const HybridPathItem = ({ item }: { item: PathItem }) => {
+const HybridPathItem = ({ item, isRtl }: { item: PathItem; isRtl: boolean }) => {
   const bbox = useMemo(() => {
     if (!item.nameStrokes) return null;
     return getSvgPathBoundingBox(item.nameStrokes);
@@ -37,6 +38,7 @@ const HybridPathItem = ({ item }: { item: PathItem }) => {
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
+                transform={isRtl ? `translate(${svgWidth - drawingWidth}, 0)` : undefined}
               />
             </svg>
           </div>
@@ -47,7 +49,13 @@ const HybridPathItem = ({ item }: { item: PathItem }) => {
 };
 
 export const CanvasTitle = () => {
-  const { activeNotebookId, activePath, activePageId, notebooks, folders, pages, isSidebarOpen, toggleSidebar } = useFileSystemStore();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.dir() === 'rtl';
+  const {
+    activeNotebookId, notebooks, activePageId, pages, activePath, folders,
+    isSidebarOpen, toggleSidebar, dominantHand
+  } = useFileSystemStore();
+  const leftHandedMode = dominantHand === 'left';
 
   const activePage = activePageId ? pages[activePageId] : null;
 
@@ -67,14 +75,21 @@ export const CanvasTitle = () => {
     return items;
   }, [activeNotebookId, activePath, activePage, notebooks, folders]);
 
-  if (isSidebarOpen || !activePage) return null;
+  if (isSidebarOpen || breadcrumbItems.length === 0) return null;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.breadcrumb} onClick={toggleSidebar} title="Click to show sidebar">
+    <div
+      className={styles.container}
+      style={{
+        '--title-align': leftHandedMode ? 'flex-end' : 'flex-start',
+        '--title-padding-left': leftHandedMode ? '1.5rem' : '5rem',
+        '--title-padding-right': leftHandedMode ? '5rem' : '1.5rem',
+      } as React.CSSProperties}
+    >
+      <div className={styles.breadcrumb} onClick={toggleSidebar} title={t('click_to_show_sidebar')}>
         {breadcrumbItems.map((item, i) => (
           <Fragment key={item.id}>
-            <HybridPathItem item={item} />
+            <HybridPathItem item={item} isRtl={isRtl} />
             {i < breadcrumbItems.length - 1 && <span className={styles.separator}>/</span>}
           </Fragment>
         ))}

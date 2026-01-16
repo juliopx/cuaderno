@@ -89,7 +89,11 @@
 }
 
 .optionCard:hover {
-  border-color: hsl(var(--color-accent) / 0.3);
+  border-color: var(--color-accent);
+  /* Opacity must be handled in index.css def or use opaque override if needed. Actually accent is HEX now. We need opaque or rgba conversion? Tldraw HEX can't take / alpha. */
+  /* HEX cannot have alpha added this way in CSS. We need --color-accent-soft for backgrounds. */
+  /* For border, just use accent opaque? */
+  border-color: var(--color-accent);
   transform: translateY(-2px);
 }
 
@@ -126,17 +130,17 @@
 }
 
 .localButton {
-  background: hsl(var(--color-accent-soft));
-  color: hsl(var(--color-accent));
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
 }
 
 .localButton:hover {
-  background: hsl(var(--color-accent));
+  background: var(--color-accent);
   color: white;
 }
 
 .remoteButton {
-  background: hsl(var(--color-accent));
+  background: var(--color-accent);
   color: white;
 }
 

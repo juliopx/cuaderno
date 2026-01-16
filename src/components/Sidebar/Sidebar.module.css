@@ -48,7 +48,8 @@
   width: 250px;
   min-width: 250px;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
+  /* Changed from overflow-y: auto */
   display: flex;
   flex-direction: column;
 }
@@ -65,11 +66,15 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid hsl(var(--color-text-secondary) / 0.05);
+  flex-shrink: 0;
 }
 
 .list {
   flex: 1;
   padding: 0.5rem;
+  overflow-y: auto;
+  /* Scroll only the list */
+  overflow-x: hidden;
 }
 
 .item {
@@ -91,7 +96,9 @@
 }
 
 .itemActive {
-  background-color: hsl(var(--color-selection-bg));
+  background-color: var(--color-selection-bg);
+  /* color: hsl(var(--color-selection-text)); -> handled by inline style in component if needed, or check below */
+  /* Actually Sidebar.tsx sets color inline for active items to #fff usually */
   color: hsl(var(--color-selection-text));
 }
 
@@ -108,9 +115,10 @@
 }
 
 .itemOver {
-  outline: 2px solid hsl(var(--color-accent));
+  outline: 2px solid var(--color-accent);
   outline-offset: -2px;
-  background-color: hsl(var(--color-accent-soft) / 0.3);
+  background-color: var(--color-accent-soft);
+  /* Assuming accent-soft is also wrapped in index.css or opaque */
 }
 
 
@@ -133,6 +141,10 @@
   background-color: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
+  min-height: 50px;
+  align-items: center;
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .iconButton {
@@ -174,6 +186,19 @@
   gap: 0.5rem;
   font-size: 0.75rem;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  flex: 1;
+  /* Share space equally */
+  min-width: 0;
+  /* Allow shrinking */
+  justify-content: center;
+  /* Center content */
+}
+
+.toolbarButton span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .toolbarButton:hover {
@@ -197,7 +222,14 @@
   text-overflow: ellipsis;
   white-space: pre;
   opacity: 1;
+  white-space: pre;
+  opacity: 1;
   width: 100%;
+}
+
+:root:lang(ar) .nameText {
+  font-size: 1rem;
+  /* Increase from 0.9rem */
 }
 
 

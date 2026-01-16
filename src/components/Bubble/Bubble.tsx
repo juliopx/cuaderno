@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useEditor, track, useIsDarkMode, getDefaultColorTheme } from 'tldraw';
+import { useEditor, useIsDarkMode, getDefaultColorTheme } from 'tldraw';
 import {
   DefaultColorStyle,
   DefaultSizeStyle,
@@ -19,6 +19,7 @@ import {
   Strikethrough,
   ChevronDown
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Generic Scribble SVG
 const Scribble = ({ strokeWidth, color = 'currentColor' }: { strokeWidth: number, color?: string }) => (
@@ -152,12 +153,14 @@ const CustomDropdown = ({ value, options, labels, onChange, isOpen, onToggle, ic
   );
 };
 
-export const Bubble = track(({ activeTool }: BubbleProps) => {
+export const Bubble = ({ activeTool }: BubbleProps) => {
+  const { t } = useTranslation();
   const editor = useEditor();
   const isDarkMode = useIsDarkMode();
   const theme = getDefaultColorTheme({ isDarkMode });
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [isFontOpen, setIsFontOpen] = useState(false);
+  const [isSizeOpen, setIsSizeOpen] = useState(false);
   const [relativeClickPoint, setRelativeClickPoint] = useState({ x: 0, y: 0 });
 
   const textStyles = useTextStyleStore();
@@ -298,7 +301,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
     // Priming for NEW shapes
     const html = (editingShape?.props as any)?.html || '';
-    const isNewNode = html === '' || html === '<div></div>' || html === '<div>Start typing...</div>' || html === 'Start typing...';
+    const isNewNode = html === '' || html === '<div></div>' || html === `<div>${t('start_typing')}</div>` || html === t('start_typing');
 
     const applyPersistentStyles = () => {
       const active = document.activeElement as HTMLElement;
@@ -351,7 +354,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
       document.removeEventListener('pointerup', updateStats);
       document.removeEventListener('keyup', updateStats);
     };
-  }, [editor.getEditingShapeId()]);
+  }, [editor.getEditingShapeId(), t]);
 
   // 💡 PROACTIVE SYNC: When switching to text tool, push current persistent stats to Tldraw context
   // This ensures new shapes inherit the correct color/size from the very first frame.
@@ -411,7 +414,8 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   // Increase height for text tool (has font row)
   const height = isCollapsed ? 48 : (activeTool === 'text' ? 240 : 170);
 
-  const { leftHandedMode } = useFileSystemStore();
+  const { dominantHand } = useFileSystemStore();
+  const leftHandedMode = dominantHand === 'left';
   const initialX = leftHandedMode ? 100 : window.innerWidth / 2 - 150;
   const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: initialX, y: 100 }, width, height);
 
@@ -671,31 +675,40 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
       >
         {(activeTool === 'text' || (activeTool === 'select' && isEditingRichText)) && (
           <div className={styles.textSettings}>
-            <div className={styles.dropdownRow}>
-              <CustomDropdown
-                value={currentFont}
-                options={['draw', 'sans', 'serif', 'mono']}
-                labels={{ draw: 'Draw', sans: 'Sans', serif: 'Serif', mono: 'Mono' }}
-                onChange={(val: string) => setStyle(DefaultFontStyle, val)}
-                isOpen={activeDropdown === 'font'}
-                onToggle={() => {
-                  if (!hasMoved.current) setActiveDropdown(activeDropdown === 'font' ? null : 'font');
-                }}
-                applyFontToLabel={true}
-                hasMoved={hasMoved}
-              />
-              <CustomDropdown
-                value={currentSize}
-                options={['s', 'm', 'l', 'xl']}
-                labels={{ s: 'S', m: 'M', l: 'L', xl: 'XL' }}
-                onChange={(val: string) => setStyle(DefaultSizeStyle, val)}
-                isOpen={activeDropdown === 'size'}
-                onToggle={() => {
-                  if (!hasMoved.current) setActiveDropdown(activeDropdown === 'size' ? null : 'size');
-                }}
-                width="80px"
-                hasMoved={hasMoved}
-              />
+            <div className={styles.topRow}>
+              <div className={styles.dropdownsGroup}>
+                <CustomDropdown
+                  value={currentFont}
+                  options={['draw', 'sans', 'serif', 'mono']}
+                  labels={{
+                    draw: t('font_draw'),
+                    sans: t('font_sans'),
+                    serif: t('font_serif'),
+                    mono: t('font_mono'),
+                  }}
+                  onChange={(f: string) => setStyle(DefaultFontStyle, f)}
+                  isOpen={isFontOpen}
+                  onToggle={() => { setIsFontOpen(!isFontOpen); setIsSizeOpen(false); }}
+                  width="140px"
+                  hasMoved={hasMoved}
+                  applyFontToLabel
+                />
+                <CustomDropdown
+                  value={currentSize}
+                  options={['s', 'm', 'l', 'xl']}
+                  labels={{
+                    s: t('font_size_s'),
+                    m: t('font_size_m'),
+                    l: t('font_size_l'),
+                    xl: t('font_size_xl'),
+                  }}
+                  onChange={(s: string) => setStyle(DefaultSizeStyle, s)}
+                  isOpen={isSizeOpen}
+                  onToggle={() => { setIsSizeOpen(!isSizeOpen); setIsFontOpen(false); }}
+                  width="120px"
+                  hasMoved={hasMoved}
+                />
+              </div>
             </div>
             <div className={styles.toolsRow}>
               <div className={styles.styleGroup}>
@@ -703,6 +716,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                   className={clsx(styles.iconBtn, richStats.bold && styles.active)}
                   onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('bold'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  title={t('format_bold')}
                 >
                   <Bold size={16} />
                 </button>
@@ -710,6 +724,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                   className={clsx(styles.iconBtn, richStats.italic && styles.active)}
                   onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('italic'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  title={t('format_italic')}
                 >
                   <Italic size={16} />
                 </button>
@@ -717,6 +732,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                   className={clsx(styles.iconBtn, richStats.underline && styles.active)}
                   onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('underline'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  title={t('format_underline')}
                 >
                   <Underline size={16} />
                 </button>
@@ -724,6 +740,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                   className={clsx(styles.iconBtn, richStats.strike && styles.active)}
                   onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('strikethrough'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  title={t('format_strikethrough')}
                 >
                   <Strikethrough size={16} />
                 </button>
@@ -747,7 +764,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                         }
                       }}
                       onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      title={`Align ${h} `}
+                      title={t(`align_${h === 'middle' ? 'middle' : (h === 'end' ? 'end' : h)}`)}
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <rect x="2" y="4" width="12" height="1.5" rx="0.75" />
@@ -808,6 +825,9 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
               className={clsx(styles.colorSwatch, currentColor === c && styles.activeColor)}
               style={{
                 backgroundColor: colorsMap[c],
+                boxShadow: currentColor === c
+                  ? `0 0 0 2px var(--glass-bg), 0 0 0 4px ${colorsMap[c]}`
+                  : undefined
               }}
               onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
               onClick={() => !hasMoved.current && setStyle(DefaultColorStyle, c)}
@@ -815,6 +835,6 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
           ))}
         </div>
       </div>
-    </UIPortal>
+    </UIPortal >
   );
-});
+};
