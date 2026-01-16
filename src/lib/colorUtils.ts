@@ -26,7 +26,7 @@ export const resolveItemColor = (
   while (item && (item as any).parentId) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parentId: string = (item as any).parentId;
-    const parentFolder = folders[parentId];
+    const parentFolder: Folder | undefined = folders[parentId];
     if (parentFolder) {
       if (parentFolder.color && parentFolder.color !== 'black' && parentFolder.color !== 'auto') return parentFolder.color;
       item = parentFolder;

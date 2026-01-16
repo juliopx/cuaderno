@@ -1,4 +1,6 @@
 {
+  "delete_confirmation_message": "¿Eliminar el siguiente {{itemType}}?",
+  "contains_items": "(Contiene {{count}} elementos)",
   "language": "Idioma",
   "settings": "Ajustes",
   "theme": "Tema",

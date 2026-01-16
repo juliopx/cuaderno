@@ -1,4 +1,6 @@
 {
+  "delete_confirmation_message": "Vols eliminar el següent {{itemType}}?",
+  "contains_items": "(Conté {{count}} elements)",
   "language": "Idioma",
   "settings": "Configuració",
   "theme": "Tema",
@@ -6,6 +8,7 @@
   "theme_light": "Clar",
   "theme_dark": "Fosc",
   "dominant_hand": "Mà dominant",
+  "pen_mode": "Mode només llapis",
   "hand_left": "Esquerra",
   "hand_right": "Dreta",
   "cloud_sync": "Sincronització al núvol",
@@ -21,6 +24,7 @@
   "select_page_to_start": "Selecciona una pàgina per començar a dibuixar",
   "tool_selection": "Selecció",
   "tool_pencil": "Llapis",
+  "tool_eraser": "Goma d'esborrar",
   "tool_text": "Text",
   "font_size_s": "Petit",
   "font_size_m": "Mitjà",

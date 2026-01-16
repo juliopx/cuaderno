@@ -316,8 +316,7 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
 };
 
 export const Sidebar = () => {
-  const { t, i18n } = useTranslation();
-  const isRtl = i18n.dir() === 'rtl';
+  const { t } = useTranslation();
   const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
     (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 

@@ -1,4 +1,6 @@
 {
+  "delete_confirmation_message": "Ondorengo {{itemType}} ezabatu nahi duzu?",
+  "contains_items": "({{count}} elementu ditu)",
   "language": "Hizkuntza",
   "settings": "Ezarpenak",
   "theme": "Gaia",
@@ -6,6 +8,7 @@
   "theme_light": "Argia",
   "theme_dark": "Iluna",
   "dominant_hand": "Esku nagusia",
+  "pen_mode": "Arkatza soilik modua",
   "hand_left": "Ezkerra",
   "hand_right": "Eskuina",
   "cloud_sync": "Hodei sinkronizazioa",
@@ -21,6 +24,7 @@
   "select_page_to_start": "Hautatu orri bat marrazten hasteko",
   "tool_selection": "Hautapena",
   "tool_pencil": "Arkatza",
+  "tool_eraser": "Ezabagailua",
   "tool_text": "Testua",
   "font_size_s": "Txikia",
   "font_size_m": "Ertaina",
