@@ -14,11 +14,24 @@ export const Layout = () => {
 
   // Theme observer
   useEffect(() => {
+    let activeTheme = theme;
     if (theme === 'auto') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      activeTheme = isDark ? 'dark' : 'light';
       document.documentElement.removeAttribute('data-theme');
     } else {
       document.documentElement.setAttribute('data-theme', theme);
     }
+
+    // Update theme-color meta tag
+    const themeColor = activeTheme === 'dark' ? '#141414' : '#d9d9d9';
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      (meta as any).name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', themeColor);
   }, [theme]);
 
   useEffect(() => {

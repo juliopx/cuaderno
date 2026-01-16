@@ -16,6 +16,8 @@
   "syncing": "Sincronitzant...",
   "last_sync": "Última sinc.: {{time}}",
   "recenter": "Recentrar",
+  "undo": "Desfà",
+  "redo": "Refà",
   "select_page_to_start": "Selecciona una pàgina per començar a dibuixar",
   "tool_selection": "Selecció",
   "tool_pencil": "Llapis",

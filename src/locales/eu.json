@@ -16,6 +16,8 @@
   "syncing": "Sinkronizatzen...",
   "last_sync": "Azken sink.: {{time}}",
   "recenter": "Zentratu berriro",
+  "undo": "Desegin",
+  "redo": "Berregin",
   "select_page_to_start": "Hautatu orri bat marrazten hasteko",
   "tool_selection": "Hautapena",
   "tool_pencil": "Arkatza",

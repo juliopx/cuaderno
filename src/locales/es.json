@@ -17,6 +17,8 @@
   "syncing": "Sincronizando...",
   "last_sync": "Última sincronización: {{time}}",
   "recenter": "Recentrar",
+  "undo": "Deshacer",
+  "redo": "Rehacer",
   "select_page_to_start": "Selecciona una página para empezar a dibujar",
   "tool_selection": "Selección",
   "tool_pencil": "Lápiz",

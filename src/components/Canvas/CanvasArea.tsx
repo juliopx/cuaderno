@@ -13,11 +13,17 @@ import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
-import { useState, useEffect, useRef } from 'react';
-import { PanelRightOpen, PanelLeftOpen, LocateFixed } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import {
+  LocateFixed,
+  PanelLeftOpen,
+  PanelRightOpen,
+  Undo2,
+  Redo2
+} from 'lucide-react';
 import { CircularButton } from '../UI/CircularButton';
 import { useFileSystemStore } from '../../store/fileSystemStore';
-import { useSyncStore } from '../../store/syncStore';
+import { useSyncStore } from '../../store/syncStore'; // Assuming this is the correct path, user provided 'useSyncStore'
 import { useTextStyleStore } from '../../store/textStyleStore';
 import { opfs } from '../../lib/opfs';
 import { RichTextShapeUtil } from '../../shapes/RichTextShapeUtil';
@@ -25,6 +31,7 @@ import { syncLog } from '../../lib/debugLog';
 import { CanvasTitle } from './CanvasTitle';
 import { UIPortal } from '../UIPortal';
 import { useTranslation } from 'react-i18next';
+import clsx from 'clsx'; // Added clsx for HistoryControls
 
 const customShapeUtils = [RichTextShapeUtil];
 
@@ -113,6 +120,40 @@ const DebugOverlay = track(({ sidebarColumns }: { sidebarColumns: number }) => {
   );
 });
 
+const HistoryControls = track(({ sidebarColumns, leftHandedMode }: { sidebarColumns: number, leftHandedMode: boolean }) => {
+  const editor = useEditor();
+  const { t } = useTranslation();
+
+  const canUndo = editor.getCanUndo();
+  const canRedo = editor.getCanRedo();
+
+  const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+
+  return (
+    <div
+      className={styles.historyControls}
+      style={{
+        [leftHandedMode ? 'right' : 'left']: `calc(${sidebarWidth}px + 1rem)`,
+        [leftHandedMode ? 'left' : 'right']: 'auto'
+      } as React.CSSProperties}
+    >
+      <CircularButton
+        onClick={() => editor.undo()}
+        disabled={!canUndo}
+        title={t('undo')}
+        icon={<Undo2 size={20} />}
+        className={clsx(styles.historyButton, !canUndo && styles.disabled)}
+      />
+      <CircularButton
+        onClick={() => editor.redo()}
+        disabled={!canRedo}
+        title={t('redo')}
+        icon={<Redo2 size={20} />}
+        className={clsx(styles.historyButton, !canRedo && styles.disabled)}
+      />
+    </div>
+  );
+});
 
 interface CanvasInterfaceProps {
   pageId: string;
@@ -787,6 +828,56 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
+    // --- Gesture Detection (2/3 Finger Tap) ---
+    let touchStartTime = 0;
+    let initialTouches: { id: number, x: number, y: number }[] = [];
+    let touchMoving = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Ignore if it's already a complex gesture or we are in tool mode that might conflict
+      if (e.touches.length === 2 || e.touches.length === 3) {
+        touchStartTime = Date.now();
+        touchMoving = false;
+        initialTouches = Array.from(e.touches).map(t => ({ id: t.identifier, x: t.clientX, y: t.clientY }));
+      } else {
+        initialTouches = [];
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (initialTouches.length > 0) {
+        for (let i = 0; i < e.touches.length; i++) {
+          const t = e.touches[i];
+          const initial = initialTouches.find(it => it.id === t.identifier);
+          if (initial) {
+            const dist = Math.hypot(t.clientX - initial.x, t.clientY - initial.y);
+            if (dist > 10) { // Movement threshold
+              touchMoving = true;
+              break;
+            }
+          }
+        }
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (initialTouches.length > 0 && e.touches.length === 0) {
+        const duration = Date.now() - touchStartTime;
+        if (duration < 300 && !touchMoving) {
+          if (initialTouches.length === 2) {
+            editor.undo();
+          } else if (initialTouches.length === 3) {
+            editor.redo();
+          }
+        }
+        initialTouches = [];
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
     return () => {
       container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('pointerdown', handlePointerDown);
@@ -795,6 +886,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       container.removeEventListener('wheel', handleWheel, { capture: true } as any);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
     };
   }, [editor]);
 
@@ -862,6 +957,8 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
       <Toolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
       <Bubble activeTool={activeTool} />
+
+      <HistoryControls sidebarColumns={sidebarColumns} leftHandedMode={leftHandedMode} />
 
       <CircularButton
         onPointerDown={(e) => e.stopPropagation()}

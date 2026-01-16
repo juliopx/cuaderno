@@ -19,6 +19,8 @@
   "syncing": "Syncing...",
   "last_sync": "Last sync: {{time}}",
   "recenter": "Recenter",
+  "undo": "Undo",
+  "redo": "Redo",
   "select_page_to_start": "Select a page to start drawing",
   "tool_selection": "Selection",
   "tool_pencil": "Pencil",

@@ -76,3 +76,29 @@
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+.historyControls {
+  position: fixed;
+  bottom: 1rem;
+  z-index: 2100;
+  display: flex;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.historyControls>* {
+  pointer-events: auto;
+}
+
+.historyButton {
+  width: 40px;
+  height: 40px;
+}
+
+.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+  cursor: not-allowed;
+  background-color: var(--glass-bg-disabled, hsla(0, 0%, 50%, 0.1));
+}
