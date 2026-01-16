@@ -153,6 +153,15 @@ export const Settings = () => {
                 <span>{t('hand_right')}</span>
               </button>
             </div>
+            <div className={styles.toggleWrapper} style={{ marginTop: '1rem' }}>
+              <div className={styles.toggleLabel}>{t('pen_mode')}</div>
+              <div
+                className={clsx(styles.toggle, useFileSystemStore.getState().penMode && styles.toggleActive)}
+                onClick={() => useFileSystemStore.getState().setPenMode(!useFileSystemStore.getState().penMode)}
+              >
+                <div className={styles.toggleCircle} />
+              </div>
+            </div>
           </div>
 
           <div className={styles.divider} />
@@ -214,7 +223,8 @@ export const Settings = () => {
             )}
           </div>
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 };

@@ -42,9 +42,8 @@
 
 .active:hover {
   background-color: var(--color-accent);
-  /* Keep same as active */
+  color: #ffffff;
   cursor: default;
-  /* Optional: show it's not clickable */
 }
 
 .toolButton:active {

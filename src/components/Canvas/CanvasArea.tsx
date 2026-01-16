@@ -143,7 +143,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       isLoadingRef.current = true; // Prevent saves during load
 
       const json = await opfs.loadFile(`page-${pageId}.tldr`);
-      if (json) {
+      if (json && json !== '{}' && json !== '') {
         try {
           const snapshot = JSON.parse(json);
           editor.loadSnapshot(snapshot);
@@ -163,12 +163,22 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           } else {
             // Document exists but no camera? Default to centered origin
             const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-            const viewportHalfWidth = (window.innerWidth + sidebarWidth) / 2;
+            const viewportHalfWidth = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
             const viewportHalfHeight = window.innerHeight / 2;
             const centerX = viewportHalfWidth;
             const centerY = viewportHalfHeight;
             editor.setCamera({ x: centerX, y: centerY, z: 1 });
           }
+
+          // 1. Override isShapeErasable to only allow erasing 'draw' (handwriting) shapes
+          const originalIsErasable = (editor as any).isShapeErasable ? (editor as any).isShapeErasable.bind(editor) : null;
+
+          // Try both new and old names just in case
+          (editor as any).isErasable = (shape: any) => {
+            if (editor.getCurrentToolId() === 'eraser') return shape.type === 'draw';
+            return originalIsErasable ? originalIsErasable(shape) : true;
+          };
+          (editor as any).isShapeErasable = (editor as any).isErasable;
 
           // 💡 RESET defaults
           editor.setStyleForNextShapes(DefaultColorStyle, 'black');
@@ -183,7 +193,13 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           console.error("Failed to load snapshot", e);
         }
       } else {
-        // New page: Center on origin (0,0) taking sidebar into account
+        // New or Empty page: EXPLICITLY clear shapes to prevent bleed
+        const shapeIds = editor.getCurrentPageShapeIds();
+        if (shapeIds.size > 0) {
+          editor.deleteShapes(Array.from(shapeIds));
+        }
+
+        // Center on origin (0,0) taking sidebar into account
         const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
         const viewportHalfWidth = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
         const viewportHalfHeight = window.innerHeight / 2;
@@ -387,12 +403,98 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     }
   }, [isEmulatedTextTool, isLockingUI, editingShapeId]);
 
+  // --- Eraser Override Logic ---
+  useEffect(() => {
+    if (!editor) return;
 
-  const handleSelectTool = (tool: string) => {
-    manualToolRef.current = tool;
-    editor.setEditingShape(null); // Exit edit mode first
-    editor.setCurrentTool(tool);
-  };
+    const originalIsErasable = (editor as any).isShapeErasable ? (editor as any).isShapeErasable.bind(editor) : null;
+
+    // Try both new and old names just in case
+    (editor as any).isErasable = (shape: any) => {
+      if (editor.getCurrentToolId() === 'eraser') return shape.type === 'draw';
+      return originalIsErasable ? originalIsErasable(shape) : true;
+    };
+    (editor as any).isShapeErasable = (editor as any).isErasable;
+
+    return () => {
+      // Restore
+      if (editor) {
+        if (originalIsErasable) {
+          (editor as any).isErasable = originalIsErasable;
+          (editor as any).isShapeErasable = originalIsErasable;
+        } else {
+          delete (editor as any).isErasable;
+          delete (editor as any).isShapeErasable;
+        }
+      }
+    };
+  }, [editor]);
+
+  // --- Pen Mode Logic ---
+  useEffect(() => {
+    const container = parentRef.current;
+    if (!container) return;
+
+    // Track active touches to support multi-touch panning
+    let activeTouchIds = new Set<number>();
+    let previousTool: string | null = null;
+    let didSwitchToHand = false;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const { penMode } = useFileSystemStore.getState();
+      const currentTool = editor.getCurrentToolId();
+
+      // If Pen Mode is on, and we are drawing/erasing, and input is NOT pen
+      if (penMode && (currentTool === 'draw' || currentTool === 'eraser') && e.pointerType !== 'pen') {
+        // Switch to 'hand' tool for panning
+        if (activeTouchIds.size === 0) {
+          previousTool = currentTool;
+          editor.setCurrentTool('hand');
+          didSwitchToHand = true;
+        }
+        activeTouchIds.add(e.pointerId);
+        // Do NOT stop propagation - let Tldraw handle it as a Hand tool event
+      }
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (activeTouchIds.has(e.pointerId)) {
+        activeTouchIds.delete(e.pointerId);
+
+        // If all fingers lifted and we previously switched tool, restore it
+        if (activeTouchIds.size === 0 && didSwitchToHand) {
+          const toolToRestore = previousTool;
+          didSwitchToHand = false;
+          previousTool = null;
+
+          // Restore text/draw tool on next frame to safely exit hand mode
+          requestAnimationFrame(() => {
+            if (toolToRestore && editor) {
+              // Only restore if we are still in hand mode (user didn't change tool manually)
+              if (editor.getCurrentToolId() === 'hand') {
+                editor.setCurrentTool(toolToRestore);
+              }
+            }
+          });
+        }
+      }
+    };
+
+    // Use capture to intercept before Tldraw acts on it
+    container.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    // Global up/cancel needed because drag can end outside canvas
+    window.addEventListener('pointerup', handlePointerUp, { capture: true });
+    window.addEventListener('pointercancel', handlePointerUp, { capture: true });
+
+    return () => {
+      container.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+      window.removeEventListener('pointerup', handlePointerUp, { capture: true });
+      window.removeEventListener('pointercancel', handlePointerUp, { capture: true });
+    };
+  }, [editor, parentRef]);
+
+
+
 
 
   // Force Tldraw internal theme
@@ -715,6 +817,27 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
     lastSidebarColumnsRef.current = sidebarColumns;
   }, [editor, sidebarColumns]);
+
+  const handleSelectTool = (tool: string) => {
+    manualToolRef.current = tool;
+
+    // Deselect all when switching to drawing tools
+    if (tool === 'draw' || tool === 'eraser') {
+      editor.selectNone();
+    }
+
+    editor.setEditingShape(null); // Exit edit mode first
+    editor.setCurrentTool(tool);
+
+    if (tool === 'text') {
+      // Re-apply styles...
+      editor.setStyleForNextShapes(DefaultColorStyle, textStyles.color);
+      editor.setStyleForNextShapes(DefaultSizeStyle, textStyles.size);
+      editor.setStyleForNextShapes(DefaultFontStyle, textStyles.font);
+      const validAlign = textStyles.align === 'justify' ? 'start' : textStyles.align;
+      editor.setStyleForNextShapes(DefaultTextAlignStyle, validAlign);
+    }
+  };
 
   return (
     <div className={styles.canvasContainer}>

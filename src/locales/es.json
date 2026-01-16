@@ -6,6 +6,7 @@
   "theme_light": "Claro",
   "theme_dark": "Oscuro",
   "dominant_hand": "Mano dominante",
+  "pen_mode": "Modo solo lápiz",
   "hand_left": "Zurda",
   "hand_right": "Diestra",
   "cloud_sync": "Sincronización en la nube",

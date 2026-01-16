@@ -160,7 +160,7 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onDelete, style
             <svg
               viewBox={viewBox}
               width={svgWidth}
-              height={40}
+              height={32}
               style={{ display: 'block' }}
             >
               <path
@@ -759,7 +759,7 @@ export const Sidebar = () => {
                     <svg
                       viewBox={viewBox}
                       width={svgWidth}
-                      height={40}
+                      height={32}
                       style={{ display: 'block' }}
                     >
                       <path d={nameStrokes} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

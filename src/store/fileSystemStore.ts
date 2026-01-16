@@ -22,6 +22,7 @@ interface FileSystemState {
   isSidebarOpen: boolean;
   theme: 'auto' | 'light' | 'dark';
   dominantHand: 'right' | 'left';
+  penMode: boolean;
   language: 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar' | 'ca' | 'gl' | 'eu' | 'ru' | 'it' | 'nl' | 'sv' | 'pl' | 'tr';
   deletedItemIds: string[]; // Tombstones for sync
 
@@ -29,6 +30,7 @@ interface FileSystemState {
   toggleSidebar: () => void;
   setTheme: (theme: 'auto' | 'light' | 'dark') => void;
   setDominantHand: (hand: 'right' | 'left') => void;
+  setPenMode: (enabled: boolean) => void;
   setLanguage: (lang: 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar' | 'ca' | 'gl' | 'eu' | 'ru' | 'it' | 'nl' | 'sv' | 'pl' | 'tr') => void;
 
   createNotebook: (name: string) => void;
@@ -78,6 +80,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   theme: (localStorage.getItem('cuaderno-theme') as any) || 'auto',
   dominantHand: (localStorage.getItem('cuaderno-dominant-hand') as any) ||
     (localStorage.getItem('cuaderno-left-handed') === 'true' ? 'left' : 'right'),
+  penMode: localStorage.getItem('cuaderno-pen-mode') === 'true',
   language: (localStorage.getItem('i18nextLng') as any) || 'en',
 
   forceSaveActivePage: null,
@@ -97,6 +100,11 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
     diskLog(`💾 [FileSystem] Changed dominant hand to "${hand}"`);
     localStorage.setItem('cuaderno-dominant-hand', hand);
     set({ dominantHand: hand });
+  },
+  setPenMode: (enabled) => {
+    diskLog(`💾 [FileSystem] Changed pen mode to "${enabled}"`);
+    localStorage.setItem('cuaderno-pen-mode', String(enabled));
+    set({ penMode: enabled });
   },
   setLanguage: (lang) => {
     diskLog(`💾 [FileSystem] Changed language to "${lang}"`);
@@ -119,6 +127,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
     };
     syncLog(`🔶 [FileSystem] Created notebook "${name}" (${newNotebook.id}) - dirty`);
     set((state) => ({ notebooks: [...state.notebooks, newNotebook].sort((a, b) => (a.order || 0) - (b.order || 0)) }));
+    get().setActiveNotebook(newNotebook.id);
     setTimeout(() => get().save(), 0);
   },
 
@@ -144,7 +153,10 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       };
 
       syncLog(`🔶 [FileSystem] Created folder "${name}" (${newFolder.id}) - dirty`);
-      setTimeout(() => get().save(), 0); // Trigger save
+      setTimeout(() => {
+        get().openFolder(newFolder.id);
+        get().save();
+      }, 0);
       return { folders: { ...state.folders, [newFolder.id]: newFolder } };
     });
   },
@@ -175,8 +187,11 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       opfs.saveFile(`page-${newPage.id}.tldr`, '{}');
 
       const nextState = { pages: { ...state.pages, [newPage.id]: newPage } };
-      // Trigger save
-      setTimeout(() => get().save(), 0);
+      // Trigger save and select
+      setTimeout(() => {
+        get().selectPage(newPage.id);
+        get().save();
+      }, 0);
       return nextState;
     });
   },

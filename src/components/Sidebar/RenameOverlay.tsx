@@ -49,7 +49,7 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
 
   // Position logic: centered over the anchor, but slightly larger
   const width = 450; // Increased from 340
-  const height = 160; // Reduced to fit content tightly
+  const height = 165; // Adjusted to be even tighter per user request
   const margin = 10;
 
   let top = anchorRect.top - (height - anchorRect.height) / 2;
@@ -140,7 +140,7 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
     }
   }, [name]);
 
-  const activeColorHex = colorsMap[selectedColor] || theme.black.solid;
+
 
   return createPortal(
     <div className={styles.backdrop} onClick={handleOverlayClick}>
@@ -222,7 +222,6 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
               <button
                 className={styles.confirm}
                 onClick={(e) => { e.stopPropagation(); onSave(name, paths.join(' '), selectedColor); }}
-                style={{ backgroundColor: activeColorHex, color: selectedColor === 'black' ? 'white' : 'white' }}
               >
                 SAVE
               </button>

@@ -8,6 +8,7 @@
   "theme_light": "Light",
   "theme_dark": "Dark",
   "dominant_hand": "Dominant Hand",
+  "pen_mode": "Pen Only Mode",
   "hand_left": "Left",
   "hand_right": "Right",
   "cloud_sync": "Cloud Sync",
