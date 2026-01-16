@@ -205,9 +205,47 @@ body {
 /* Tldraw Accent Color Overrides */
 .tl-theme__light,
 .tl-theme__dark {
+  /* Restore previously working variables */
   --tl-color-selected: var(--color-accent) !important;
   --tl-color-selection-stroke: var(--color-accent) !important;
   --tl-color-selection-fill: var(--color-accent-soft) !important;
   --tl-color-hint: var(--color-accent) !important;
   --tl-color-interaction-user: var(--color-accent) !important;
+
+  /* Add new variables for handles and creation (using app-accent-color if avail, else color-accent) */
+  --tl-select-stroke: var(--color-accent) !important;
+  --tl-select-fill: var(--color-accent-soft) !important;
+  --tl-camera-binding: var(--color-accent) !important;
+
+  --tl-brush-stroke: var(--color-accent) !important;
+  --tl-brush-fill: var(--color-accent-soft) !important;
+
+  --color-text-selection: var(--color-accent-soft) !important;
+
+  --color-interaction: var(--color-accent) !important;
+  --tl-cursor-color: var(--color-accent) !important;
+}
+
+/* Force specific Tldraw UI elements to use accent */
+.tl-handle,
+.tl-handle-bg {
+  stroke: var(--color-accent) !important;
+  fill: var(--color-bg-primary) !important;
+}
+
+.tl-handle:hover,
+.tl-handle:active {
+  fill: var(--color-accent) !important;
+  stroke: var(--color-bg-primary) !important;
+}
+
+/* The dashed outline for text creation often uses this class pattern */
+.tl-text-shape__wrapper[data-isselected="true"] {
+  outline-color: var(--color-accent) !important;
+}
+
+/* Override the blue default usually found in .tl-overlays */
+.tl-overlays * {
+  --color-selected: var(--color-accent) !important;
+  --color-primary: var(--color-accent) !important;
 }

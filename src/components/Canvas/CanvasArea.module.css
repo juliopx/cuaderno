@@ -59,37 +59,14 @@
   background: hsl(var(--color-text-secondary) / 0.1);
 }
 
+
 .recenterButton {
   position: fixed;
   bottom: 1rem;
   right: var(--recenter-right, 1rem);
   left: var(--recenter-left, auto);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: 50%;
-  padding: 0.5rem;
-  cursor: pointer;
-  color: hsl(var(--color-text-secondary));
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
   z-index: 2100;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.recenterButton:hover {
-  color: hsl(var(--color-text-primary));
-  background: hsl(var(--color-text-secondary) / 0.1);
-}
-
-.recenterButton:active {
-  transform: scale(0.95);
+  pointer-events: auto;
 }
 
 /* Flicker Mask: Hides selection indicators during transitions */

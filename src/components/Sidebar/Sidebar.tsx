@@ -7,6 +7,7 @@ import { FolderPlus, FilePlus, BookPlus, Folder as FolderIcon, File, Book, Plus,
 import clsx from 'clsx';
 import { RenameOverlayV2 } from './RenameOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { CircularButton } from '../UI/CircularButton';
 import { getSvgPathBoundingBox } from '../../lib/svgUtils';
 import { resolveItemColor, getThemeColorHex } from '../../lib/colorUtils';
 import { useThemeColorHex } from '../../hooks/useThemeColor';
@@ -359,6 +360,8 @@ export const Sidebar = () => {
 
     // Update CSS variable with HEX
     document.documentElement.style.setProperty('--color-accent', colorHex);
+    // Set a unique app-specific accent variable that Tldraw won't shadow
+    document.documentElement.style.setProperty('--app-accent-color', colorHex);
     // Also update selection background potentially?
     // .itemActive uses hsl(var(--color-selection-bg)).
     // Ideally we want the global accent to trigger everything.
@@ -688,18 +691,17 @@ export const Sidebar = () => {
         ))}
       </div>
 
-      <button
-        className={styles.closeButton}
+      <CircularButton
         onClick={toggleSidebar}
         title={t('sidebar_close')}
+        icon={leftHandedMode ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
+        className={styles.closeButton}
         style={{
           '--sidebar-columns': columns.length,
           '--close-left': leftHandedMode ? 'auto' : `calc(250px * ${columns.length} + 0.75rem + 12px)`,
           '--close-right': leftHandedMode ? `calc(250px * ${columns.length} + 0.75rem + 12px)` : 'auto',
         } as React.CSSProperties}
-      >
-        {leftHandedMode ? <PanelRightClose size={18} /> : <PanelLeftClose size={18} />}
-      </button>
+      />
 
       <DragOverlay dropAnimation={dropAnimation}>
         {activeDragItem ? (() => {

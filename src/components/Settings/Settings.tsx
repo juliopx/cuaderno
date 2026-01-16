@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings as SettingsIcon, Sun, Moon, Monitor, LogOut, RefreshCw, ChevronDown, Check } from 'lucide-react';
+import { Settings as SettingsIcon, Sun, Moon, Monitor, LogOut, RefreshCw } from 'lucide-react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore';
 import { useTranslation } from 'react-i18next';
 import styles from './Settings.module.css';
 import clsx from 'clsx';
 import googleDriveIcon from '../../assets/google-drive.svg';
+import { Dropdown } from '../UI/Dropdown';
+import { CircularButton } from '../UI/CircularButton';
 
 export const Settings = () => {
   const { theme, setTheme, dominantHand, setDominantHand, language, setLanguage } = useFileSystemStore();
@@ -25,17 +27,13 @@ export const Settings = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const langMenuRef = useRef<HTMLDivElement>(null);
+  // langMenuRef removed as it's not needed for the shared Dropdown which handles outside clicks internally
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       // Close main settings menu
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsOpen(false);
-        setIsLanguageOpen(false);
-      }
-      // Close language dropdown if clicked outside of it
-      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
         setIsLanguageOpen(false);
       }
     };
@@ -76,8 +74,6 @@ export const Settings = () => {
     { code: 'ko', label: '한국어' },
   ];
 
-  const activeLanguageLabel = languages.find(l => l.code === language)?.label || 'English';
-
   const isSyncing = syncStatus === 'syncing' || syncStatus === 'saving-to-disk';
 
   return (
@@ -89,13 +85,13 @@ export const Settings = () => {
         '--settings-left': leftHandedMode ? '1rem' : 'auto',
       } as React.CSSProperties}
     >
-      <button
-        className={clsx(styles.gearButton, isOpen && styles.active)}
+      <CircularButton
         onClick={() => setIsOpen(!isOpen)}
         title={t('settings')}
-      >
-        <SettingsIcon size={20} />
-      </button>
+        icon={<SettingsIcon size={20} />}
+        isActive={isOpen}
+        className={styles.gearButton}
+      />
 
       {isOpen && (
         <div
@@ -107,32 +103,14 @@ export const Settings = () => {
         >
           <div className={styles.section}>
             <div className={styles.sectionTitle}>{t('language')}</div>
-            <div className={styles.languageDropdownWrapper} ref={langMenuRef}>
-              <button
-                className={clsx(styles.dropdownTrigger, isLanguageOpen && styles.active)}
-                onClick={() => setIsLanguageOpen(!isLanguageOpen)}
-              >
-                <span>{activeLanguageLabel}</span>
-                <ChevronDown size={14} className={clsx(styles.chevron, isLanguageOpen && styles.rotate)} />
-              </button>
-
-              {isLanguageOpen && (
-                <div className={styles.languageDropdown}>
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.code}
-                      className={clsx(styles.languageOption, language === lang.code && styles.selected)}
-                      onClick={() => {
-                        setLanguage(lang.code as any);
-                        setIsLanguageOpen(false);
-                      }}
-                    >
-                      <span>{lang.label}</span>
-                      {language === lang.code && <Check size={14} />}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className={styles.languageDropdownWrapper}>
+              <Dropdown
+                value={language}
+                options={languages.map(l => ({ value: l.code, label: l.label }))}
+                onChange={(val) => setLanguage(val as any)}
+                isOpen={isLanguageOpen}
+                onToggle={() => setIsLanguageOpen(!isLanguageOpen)}
+              />
             </div>
           </div>
 

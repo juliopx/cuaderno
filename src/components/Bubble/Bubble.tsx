@@ -17,8 +17,8 @@ import {
   Italic,
   Underline,
   Strikethrough,
-  ChevronDown
 } from 'lucide-react';
+import { Dropdown } from '../UI/Dropdown';
 import { useTranslation } from 'react-i18next';
 
 // Generic Scribble SVG
@@ -113,45 +113,6 @@ interface BubbleProps {
   activeTool: string;
 }
 
-// Custom Dropdown Component
-const CustomDropdown = ({ value, options, labels, onChange, isOpen, onToggle, icon, width = '100%', hasMoved, applyFontToLabel = false }: any) => {
-  return (
-    <div className={styles.customDropdown} style={{ width }}>
-      <button
-        className={clsx(styles.dropdownTrigger, isOpen && styles.open)}
-        onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-      >
-        <span className={styles.dropdownLabel} style={applyFontToLabel && labels[value] ? { fontFamily: `var(--tl - font - ${value})` } : {}}>
-          {icon && <span className={styles.dropdownIcon}>{icon}</span>}
-          {labels[value] || value}
-        </span>
-        <ChevronDown size={14} className={styles.chevron} />
-      </button>
-      {isOpen && (
-        <div className={styles.dropdownMenu} onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-          {options.map((opt: string) => (
-            <button
-              key={opt}
-              className={clsx(styles.dropdownItem, value === opt && styles.selected)}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!hasMoved.current) {
-                  onChange(opt);
-                  onToggle(); // Close
-                }
-              }}
-              style={applyFontToLabel ? { fontFamily: `var(--tl - font - ${opt})` } : {}}
-            >
-              {labels[opt]}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const Bubble = ({ activeTool }: BubbleProps) => {
   const { t } = useTranslation();
@@ -676,8 +637,8 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         {(activeTool === 'text' || (activeTool === 'select' && isEditingRichText)) && (
           <div className={styles.textSettings}>
             <div className={styles.topRow}>
-              <div className={styles.dropdownsGroup}>
-                <CustomDropdown
+              <div className={styles.dropdownRow}>
+                <Dropdown
                   value={currentFont}
                   options={['draw', 'sans', 'serif', 'mono']}
                   labels={{
@@ -688,12 +649,16 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
                   }}
                   onChange={(f: string) => setStyle(DefaultFontStyle, f)}
                   isOpen={isFontOpen}
-                  onToggle={() => { setIsFontOpen(!isFontOpen); setIsSizeOpen(false); }}
+                  onToggle={() => {
+                    if (!hasMoved.current) {
+                      setIsFontOpen(!isFontOpen);
+                      setIsSizeOpen(false);
+                    }
+                  }}
                   width="140px"
-                  hasMoved={hasMoved}
                   applyFontToLabel
                 />
-                <CustomDropdown
+                <Dropdown
                   value={currentSize}
                   options={['s', 'm', 'l', 'xl']}
                   labels={{
@@ -704,9 +669,13 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
                   }}
                   onChange={(s: string) => setStyle(DefaultSizeStyle, s)}
                   isOpen={isSizeOpen}
-                  onToggle={() => { setIsSizeOpen(!isSizeOpen); setIsFontOpen(false); }}
+                  onToggle={() => {
+                    if (!hasMoved.current) {
+                      setIsSizeOpen(!isSizeOpen);
+                      setIsFontOpen(false);
+                    }
+                  }}
                   width="120px"
-                  hasMoved={hasMoved}
                 />
               </div>
             </div>

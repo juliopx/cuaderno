@@ -123,7 +123,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             shape.props.align === 'justify' ? 'justify' : 'left'
       ),
       border: shape.props.isCreating
-        ? '2px dashed #2f80ed'
+        ? '2px dashed var(--color-accent)'
         : '2px solid transparent',
       borderRadius: '2px',
       boxSizing: 'border-box'
@@ -354,7 +354,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             <div style={{
               width: 4,
               height: 32,
-              backgroundColor: '#2f80ed',
+              backgroundColor: 'var(--color-accent)',
               borderRadius: 2,
               opacity: 0.8
             }} />

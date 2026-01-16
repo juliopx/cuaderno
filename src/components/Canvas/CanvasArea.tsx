@@ -14,7 +14,8 @@ import styles from './CanvasArea.module.css';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
 import { useState, useEffect, useRef } from 'react';
-import { PanelRightOpen, Focus, PanelLeftOpen } from 'lucide-react';
+import { PanelRightOpen, PanelLeftOpen, LocateFixed } from 'lucide-react';
+import { CircularButton } from '../UI/CircularButton';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore';
 import { useTextStyleStore } from '../../store/textStyleStore';
@@ -739,52 +740,57 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       <Toolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
       <Bubble activeTool={activeTool} />
 
-      <UIPortal>
-        <button
-          className={styles.recenterButton}
-          title={t('recenter')}
-          style={{
-            '--recenter-right': leftHandedMode ? 'auto' : '1rem',
-            '--recenter-left': leftHandedMode ? '1rem' : 'auto',
-          } as React.CSSProperties}
-          onClick={() => {
+      <CircularButton
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          // Simple debounce to prevent single click action on double click? 
+          // For now, let's allow both or assume user intent. 
+          // Actually, Tldraw might be grabbing focus.
+          if (editor) {
             const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
             const viewportCenter = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : (window.innerWidth + sidebarWidth) / 2;
             const viewportHalfHeight = window.innerHeight / 2;
             const { z } = editor.getCamera();
             editor.setCamera({ x: viewportCenter / z, y: viewportHalfHeight / z, z }, { animation: { duration: 300 } });
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            const bounds = editor.getCurrentPageBounds();
-            if (!bounds) return;
+          }
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          const bounds = editor.getCurrentPageBounds();
+          if (!bounds) return;
 
-            const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
-            const padding = 64;
-            const availableWidth = window.innerWidth - sidebarWidth - padding;
-            const availableHeight = window.innerHeight - padding;
+          const sidebarWidth = sidebarColumns > 0 ? (250 * sidebarColumns + 24) : 0;
+          const padding = 64;
+          const availableWidth = window.innerWidth - sidebarWidth - padding;
+          const availableHeight = window.innerHeight - padding;
 
-            if (availableWidth <= 0 || availableHeight <= 0) return;
+          if (availableWidth <= 0 || availableHeight <= 0) return;
 
-            // Calculate ideal zoom (clamped to max 1 for clarity)
-            const zoomX = availableWidth / bounds.w;
-            const zoomY = availableHeight / bounds.h;
-            const z = Math.min(zoomX, zoomY, 1);
+          // Calculate ideal zoom (clamped to max 1 for clarity)
+          const zoomX = availableWidth / bounds.w;
+          const zoomY = availableHeight / bounds.h;
+          const z = Math.min(zoomX, zoomY, 1);
 
-            // Target screen center (offset by sidebar)
-            const targetX = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : sidebarWidth + (window.innerWidth - sidebarWidth) / 2;
-            const targetY = window.innerHeight / 2;
+          // Target screen center (offset by sidebar)
+          const targetX = leftHandedMode ? (window.innerWidth - sidebarWidth) / 2 : sidebarWidth + (window.innerWidth - sidebarWidth) / 2;
+          const targetY = window.innerHeight / 2;
 
-            // camera.x = target_screen_x / zoom - target_page_x
-            const camX = (targetX / z) - (bounds.x + bounds.w / 2);
-            const camY = (targetY / z) - (bounds.y + bounds.h / 2);
+          // camera.x = target_screen_x / zoom - target_page_x
+          const camX = (targetX / z) - (bounds.x + bounds.w / 2);
+          const camY = (targetY / z) - (bounds.y + bounds.h / 2);
 
-            editor.setCamera({ x: camX, y: camY, z }, { animation: { duration: 300 } });
-          }}
-        >
-          <Focus size={20} />
-        </button>
-      </UIPortal>
+          editor.setCamera({ x: camX, y: camY, z }, { animation: { duration: 300 } });
+        }}
+        title={t('recenter')}
+        icon={<LocateFixed size={20} />}
+        className={styles.recenterButton}
+        style={{
+          '--recenter-right': leftHandedMode ? 'auto' : '1rem',
+          '--recenter-left': leftHandedMode ? '1rem' : 'auto',
+        } as React.CSSProperties}
+      />
     </div>
   );
 });

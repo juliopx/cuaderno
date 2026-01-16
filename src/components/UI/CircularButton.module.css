@@ -1,0 +1,46 @@
+.button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  color: hsl(var(--color-text-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  /* Critical for nice feel */
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+
+  /* Ensure it sits on top if needed, though primarily handled by container z-index */
+  z-index: 100;
+}
+
+.button:hover {
+  color: hsl(var(--color-text-primary));
+  transform: translateY(-2px);
+  /* Subtle lift */
+  background: hsl(var(--color-text-secondary) / 0.25);
+}
+
+.button:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Specific active state (like toggled Settings) */
+.active {
+  color: hsl(var(--color-selection-text));
+  background: var(--color-selection-bg);
+  border-color: var(--color-accent);
+  /* Optional: distinct border */
+}
+
+/* If active, hover might need adjustment to not lose the active color */
+.active:hover {
+  background: var(--color-selection-hover);
+  color: hsl(var(--color-selection-text));
+}

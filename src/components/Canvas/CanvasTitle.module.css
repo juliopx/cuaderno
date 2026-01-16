@@ -46,21 +46,21 @@
   padding: 0 8px;
 }
 
-/* Breadcrumb text is subtle */
+/* Breadcrumb text is subtle but readable */
 .breadcrumb .itemWrapper .nameText {
-  opacity: 0.5;
+  opacity: 0.8;
 }
 
 /* Drawings follow text opacity */
 .breadcrumb .itemWrapper .strokeOverlay {
-  opacity: 0.5;
+  opacity: 0.8;
 }
 
 /* The last item (active page) should be prominent */
 .container>.itemWrapper:last-of-type,
 .breadcrumb>.itemWrapper:last-of-type {
   opacity: 1;
-  color: hsl(var(--color-text-primary));
+  color: var(--color-accent);
 }
 
 .container>.itemWrapper:last-of-type .nameText,
