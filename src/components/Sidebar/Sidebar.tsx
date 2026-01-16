@@ -354,7 +354,7 @@ export const Sidebar = () => {
     }
 
 
-    const colorName = targetId ? resolveItemColor(targetId, folders, pages, notebooks) : 'blue';
+    const colorName = targetId ? resolveItemColor(targetId, folders, pages, notebooks) : 'grey';
     const colorHex = getThemeColorHex(colorName, isDarkMode);
 
     // Update CSS variable with HEX

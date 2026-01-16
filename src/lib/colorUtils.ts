@@ -15,7 +15,7 @@ export const resolveItemColor = (
   else if (pages[itemId]) item = pages[itemId];
   else item = notebooks.find(n => n.id === itemId);
 
-  if (!item) return 'blue'; // Default fallback
+  if (!item) return 'grey'; // Default fallback
 
   if ((item as any).color && (item as any).color !== 'black' && (item as any).color !== 'auto') {
     return (item as any).color;
@@ -55,7 +55,7 @@ export const resolveItemColor = (
     }
   }
 
-  return 'blue';
+  return 'grey';
 };
 
 
@@ -63,8 +63,8 @@ import { DefaultColorThemePalette } from 'tldraw';
 
 export const getThemeColorHex = (colorName: string, isDarkMode: boolean): string => {
   const theme = isDarkMode ? DefaultColorThemePalette.darkMode : DefaultColorThemePalette.lightMode;
-  // If colorName is invalid or defaults to 'blue'
-  const colorKey = (colorName in theme) ? colorName : 'blue';
+  // If colorName is invalid or defaults to 'grey'
+  const colorKey = (colorName in theme) ? colorName : 'grey';
   // @ts-ignore - We know colorKey is valid or 'blue' which is valid
   return theme[colorKey].solid;
 };

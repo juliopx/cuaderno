@@ -39,6 +39,7 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
   // Colors mapping (using Tldraw's actual theme engine)
   const colorsMap: Record<string, string> = {
     auto: theme.black.solid, // Represents "Auto" / Inherit
+    grey: theme.grey.solid,
     blue: theme.blue.solid,
     red: theme.red.solid,
     yellow: theme.yellow.solid,
@@ -48,7 +49,7 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
 
   // Position logic: centered over the anchor, but slightly larger
   const width = 450; // Increased from 340
-  const height = 220; // Increased for color picker
+  const height = 160; // Reduced to fit content tightly
   const margin = 10;
 
   let top = anchorRect.top - (height - anchorRect.height) / 2;
@@ -195,35 +196,37 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
 
           </div>
 
-          <div className={styles.colorsRow}>
-            {Object.entries(colorsMap).map(([key, hex]) => (
-              <button
-                key={key}
-                className={styles.colorSwatch}
-                style={{
-                  backgroundColor: hex,
-                  boxShadow: selectedColor === key
-                    ? `0 0 0 2px hsl(var(--color-bg-primary)), 0 0 0 4px ${hex}`
-                    : undefined
-                }}
-                onClick={() => setSelectedColor(key)}
-                title={key === 'auto' ? 'Auto' : key}
-              >
-                {/* Visual cue for auto handled by box-shadow or just plain */}
-              </button>
-            ))}
-          </div>
-
           <div className={styles.actions}>
-            <button className={styles.btn} onClick={(e) => { e.stopPropagation(); setName(""); setPaths([]); }} title="Clear All"><Eraser size={20} /></button>
-            <button className={styles.btn} onClick={(e) => { e.stopPropagation(); onCancel(); }} title="Cancel"><X size={20} /></button>
-            <button
-              className={styles.confirm}
-              onClick={(e) => { e.stopPropagation(); onSave(name, paths.join(' '), selectedColor); }}
-              style={{ backgroundColor: activeColorHex, color: selectedColor === 'black' ? 'white' : 'white' }}
-            >
-              SAVE
-            </button>
+            <div className={styles.colorsRow}>
+              {Object.entries(colorsMap).map(([key, hex]) => (
+                <button
+                  key={key}
+                  className={styles.colorSwatch}
+                  style={{
+                    backgroundColor: hex,
+                    boxShadow: selectedColor === key
+                      ? `0 0 0 2px hsl(var(--color-bg-primary)), 0 0 0 4px ${hex}`
+                      : undefined
+                  }}
+                  onClick={() => setSelectedColor(key)}
+                  title={key === 'auto' ? 'Auto' : key}
+                >
+                  {/* Visual cue for auto handled by box-shadow or just plain */}
+                </button>
+              ))}
+            </div>
+
+            <div className={styles.buttonsGroup}>
+              <button className={styles.btn} onClick={(e) => { e.stopPropagation(); setName(""); setPaths([]); }} title="Clear All"><Eraser size={20} /></button>
+              <button className={styles.btn} onClick={(e) => { e.stopPropagation(); onCancel(); }} title="Cancel"><X size={20} /></button>
+              <button
+                className={styles.confirm}
+                onClick={(e) => { e.stopPropagation(); onSave(name, paths.join(' '), selectedColor); }}
+                style={{ backgroundColor: activeColorHex, color: selectedColor === 'black' ? 'white' : 'white' }}
+              >
+                SAVE
+              </button>
+            </div>
           </div>
         </div>
       </div>
