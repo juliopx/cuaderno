@@ -1017,7 +1017,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
 export const CanvasArea = () => {
   const { t } = useTranslation();
-  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages, activePath, dominantHand } = useFileSystemStore();
+  const { activePageId, isSidebarOpen, toggleSidebar, theme, pages, activePath, activeNotebookId, dominantHand } = useFileSystemStore();
   const leftHandedMode = dominantHand === 'left';
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -1029,7 +1029,7 @@ export const CanvasArea = () => {
 
   // Show empty state when no page is selected
   if (!activePageId) {
-    const sidebarColumns = isSidebarOpen ? activePath.length + 2 : 0;
+    const sidebarColumns = isSidebarOpen ? (activeNotebookId ? activePath.length + 2 : 1) : 0;
     const sidebarWidth = sidebarColumns > 0 ? (sidebarColumns * 250 + 24) : 0;
 
     return (
@@ -1078,7 +1078,7 @@ export const CanvasArea = () => {
     );
   }
 
-  const sidebarColumns = isSidebarOpen ? activePath.length + 2 : 0;
+  const sidebarColumns = isSidebarOpen ? (activeNotebookId ? activePath.length + 2 : 1) : 0;
 
   return (
     <div className={styles.wrapper} ref={parentRef} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
