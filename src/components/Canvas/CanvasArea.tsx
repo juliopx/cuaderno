@@ -477,7 +477,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     if (!container) return;
 
     // Track active touches to support multi-touch panning
-    let activeTouchIds = new Set<number>();
+    const activeTouchIds = new Set<number>();
     let previousTool: string | null = null;
     let didSwitchToHand = false;
 

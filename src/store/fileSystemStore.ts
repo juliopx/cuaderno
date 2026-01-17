@@ -241,7 +241,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 
     const path: string[] = [];
     let currentParentId: string | null = page.parentId;
-    let notebookId: string = page.notebookId;
+    const notebookId: string = page.notebookId;
 
     if (!notebookId) return;
 
@@ -269,9 +269,9 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   renameNode: (id, name, strokes, color) => {
     const clientId = useSyncStore.getState().clientId;
     set((state) => {
-      let notebooks = [...state.notebooks];
-      let folders = { ...state.folders };
-      let pages = { ...state.pages };
+      const notebooks = [...state.notebooks];
+      const folders = { ...state.folders };
+      const pages = { ...state.pages };
 
       const nbIdx = notebooks.findIndex(n => n.id === id);
       if (nbIdx !== -1) {
@@ -531,7 +531,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       }
 
       // Update the moved item
-      let newItem = {
+      const newItem = {
         ...activeItem,
         parentId: targetParentId,
         notebookId: targetNotebookId,
