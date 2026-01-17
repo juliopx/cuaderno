@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.3] - 2026-01-17
 
-<!-- Release notes generated using configuration in .github/release.yml at develop -->
+### 🚀 Features
+- **Undo/Redo Shortcuts**: Added keyboard shortcuts for Undo (`Ctrl/Cmd + Z`) and Redo (`Ctrl/Cmd + Shift + Z`, `Ctrl/Cmd + Y`).
+- **Improved Release Flow**: Automated `CHANGELOG.md` updates and local version bumping via `npm run release`.
+- **Branch Protection Enforcement**: Improved security by requiring PRs for `main` and `develop`.
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.1.0...v1.1.3
 
