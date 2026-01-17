@@ -1,4 +1,4 @@
-# 📓 Cuaderno
+# Cuaderno
 
 **Cuaderno** is a privacy-first, local-first digital notebook designed for seamless handwriting, sketching, and note-taking. Built with a focus on speed, ergonomics, and data ownership, it offers an infinite canvas experience that lives entirely in your browser.
 
@@ -9,7 +9,7 @@
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 - ** Local-First Architecture**: Uses the **Origin Private File System (OPFS)** for near-native storage performance. Your notes are always available, even offline.
 - ** Infinite Canvas**: Powered by **tldraw**, providing a world-class drawing engine with pressure sensitivity and smart shape detection.
@@ -23,7 +23,7 @@
 
 ---
 
-## 🛠️ Built With
+## Built With
 
 ### Core Engine
 - **[React 19](https://react.dev/)**: For a modern, declarative UI.
