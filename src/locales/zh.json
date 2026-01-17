@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "笔记本",
   "cancel": "取消",
   "delete": "删除",
-  "confirm_logout_delete_data": "您确定要在登出前删除所有保存在 Google Drive 中的数据吗？"
+  "confirm_logout_delete_data": "您确定要在登出前删除所有保存在 Google Drive 中的数据吗？",
+  "privacy_policy": "隐私与 Cookie",
+  "google_drive_privacy_notice": "连接到 Google 云端硬盘后，Google 将适用其自身的隐私和 Cookie 政策。",
+  "learn_more": "了解更多"
 }

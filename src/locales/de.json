@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "Notizbuch",
   "cancel": "Abbrechen",
   "delete": "Löschen",
-  "confirm_logout_delete_data": "Möchten Sie alle gespeicherten Daten in Google Drive löschen, bevor Sie sich abmelden?"
+  "confirm_logout_delete_data": "Möchten Sie alle gespeicherten Daten in Google Drive löschen, bevor Sie sich abmelden?",
+  "privacy_policy": "Datenschutz & Cookies",
+  "google_drive_privacy_notice": "Durch die Verbindung mit Google Drive wendet Google seine eigenen Datenschutz- und Cookie-Richtlinien an.",
+  "learn_more": "Mehr erfahren"
 }

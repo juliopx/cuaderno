@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "carnet",
   "cancel": "Annuler",
   "delete": "Supprimer",
-  "confirm_logout_delete_data": "Voulez-vous supprimer toutes les données enregistrées dans Google Drive avant de vous déconnecter ?"
+  "confirm_logout_delete_data": "Voulez-vous supprimer toutes les données enregistrées dans Google Drive avant de vous déconnecter ?",
+  "privacy_policy": "Confidentialité et Cookies",
+  "google_drive_privacy_notice": "En vous connectant à Google Drive, Google applique ses propres politiques de confidentialité et de cookies.",
+  "learn_more": "En savoir plus"
 }

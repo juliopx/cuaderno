@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "notitieboek",
   "cancel": "Annuleren",
   "delete": "Verwijderen",
-  "confirm_logout_delete_data": "Wilt u alle opgeslagen gegevens in Google Drive verwijderen voordat u uitlogt?"
+  "confirm_logout_delete_data": "Wilt u alle opgeslagen gegevens in Google Drive verwijderen voordat u uitlogt?",
+  "privacy_policy": "Privacy & Cookies",
+  "google_drive_privacy_notice": "Door verbinding te maken met Google Drive past Google zijn eigen privacy- en cookiebeleid toe.",
+  "learn_more": "Meer informatie"
 }

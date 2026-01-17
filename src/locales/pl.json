@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "notatnik",
   "cancel": "Anuluj",
   "delete": "Usuń",
-  "confirm_logout_delete_data": "Czy chcesz usunąć wszystkie dane zapisane na Google Drive przed wylogowaniem?"
+  "confirm_logout_delete_data": "Czy chcesz usunąć wszystkie dane zapisane na Google Drive przed wylogowaniem?",
+  "privacy_policy": "Prywatność i Pliki Cookie",
+  "google_drive_privacy_notice": "Po połączeniu z Google Drive Google stosuje własne zasady dotyczące prywatności i plików cookie.",
+  "learn_more": "Dowiedz się więcej"
 }

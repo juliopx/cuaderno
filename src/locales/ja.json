@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "ノートブック",
   "cancel": "キャンセル",
   "delete": "削除",
-  "confirm_logout_delete_data": "ログアウトする前に、Google Driveに保存されているすべてのデータを削除しますか？"
+  "confirm_logout_delete_data": "ログアウトする前に、Google Driveに保存されているすべてのデータを削除しますか？",
+  "privacy_policy": "プライバシーとCookie",
+  "google_drive_privacy_notice": "Google ドライブに接続すると、Google のプライバシー ポリシーと Cookie ポリシーが適用されます。",
+  "learn_more": "詳細"
 }

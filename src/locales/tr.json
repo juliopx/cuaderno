@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "defter",
   "cancel": "İptal",
   "delete": "Sil",
-  "confirm_logout_delete_data": "Çıkış yapmadan önce Google Drive'daki tüm kayıtlı verileri silmek istiyor musunuz?"
+  "confirm_logout_delete_data": "Çıkış yapmadan önce Google Drive'daki tüm kayıtlı verileri silmek istiyor musunuz?",
+  "privacy_policy": "Gizlilik ve Çerezler",
+  "google_drive_privacy_notice": "Google Drive'a bağlanarak, Google kendi gizlilik ve çerez politikalarını uygular.",
+  "learn_more": "Daha fazla bilgi"
 }

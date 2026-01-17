@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "блокнот",
   "cancel": "Отмена",
   "delete": "Удалить",
-  "confirm_logout_delete_data": "Вы уверены, что хотите удалить все сохраненные данные в Google Drive перед выходом?"
+  "confirm_logout_delete_data": "Вы уверены, что хотите удалить все сохраненные данные в Google Drive перед выходом?",
+  "privacy_policy": "Конфиденциальность и файлы cookie",
+  "google_drive_privacy_notice": "При подключении к Google Диску Google применяет собственную политику конфиденциальности и использования файлов cookie.",
+  "learn_more": "Узнать больше"
 }

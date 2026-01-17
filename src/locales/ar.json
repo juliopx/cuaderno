@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "دفتر الملاحظات",
   "cancel": "إلغاء",
   "delete": "حذف",
-  "confirm_logout_delete_data": "هل تريد حذف جميع البيانات المحفوظة في Google Drive قبل تسجيل الخروج؟"
+  "confirm_logout_delete_data": "هل تريد حذف جميع البيانات المحفوظة في Google Drive قبل تسجيل الخروج؟",
+  "privacy_policy": "الخصوصية وملفات تعريف الارتباط",
+  "google_drive_privacy_notice": "عند الربط بـ Google Drive، تطبق Google سياسات الخصوصية وملفات تعريف الارتباط الخاصة بها.",
+  "learn_more": "تعرف على المزيد"
 }

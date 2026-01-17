@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "koadernoa",
   "cancel": "Utzi",
   "delete": "Ezabatu",
-  "confirm_logout_delete_data": "Google Drive-n gordetako datu guztiak ezabatu nahi dituzu saioa itxi aurretik?"
+  "confirm_logout_delete_data": "Google Drive-n gordetako datu guztiak ezabatu nahi dituzu saioa itxi aurretik?",
+  "privacy_policy": "Pribatutasuna eta Cookie-ak",
+  "google_drive_privacy_notice": "Google Drive konektatzean, Google-k bere pribatutasun eta cookie politikak aplikatzen ditu.",
+  "learn_more": "Gehiago jakin"
 }

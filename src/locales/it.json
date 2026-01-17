@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "blocco appunti",
   "cancel": "Annulla",
   "delete": "Elimina",
-  "confirm_logout_delete_data": "Vuoi eliminare tutti i dati salvati su Google Drive prima di uscire?"
+  "confirm_logout_delete_data": "Vuoi eliminare tutti i dati salvati su Google Drive prima di uscire?",
+  "privacy_policy": "Privacy e Cookie",
+  "google_drive_privacy_notice": "Collegandoti a Google Drive, Google applica le proprie norme sulla privacy e sui cookie.",
+  "learn_more": "Scopri di più"
 }

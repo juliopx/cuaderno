@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "anteckningsbok",
   "cancel": "Avbryt",
   "delete": "Radera",
-  "confirm_logout_delete_data": "Vill du radera all sparad data i Google Drive innan du loggar ut?"
+  "confirm_logout_delete_data": "Vill du radera all sparad data i Google Drive innan du loggar ut?",
+  "privacy_policy": "Integritet & Cookies",
+  "google_drive_privacy_notice": "Genom att ansluta till Google Drive tillämpar Google sina egna policyer för integritet och cookies.",
+  "learn_more": "Läs mer"
 }

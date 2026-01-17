@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "quadern",
   "cancel": "Cancel·lar",
   "delete": "Eliminar",
-  "confirm_logout_delete_data": "Vols eliminar totes les dades desades a Google Drive abans de tancar la sessió?"
+  "confirm_logout_delete_data": "Vols eliminar totes les dades desades a Google Drive abans de tancar la sessió?",
+  "privacy_policy": "Privadesa i Cookies",
+  "google_drive_privacy_notice": "En connectar Google Drive, Google aplica les seves pròpies polítiques de privadesa i cookies.",
+  "learn_more": "Saber-ne més"
 }
