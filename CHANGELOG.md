@@ -1,8 +1,13 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [1.1.3] - 2026-01-17
 
 <!-- Release notes generated using configuration in .github/release.yml at develop -->
-
-
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.1.0...v1.1.3
 
@@ -10,12 +15,8 @@
 
 <!-- Release notes generated using configuration in .github/release.yml at 23d4a909f43cefb623188c0e8e5a792d35eab21c -->
 
-## What's Changed
 ### 🚀 Features
-* feat: sync welcome screen colors with active accent color by @juliopx in https://github.com/juliopx/cuaderno/pull/5
-
-## New Contributors
-* @juliopx made their first contribution in https://github.com/juliopx/cuaderno/pull/2
+- **Sync Welcome Page Color**: Dynamically synchronization of the welcome page's branding, links, and background with the application's accent color.
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.0.0...v1.1.0
 
@@ -23,17 +24,7 @@
 
 <!-- Release notes generated using configuration in .github/release.yml at af9c84b96075ae0612aa787d06a7ddaeab58c020 -->
 
-## New Contributors
-* @juliopx made their first contribution in https://github.com/juliopx/cuaderno/pull/2
-
 **Full Changelog**: https://github.com/juliopx/cuaderno/commits/v1.0.0
-
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.0.1] - 2026-01-17
 
