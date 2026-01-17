@@ -1,0 +1,76 @@
+name: PR Auto-Labeler
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Auto-label based on files and title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+            
+            const title = context.payload.pull_request.title.toLowerCase();
+            const body = (context.payload.pull_request.body || '').toLowerCase();
+            const labels = new Set();
+            
+            // Check files for patterns
+            const hasSourceChanges = files.some(f => f.filename.startsWith('src/'));
+            const hasDocChanges = files.some(f => 
+              f.filename.includes('README') || 
+              f.filename.startsWith('docs/')
+            );
+            const hasConfigChanges = files.some(f => 
+              f.filename.startsWith('.github/') || 
+              f.filename.startsWith('scripts/')
+            );
+            const hasTestChanges = files.some(f => 
+              f.filename.includes('.test.') || 
+              f.filename.includes('.spec.')
+            );
+            
+            // Check title/body for keywords
+            const isBugFix = /\b(fix|bug|hotfix|patch)\b/.test(title) || 
+                            /\b(fix|bug|hotfix|patch)\b/.test(body);
+            const isFeature = /\b(feat|feature|add|implement)\b/.test(title) ||
+                             /\b(feat|feature|add|implement)\b/.test(body);
+            
+            // Apply labels based on detection
+            if (isBugFix) labels.add('fix');
+            else if (isFeature || hasSourceChanges) labels.add('enhancement');
+            
+            if (hasDocChanges) labels.add('documentation');
+            if (hasConfigChanges && !hasSourceChanges) labels.add('chore');
+            if (hasTestChanges) labels.add('test');
+            
+            // If no labels detected, default to enhancement for source changes
+            if (labels.size === 0 && hasSourceChanges) {
+              labels.add('enhancement');
+            }
+            
+            // Apply labels
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                labels: Array.from(labels)
+              });
+              
+              console.log(`Applied labels: ${Array.from(labels).join(', ')}`);
+            }

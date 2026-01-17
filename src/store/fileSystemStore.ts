@@ -466,6 +466,24 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       };
 
 
+      // 0. Security check: Cannot move an item to itself or its descendants
+      if (activeId === overId) return {};
+
+      // Helper to check for descendants in state
+      const isNodeDescendant = (childId: string, ancestorId: string): boolean => {
+        let current = folders[childId] || pages[childId];
+        while (current && current.parentId) {
+          if (current.parentId === ancestorId) return true;
+          current = folders[current.parentId];
+        }
+        return false;
+      };
+
+      if (isNodeDescendant(overId, activeId)) {
+        syncLog(`🚫 [FileSystem] Blocked circular move: cannot move "${activeId}" into its descendant "${overId}"`);
+        return {};
+      }
+
       // 1. Identify what is being moved
       const activeItem = folders[activeId] || pages[activeId];
       if (!activeItem) return {};

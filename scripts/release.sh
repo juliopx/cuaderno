@@ -41,6 +41,19 @@ fi
 
 echo "📦 Bumping version ($BUMP)..."
 NEW_VERSION=$(npm version $BUMP --no-git-tag-version)
+# Ensure package-lock.json is updated
+npm install --package-lock-only
+
+# Remind about PR labels for better changelog
+if command -v gh &> /dev/null; then
+    echo ""
+    echo "💡 Reminder: Ensure your PRs have appropriate labels for changelog categorization:"
+    echo "   - enhancement (Features)"
+    echo "   - fix (Bug Fixes)"
+    echo "   - documentation (Documentation)"
+    echo "   - chore (Internal)"
+    echo ""
+fi
 
 # 4. Fetch Release Notes and update CHANGELOG.md
 if command -v gh &> /dev/null; then
