@@ -87,6 +87,12 @@ jobs:
           git add CHANGELOG.md
           git commit -m "docs: update CHANGELOG.md for $VERSION [skip ci]"
           git push origin main
+          
+          # Back-sync to develop
+          git fetch origin develop:develop
+          git checkout develop
+          git merge main
+          git push origin develop
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

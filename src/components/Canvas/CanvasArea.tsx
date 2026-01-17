@@ -705,11 +705,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
 
   // Interaction state
-  let isPanning = false;
-  let isZooming = false;
-  let lastPoint = { x: 0, y: 0 };
+  const isPanningRef = useRef(false);
+  const isZoomingRef = useRef(false);
+  const lastPointRef = useRef({ x: 0, y: 0 });
   // We'll store the previous tool to restore it after Space panning
-  let previousTool = 'select';
+  const previousToolRef = useRef('select');
 
   // --- Event Handlers ---
   // --- Interaction Engine ---
@@ -723,15 +723,15 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
     const handlePointerDown = (e: PointerEvent) => {
       if (e.button === 2 || e.button === 1) {
-        isPanning = true;
-        lastPoint = { x: e.clientX, y: e.clientY };
+        isPanningRef.current = true;
+        lastPointRef.current = { x: e.clientX, y: e.clientY };
         container.setPointerCapture(e.pointerId);
         e.preventDefault();
         return;
       }
       if (e.button === 0 && e.ctrlKey) {
-        isZooming = true;
-        lastPoint = { x: e.clientX, y: e.clientY };
+        isZoomingRef.current = true;
+        lastPointRef.current = { x: e.clientX, y: e.clientY };
         container.setPointerCapture(e.pointerId);
         e.preventDefault();
         return;
@@ -739,17 +739,17 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (isPanning) {
-        const deltaX = e.clientX - lastPoint.x;
-        const deltaY = e.clientY - lastPoint.y;
-        lastPoint = { x: e.clientX, y: e.clientY };
+      if (isPanningRef.current) {
+        const deltaX = e.clientX - lastPointRef.current.x;
+        const deltaY = e.clientY - lastPointRef.current.y;
+        lastPointRef.current = { x: e.clientX, y: e.clientY };
         const { x, y, z } = editor.getCamera();
         editor.setCamera({ x: x + deltaX / z, y: y + deltaY / z, z });
         return;
       }
-      if (isZooming) {
-        const deltaY = e.clientY - lastPoint.y;
-        lastPoint = { x: e.clientX, y: e.clientY };
+      if (isZoomingRef.current) {
+        const deltaY = e.clientY - lastPointRef.current.y;
+        lastPointRef.current = { x: e.clientX, y: e.clientY };
         const zoomRate = 0.01;
         const { z } = editor.getCamera();
         const factor = 1 - deltaY * zoomRate;
@@ -766,9 +766,9 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
 
     const handlePointerUp = (e: PointerEvent) => {
-      if (isPanning || isZooming) {
-        isPanning = false;
-        isZooming = false;
+      if (isPanningRef.current || isZoomingRef.current) {
+        isPanningRef.current = false;
+        isZoomingRef.current = false;
         try { container.releasePointerCapture(e.pointerId); } catch (err) { }
       }
     };
@@ -808,15 +808,33 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         return;
       }
 
+      // Undo/Redo
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          editor.redo();
+        } else {
+          editor.undo();
+        }
+        e.preventDefault();
+        return;
+      }
+
+      // Redo (Alternative)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        editor.redo();
+        e.preventDefault();
+        return;
+      }
+
       if (e.code === 'Space' && !e.repeat && !e.ctrlKey && !e.shiftKey && !e.altKey && editor.getCurrentToolId() !== 'hand') {
-        previousTool = editor.getCurrentToolId();
+        previousToolRef.current = editor.getCurrentToolId();
         editor.setCurrentTool('hand');
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space' && editor.getCurrentToolId() === 'hand') {
-        editor.setCurrentTool(previousTool);
+        editor.setCurrentTool(previousToolRef.current);
       }
     };
 
