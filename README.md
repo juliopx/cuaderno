@@ -1,73 +1,94 @@
-# React + TypeScript + Vite
+# 📓 Cuaderno
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Cuaderno** is a privacy-first, local-first digital notebook designed for seamless handwriting, sketching, and note-taking. Built with a focus on speed, ergonomics, and data ownership, it offers an infinite canvas experience that lives entirely in your browser.
 
-Currently, two official plugins are available:
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## ✨ Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- ** Local-First Architecture**: Uses the **Origin Private File System (OPFS)** for near-native storage performance. Your notes are always available, even offline.
+- ** Infinite Canvas**: Powered by **tldraw**, providing a world-class drawing engine with pressure sensitivity and smart shape detection.
+- **☁️ Private Cloud Sync**: Optional synchronization with **your own Google Drive**. No third-party servers, no surveillance. Your data stays between your device and your cloud.
+- ** Ergonomic UI**: 
+  - **Left/Right-Handed Modes**: Adaptive interface to keep tools within reach regardless of your dominant hand.
+  - **Glassmorphism Design**: A modern, premium aesthetic that stays out of your way.
+- ** Deep Organization**: Organize your world into **Notebooks**, **Folders**, and **Pages** with intuitive drag-and-drop.
+- ** Global by Design**: Fully localized in 18+ languages including English, Spanish, French, German, Japanese, and more.
+- ** PWA Ready**: Install it on your tablet or desktop for a true application experience.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🛠️ Built With
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Core Engine
+- **[React 19](https://react.dev/)**: For a modern, declarative UI.
+- **[tldraw](https://tldraw.dev/)**: The heart of the drawing experience.
+- **[TypeScript](https://www.typescriptlang.org/)**: For rock-solid type safety across the entire codebase.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### State & Storage
+- **[Zustand](https://github.com/pmndrs/zustand)**: Lightweight, high-performance state management.
+- **[OPFS](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system)**: Cutting-edge browser storage for large-scale drawing data.
+- **[Google Drive API](https://developers.google.com/drive)**: Seamless, secure cloud integration.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### UI & Aesthetics
+- **[Lucide React](https://lucide.dev/)**: Beautifully consistent iconography.
+- **[DND Kit](https://dndkit.com/)**: Sophisticated drag-and-drop for file management.
+- **[Sonner](https://sonner.emilkowal.ski/)**: Minimalist toasted notifications.
+- **Vanilla CSS Modules**: High-performance, scoped styling with modern CSS variables.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Tools
+- **[Vite](https://vitejs.dev/)**: Ultra-fast build tool and dev server.
+- **[i18next](https://www.i18next.com/)**: Powerful localization framework.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Getting Started
+
+### Prerequisites
+- Node.js 18+ 
+- npm / pnpm / yarn
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/juliopx/cuaderno.git
+   cd cuaderno
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file for your licenses and API keys:
+   ```env
+   VITE_TLDRAW_LICENSE=your_license_here
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## Privacy
+
+Cuaderno is built on the belief that your thoughts are private. 
+- **No Analytics**: We don't track you.
+- **No Backend**: We don't have a server that stores your notes.
+- **Direct Auth**: Google Drive authentication happens directly between you and Google.
+
+---
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<p align="center">
+  Built with love for the creative mind.
+</p>
