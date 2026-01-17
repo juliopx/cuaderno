@@ -1,0 +1,56 @@
+name: Back-Sync main to develop
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      
+      - name: Check if sync needed
+        id: check
+        run: |
+          git fetch origin develop
+          BEHIND=$(git rev-list --count develop..main)
+          echo "commits_behind=$BEHIND" >> $GITHUB_OUTPUT
+          
+          if [ "$BEHIND" -gt 0 ]; then
+            echo "need_sync=true" >> $GITHUB_OUTPUT
+            echo "develop is $BEHIND commits behind main, sync needed"
+          else
+            echo "need_sync=false" >> $GITHUB_OUTPUT
+            echo "develop is up to date with main"
+          fi
+      
+      - name: Create sync PR
+        if: steps.check.outputs.need_sync == 'true'
+        run: |
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --base develop --head main --json number --jq '.[0].number')
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR #$EXISTING_PR already exists, updating..."
+            gh pr edit $EXISTING_PR --body "Automated PR to sync release changes from main back to develop after release publication."
+          else
+            echo "Creating new sync PR..."
+            gh pr create \
+              --base develop \
+              --head main \
+              --title "chore: sync main → develop after release" \
+              --body "Automated PR to sync release changes from main back to develop after release publication." \
+              --label "chore"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

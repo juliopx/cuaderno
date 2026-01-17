@@ -1,12 +1,18 @@
 ## [1.3.0] - 2026-01-17
 
-<!-- Release notes generated using configuration in .github/release.yml at develop -->
+### Features
+- **Simplified Drag and Drop UX**: Streamlined sidebar drag-and-drop interaction by removing direct item nesting. Items now only support reordering (above/below) when dragging directly onto them, while nesting is exclusively handled by dropping onto column containers or empty spaces.
+
+### Internal
+- **Code Cleanup**: Removed unused props and state variables (`activeDragItem`, `dropZone` middle-zone detection) from `SortableItem` and related components.
+- **Improved Type Safety**: Resolved TypeScript lint warnings and cleaned up component interfaces.
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.2.0...v1.3.0
 
 ## [1.2.0] - 2026-01-17
 
-<!-- Release notes generated using configuration in .github/release.yml at develop -->
+### Internal
+- **Release Process Improvements**: Updated release script to ensure `package-lock.json` stays in sync with version bumps.
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.1.3...v1.2.0
 
@@ -19,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.3] - 2026-01-17
 
-### 🚀 Features
+### Features
 - **Undo/Redo Shortcuts**: Added keyboard shortcuts for Undo (`Ctrl/Cmd + Z`) and Redo (`Ctrl/Cmd + Shift + Z`, `Ctrl/Cmd + Y`).
 - **Improved Release Flow**: Automated `CHANGELOG.md` updates and local version bumping via `npm run release`.
 - **Branch Protection Enforcement**: Improved security by requiring PRs for `main` and `develop`.
@@ -30,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- Release notes generated using configuration in .github/release.yml at 23d4a909f43cefb623188c0e8e5a792d35eab21c -->
 
-### 🚀 Features
+### Features
 - **Sync Welcome Page Color**: Dynamically synchronization of the welcome page's branding, links, and background with the application's accent color.
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.0.0...v1.1.0
