@@ -11,15 +11,15 @@
 
 ## Key Features
 
-- ** Local-First Architecture**: Uses the **Origin Private File System (OPFS)** for near-native storage performance. Your notes are always available, even offline.
-- ** Infinite Canvas**: Powered by **tldraw**, providing a world-class drawing engine with pressure sensitivity and smart shape detection.
-- **☁️ Private Cloud Sync**: Optional synchronization with **your own Google Drive**. No third-party servers, no surveillance. Your data stays between your device and your cloud.
-- ** Ergonomic UI**: 
+- **Local-First Architecture**: Uses the **Origin Private File System (OPFS)** for near-native storage performance. Your notes are always available, even offline.
+- **Infinite Canvas**: Powered by **tldraw**, providing a world-class drawing engine with pressure sensitivity and smart shape detection.
+- **Private Cloud Sync**: Optional synchronization with **your own Google Drive**. No third-party servers, no surveillance. Your data stays between your device and your cloud.
+- **Ergonomic UI**: 
   - **Left/Right-Handed Modes**: Adaptive interface to keep tools within reach regardless of your dominant hand.
   - **Glassmorphism Design**: A modern, premium aesthetic that stays out of your way.
-- ** Deep Organization**: Organize your world into **Notebooks**, **Folders**, and **Pages** with intuitive drag-and-drop.
-- ** Global by Design**: Fully localized in 18+ languages including English, Spanish, French, German, Japanese, and more.
-- ** PWA Ready**: Install it on your tablet or desktop for a true application experience.
+- **Deep Organization**: Organize your world into **Notebooks**, **Folders**, and **Pages** with intuitive drag-and-drop.
+- **Global by Design**: Fully localized in 18+ languages including English, Spanish, French, German, Japanese, and more.
+- **PWA Ready**: Install it on your tablet or desktop for a true application experience.
 
 ---
 
