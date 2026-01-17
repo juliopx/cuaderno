@@ -1,3 +1,19 @@
+## [1.3.0] - 2026-01-17
+
+<!-- Release notes generated using configuration in .github/release.yml at develop -->
+
+
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.1.3...v1.3.0
+
+## [1.2.0] - 2026-01-17
+
+<!-- Release notes generated using configuration in .github/release.yml at develop -->
+
+
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.1.3...v1.2.0
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
