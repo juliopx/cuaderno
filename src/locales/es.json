@@ -61,6 +61,8 @@
   "delete": "Eliminar",
   "confirm_logout_delete_data": "¿Quieres eliminar todos los datos guardados en Google Drive antes de cerrar sesión?",
   "privacy_policy": "Privacidad y Cookies",
+  "terms_of_service": "Términos del Servicio",
+  "welcome_description": "Cuaderno es una aplicación de notas y dibujos enfocada en la privacidad (local-first). Todos tus datos permanecen en tu dispositivo a menos que elijas sincronizarlos de forma privada con tu propia cuenta de Google Drive.",
   "google_drive_privacy_notice": "Al conectar Google Drive, Google aplica sus propias políticas de privacidad y cookies.",
   "learn_more": "Más información"
 }

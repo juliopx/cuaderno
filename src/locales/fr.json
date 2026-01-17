@@ -62,5 +62,7 @@
   "confirm_logout_delete_data": "Voulez-vous supprimer toutes les données enregistrées dans Google Drive avant de vous déconnecter ?",
   "privacy_policy": "Confidentialité et Cookies",
   "google_drive_privacy_notice": "En vous connectant à Google Drive, Google applique ses propres politiques de confidentialité et de cookies.",
-  "learn_more": "En savoir plus"
+  "learn_more": "En savoir plus",
+  "terms_of_service": "Conditions d'utilisation",
+  "welcome_description": "Cuaderno est une application de notes et de dessin axée sur la confidentialité (local-first). Vos données restent sur votre appareil, à moins que vous ne choisissiez de les synchroniser de manière privée avec votre propre compte Google Drive."
 }

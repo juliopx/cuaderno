@@ -62,5 +62,7 @@
   "confirm_logout_delete_data": "로그아웃하기 전에 Google Drive에 저장된 모든 데이터를 삭제하시겠습니까?",
   "privacy_policy": "개인정보 보호 및 쿠키",
   "google_drive_privacy_notice": "Google 드라이브에 연결하면 Google의 자체 개인정보 보호 및 쿠키 정책이 적용됩니다.",
-  "learn_more": "자세히 알아보기"
+  "learn_more": "자세히 알아보기",
+  "terms_of_service": "서비스 약관",
+  "welcome_description": "Cuaderno는 개인 정보 보호 중심(로컬 우선)의 노트 및 드로잉 애플리케이션입니다. 자신의 Google 드라이브 계정과 비공개로 동기화하도록 선택하지 않는 한 데이터는 기기에 남아 있습니다."
 }

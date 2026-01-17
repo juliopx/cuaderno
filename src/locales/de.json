@@ -61,6 +61,8 @@
   "delete": "Löschen",
   "confirm_logout_delete_data": "Möchten Sie alle gespeicherten Daten in Google Drive löschen, bevor Sie sich abmelden?",
   "privacy_policy": "Datenschutz & Cookies",
+  "terms_of_service": "Nutzungsbedingungen",
+  "welcome_description": "Cuaderno ist eine datenschutzorientierte (Local-first) Notiz- und Zeichensanwendung. Ihre Daten bleiben auf Ihrem Gerät, sofern Sie sich nicht für die private Synchronisierung mit Ihrem eigenen Google Drive-Konto entscheiden.",
   "google_drive_privacy_notice": "Durch die Verbindung mit Google Drive wendet Google seine eigenen Datenschutz- und Cookie-Richtlinien an.",
   "learn_more": "Mehr erfahren"
 }

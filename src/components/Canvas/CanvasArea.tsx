@@ -1050,17 +1050,29 @@ export const CanvasArea = () => {
             <CanvasTitle />
           </UIPortal>
         )}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          [leftHandedMode ? 'paddingRight' : 'paddingLeft']: `${sidebarWidth}px`,
-          color: 'hsl(var(--color-text-secondary))',
-          fontSize: '1.125rem',
-          transition: 'padding 0.3s ease'
-        }}>
-          {t('select_page_to_start')}
+        <div
+          className={styles.welcomeScreen}
+          data-dominant-hand={dominantHand}
+          style={{
+            [leftHandedMode ? 'paddingRight' : 'paddingLeft']: `${sidebarWidth}px`,
+          }}>
+          <div className={styles.welcomeContent}>
+            <div className={styles.welcomeBranding}>
+              <h1>Cuaderno</h1>
+            </div>
+            <div className={styles.welcomeDescription}>
+              <p>
+                {t('welcome_description')}
+              </p>
+            </div>
+            <nav className={styles.welcomeNav}>
+              <a href="/cuaderno/privacy.html">{t('privacy_policy')}</a>
+              <a href="/cuaderno/terms.html">{t('terms_of_service')}</a>
+            </nav>
+            <div className={styles.welcomeInstruction}>
+              {t('select_page_to_start')}
+            </div>
+          </div>
         </div>
       </div>
     );

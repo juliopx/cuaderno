@@ -62,5 +62,7 @@
   "confirm_logout_delete_data": "您确定要在登出前删除所有保存在 Google Drive 中的数据吗？",
   "privacy_policy": "隐私与 Cookie",
   "google_drive_privacy_notice": "连接到 Google 云端硬盘后，Google 将适用其自身的隐私和 Cookie 政策。",
-  "learn_more": "了解更多"
+  "learn_more": "了解更多",
+  "terms_of_service": "服务条款",
+  "welcome_description": "Cuaderno 是一款注重隐私的（本地优先）笔记本和绘画应用。您的数据将保留在您的设备上，除非您选择将其私密地同步到您自己的 Google 云端硬盘帐户。"
 }
