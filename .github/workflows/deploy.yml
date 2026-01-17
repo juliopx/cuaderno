@@ -35,9 +35,15 @@ jobs:
         run: npm run lint
 
       - name: Build
-        run: npm run build
+        run: |
+          if [ -n "$VITE_GOOGLE_VERIFICATION_FILE" ]; then
+            echo "google-site-verification: $VITE_GOOGLE_VERIFICATION_FILE" > public/$VITE_GOOGLE_VERIFICATION_FILE
+          fi
+          npm run build
         env:
           VITE_TLDRAW_LICENSE: ${{ secrets.VITE_TLDRAW_LICENSE }}
+          VITE_GOOGLE_VERIFICATION: ${{ secrets.VITE_GOOGLE_VERIFICATION }}
+          VITE_GOOGLE_VERIFICATION_FILE: ${{ secrets.VITE_GOOGLE_VERIFICATION_FILE }}
         
       - name: Setup Pages
         uses: actions/configure-pages@v4

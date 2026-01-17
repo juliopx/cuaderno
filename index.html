@@ -5,7 +5,8 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/icon-192.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="Digital notebook with handwritten notes" />
+  <meta name="description"
+    content="Cuaderno - Local-first notebook and drawing app with Google Drive sync. / Editor de notas y dibujos local-first con sincronización en Google Drive." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="manifest" href="/cuaderno/manifest.json" />
@@ -17,6 +18,23 @@
 
 <body>
   <div id="root"></div>
+
+  <!-- Content for Googlebot and SEO (Bilingual) -->
+  <div style="display: none;" aria-hidden="true">
+    <h1>Cuaderno</h1>
+    <section>
+      <p>Cuaderno is a privacy-focused (local-first) notebook and drawing application. Your data stays on your device
+        unless you choose to sync it privately with your own Google Drive account.</p>
+      <p>Cuaderno es una aplicación de notas y dibujos enfocada en la privacidad (local-first). Todos tus datos
+        permanecen en tu dispositivo a menos que elijas sincronizarlos de forma privada con tu propia cuenta de Google
+        Drive.</p>
+    </section>
+    <nav>
+      <a href="/cuaderno/privacy.html">Privacy Policy / Política de Privacidad</a>
+      <a href="/cuaderno/terms.html">Terms of Service / Términos del Servicio</a>
+    </nav>
+  </div>
+
   <script type="module" src="/src/main.tsx"></script>
 </body>
 

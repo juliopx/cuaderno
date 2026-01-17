@@ -1,7 +1,7 @@
 {
   "name": "Cuaderno",
   "short_name": "Cuaderno",
-  "description": "Digital notebook with handwritten notes",
+  "description": "Local-first notebook with Google Drive sync. / Editor de notas con sincronización en Google Drive.",
   "start_url": "/cuaderno/",
   "display": "standalone",
   "background_color": "#d9d9d9",
