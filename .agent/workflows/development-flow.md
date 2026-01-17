@@ -40,7 +40,7 @@ To limit who can merge and ensure validation, a **Ruleset** (named `Standard bra
     - **Required approvals**: 1 (User validation).
     - **Dismiss stale pull request approvals when new commits are pushed**: Checked.
 - **Require status checks to pass**:
-    - Select the **`build`** job (covers linting and compilation).
+    - Select the **`build`** workflow job, which runs both linting (`npm run lint`) and build/compilation (`npm run build`).
 - **Require conversation resolution before merging**: Checked.
 - **Block force pushes**: Checked.
 - **Require linear history**: Checked (prevents merge commits).
