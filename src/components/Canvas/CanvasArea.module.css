@@ -131,11 +131,12 @@
   margin: 0 0 1.5rem 0;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  /* Use a gradient from accent to a slightly lighter version */
+  background: linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent), white 30%));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.1));
+  filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--color-accent), transparent 80%));
 }
 
 .welcomeDescription {
@@ -159,18 +160,18 @@
 }
 
 .welcomeNav a {
-  color: #2563eb;
+  color: var(--color-accent);
   text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
   padding: 0.5rem 1rem;
-  background: rgba(37, 99, 235, 0.05);
+  background: var(--color-accent-soft);
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .welcomeNav a:hover {
-  background: rgba(37, 99, 235, 0.1);
+  background: color-mix(in srgb, var(--color-accent), transparent 80%);
   transform: translateY(-1px);
 }
 
