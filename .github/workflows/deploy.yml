@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   check-version:
@@ -38,9 +38,64 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-  build:
+  release:
     needs: check-version
-    if: needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch'
+    if: needs.check-version.outputs.version_changed == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Generate Release Notes
+        id: release_notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${require('./package.json').version}`,
+              target_commitish: context.sha
+            });
+            return data.body;
+
+      - name: Update CHANGELOG.md
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+          NOTES="${{ steps.release_notes.outputs.result }}"
+          
+          echo -e "## [$VERSION] - $DATE\n\n$NOTES\n\n$(cat CHANGELOG.md 2>/dev/null || echo "")" > CHANGELOG.md
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: update CHANGELOG.md for $VERSION [skip ci]"
+          git push origin main
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: v${{ steps.get_version.outputs.version }}
+          body: ${{ steps.release_notes.outputs.result }}
+          draft: false
+          prerelease: false
+
+  build:
+    needs: [check-version, release]
+    # Build if version changed (on any branch) or if manual dispatch
+    # If on main and version changed, we wait for release to finish updating CHANGELOG
+    if: |
+      always() &&
+      (needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch') &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
