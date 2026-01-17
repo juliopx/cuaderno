@@ -66,12 +66,20 @@ jobs:
             return data.body;
 
       - name: Update CHANGELOG.md
+        env:
+          NOTES: ${{ steps.release_notes.outputs.result }}
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
-          NOTES="${{ steps.release_notes.outputs.result }}"
           
-          echo -e "## [$VERSION] - $DATE\n\n$NOTES\n\n$(cat CHANGELOG.md 2>/dev/null || echo "")" > CHANGELOG.md
+          # Prepare new entry safely
+          printf "## [%s] - %s\n\n%s\n\n" "$VERSION" "$DATE" "$NOTES" > NEW_CHANGELOG.md
+          
+          # Append old content
+          if [ -f CHANGELOG.md ]; then
+            cat CHANGELOG.md >> NEW_CHANGELOG.md
+          fi
+          mv NEW_CHANGELOG.md CHANGELOG.md
           
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
