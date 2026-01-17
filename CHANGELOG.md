@@ -1,3 +1,11 @@
+## [1.1.3] - 2026-01-17
+
+<!-- Release notes generated using configuration in .github/release.yml at develop -->
+
+
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.1.0...v1.1.3
+
 ## [1.1.0] - 2026-01-17
 
 <!-- Release notes generated using configuration in .github/release.yml at 23d4a909f43cefb623188c0e8e5a792d35eab21c -->
