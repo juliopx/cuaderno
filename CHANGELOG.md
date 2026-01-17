@@ -1,0 +1,37 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.0.1] - 2026-01-17
+
+### Features
+- **UI/UX**: Implement a new welcome screen with app description, privacy, and terms links.
+- **Localization**: Add translations for privacy policy and Google Drive notices in multiple languages.
+- **Layout**: Conditionally calculate sidebar columns based on the active notebook.
+- **SEO/Metadata**: Enhance SEO with bilingual descriptions and adaptive metadata.
+- **CI/CD**: Implement conditional deployment based on version changes.
+
+### Bug Fixes
+- Correct application return links in privacy and terms pages.
+
+### Internal
+- **Linting**: Configure ESLint and integrate it into the CI pipeline.
+- **Documentation**: Comprehensive rewrite of README.
+- **Workflow**: Initial implementation of release and deployment scripts.
+
+## [0.0.0] - Prior to 2026-01-17
+
+### Features
+- **Core**: Initial MVP with `tldraw` integration for canvas drawing.
+- **Cloud Sync**: Full integration with Google Drive for real-time document synchronization.
+- **PWA**: Progressive Web App support with custom icons, manifest, and offline capabilities.
+- **UI System**: Custom design system including glassmorphism, theme-based accent colors, and responsive layouts.
+- **Accessibility**: Support for RTL (Right-to-Left) languages and dedicated left-handed mode.
+- **Localization**: Initial i18n framework with support for multiple languages.
+- **Interactions**: Enhanced pointer events for touch and pen support, including multi-finger gestures for undo/redo.
+- **Components**: Library of custom UI components (Bubble, Circular buttons, Dropdowns, Portals).
+- **Tools**: Specialized drawing tools including advanced eraser and pen modes.
+- **Environment**: Support for local HTTPS development and SSL.
