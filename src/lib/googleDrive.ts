@@ -1,4 +1,4 @@
-const CLIENT_ID = '872835981281-vb0g43t4q2ueeu6h5ltvtul0324a5dab.apps.googleusercontent.com';
+const CLIENT_ID = '530335058228-4v7t7o8tvn7r86239t1851fhi0urfnn2.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
 
 let tokenClient: any = null;
