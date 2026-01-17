@@ -40,7 +40,7 @@ jobs:
 
   release:
     needs: check-version
-    if: needs.check-version.outputs.version_changed == 'true' && github.ref == 'refs/heads/main'
+    if: (needs.check-version.outputs.version_changed == 'true' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
