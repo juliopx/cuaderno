@@ -91,6 +91,10 @@ export const googleDrive = {
         Authorization: `Bearer ${gapi.client.getToken().access_token}`
       }
     });
+    if (!response.ok) {
+      const error = await response.json();
+      throw { status: response.status, result: { error } };
+    }
     return response.json();
   },
 

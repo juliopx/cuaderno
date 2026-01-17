@@ -222,6 +222,21 @@ export const Settings = () => {
               </div>
             )}
           </div>
+
+          <div className={styles.divider} />
+
+          <div className={styles.privacySection}>
+            <div className={styles.privacyTitle}>{t('privacy_policy')}</div>
+            <p className={styles.privacyNotice}>{t('google_drive_privacy_notice')}</p>
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.privacyLink}
+            >
+              {t('learn_more')}
+            </a>
+          </div>
         </div>
       )
       }

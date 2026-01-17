@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "notebook",
   "cancel": "Cancel",
   "delete": "Delete",
-  "confirm_logout_delete_data": "Do you want to delete all saved data in Google Drive before logging out?"
+  "confirm_logout_delete_data": "Do you want to delete all saved data in Google Drive before logging out?",
+  "privacy_policy": "Privacy & Cookies",
+  "google_drive_privacy_notice": "By connecting to Google Drive, Google applies its own privacy and cookie policies.",
+  "learn_more": "Learn more"
 }

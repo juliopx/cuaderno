@@ -59,5 +59,8 @@
   "delete_confirm_notebook": "cuaderno",
   "cancel": "Cancelar",
   "delete": "Eliminar",
-  "confirm_logout_delete_data": "¿Quieres eliminar todos los datos guardados en Google Drive antes de cerrar sesión?"
+  "confirm_logout_delete_data": "¿Quieres eliminar todos los datos guardados en Google Drive antes de cerrar sesión?",
+  "privacy_policy": "Privacidad y Cookies",
+  "google_drive_privacy_notice": "Al conectar Google Drive, Google aplica sus propias políticas de privacidad y cookies.",
+  "learn_more": "Más información"
 }

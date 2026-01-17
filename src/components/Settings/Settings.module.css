@@ -317,3 +317,38 @@
   position: relative;
   width: 100%;
 }
+
+.privacySection {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.privacyTitle {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: hsl(var(--color-text-secondary));
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+
+.privacyNotice {
+  font-size: 0.65rem;
+  color: hsl(var(--color-text-secondary));
+  line-height: 1.4;
+  margin: 0 0 6px 0;
+  opacity: 0.8;
+}
+
+.privacyLink {
+  font-size: 0.65rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.privacyLink:hover {
+  text-decoration: underline;
+  opacity: 0.8;
+}

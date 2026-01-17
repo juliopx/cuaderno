@@ -86,6 +86,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         await googleDrive.setToken(token);
       }
       const userInfo = await googleDrive.getUserInfo();
+
+      if (!userInfo || !userInfo.name) {
+        throw new Error('Invalid user info received');
+      }
+
       const user = { name: userInfo.name, photo: userInfo.picture };
 
       localStorage.setItem('cuaderno-user-info', JSON.stringify(user));
