@@ -1,6 +1,11 @@
 ## [1.0.0] - 2026-01-17
 
-"<!-- Release notes generated using configuration in .github/release.yml at af9c84b96075ae0612aa787d06a7ddaeab58c020 -->\n\n\n## New Contributors\n* @juliopx made their first contribution in https://github.com/juliopx/cuaderno/pull/2\n\n**Full Changelog**: https://github.com/juliopx/cuaderno/commits/v1.0.0"
+<!-- Release notes generated using configuration in .github/release.yml at af9c84b96075ae0612aa787d06a7ddaeab58c020 -->
+
+## New Contributors
+* @juliopx made their first contribution in https://github.com/juliopx/cuaderno/pull/2
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/commits/v1.0.0
 
 # Changelog
 
