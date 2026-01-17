@@ -114,7 +114,9 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
     setCurrentPath("");
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch (err) { }
+    } catch {
+      // Ignore if pointer capture was already released
+    }
   };
 
   const getPos = (e: React.PointerEvent) => {
@@ -180,13 +182,15 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
             style={{
               cursor: lastPointerType === 'pen' ? 'crosshair' : 'text',
               direction: 'ltr', /* Force LTR for the coordinate system to match SVG, but handle visual RTL via CSS */
+              touchAction: 'none',
               userSelect: initialPointerType === 'pen' ? 'none' : 'auto',
               WebkitUserSelect: initialPointerType === 'pen' ? 'none' : 'auto',
+              WebkitTouchCallout: initialPointerType === 'pen' ? 'none' : 'auto',
             } as React.CSSProperties}
           >
             <input
               ref={inputRef}
-              autoFocus
+              autoFocus={initialPointerType !== 'pen'}
               className={styles.input}
               value={name}
               readOnly={initialPointerType === 'pen'}
@@ -202,7 +206,8 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
               onScroll={handleScroll}
               style={{
                 cursor: initialPointerType === 'pen' ? 'default' : 'text',
-                textAlign: 'start'
+                textAlign: 'start',
+                pointerEvents: initialPointerType === 'pen' ? 'none' : 'auto'
               }}
             />
             <svg className={styles.svgOverlay} viewBox="0 0 2000 40" preserveAspectRatio="xMinYMin slice">
