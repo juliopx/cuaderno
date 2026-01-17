@@ -89,7 +89,20 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
     e.preventDefault();
     e.stopPropagation();
 
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Ensure clean state before starting
+    if (isDrawing.current) {
+      // Finish any pending stroke first
+      if (currentPath) {
+        setPaths(prev => [...prev, currentPath]);
+      }
+    }
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer capture might fail in some scenarios, continue anyway
+    }
+
     isDrawing.current = true;
     const pos = getPos(e);
     // pos.x is relative to inputWrapper padding start now
@@ -109,13 +122,11 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
     e.stopPropagation();
     if (isDrawing.current && currentPath) {
       setPaths(prev => [...prev, currentPath]);
+      setCurrentPath("");
     }
     isDrawing.current = false;
-    setCurrentPath("");
-    try {
+    if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore if pointer capture was already released
     }
   };
 
@@ -195,12 +206,10 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
               value={name}
               readOnly={initialPointerType === 'pen'}
               onFocus={(e) => {
-                if (initialPointerType === 'pen') {
-                  // For pen, we don't want to select text or show keyboard / focus cursor necessarily
-                  e.target.blur();
-                } else {
+                if (initialPointerType !== 'pen') {
                   e.target.select();
                 }
+                // In pen mode, we don't handle focus at all to avoid interference
               }}
               onChange={(e) => setName(e.target.value)}
               onScroll={handleScroll}
