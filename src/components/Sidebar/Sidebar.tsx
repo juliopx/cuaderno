@@ -41,7 +41,6 @@ interface SortableItemProps {
   onPointerDown?: (e: React.PointerEvent) => void;
   onDelete?: (id: string) => void;
   styles: any;
-  activeDragItem: Notebook | Folder | Page | null;
   isRtl: boolean;
   folders: Record<string, Folder>;
   pages: Record<string, Page>;
@@ -49,7 +48,9 @@ interface SortableItemProps {
   isDarkMode: boolean; // Add this
 }
 
-const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, onDelete, styles, activeDragItem, isRtl, folders, pages, notebooks, isDarkMode }: SortableItemProps) => {
+const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, onDelete, styles, isRtl, folders, pages, notebooks, isDarkMode }: SortableItemProps) => {
+  const [dropZone, setDropZone] = useState<'top' | 'bottom' | null>(null);
+
   const {
     attributes,
     listeners,
@@ -58,10 +59,25 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
     transition,
     isDragging,
     isOver
-  } = useSortable({ id: item.id, data: { item } });
+  } = useSortable({ id: item.id, data: { item, dropZone } });
+
+  // Determine the drop zone based on relative Y position
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isOver || isDragging) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relativeY = (e.clientY - rect.top) / rect.height;
+
+    // Simple 2-zone detection for reordering: Top half vs Bottom half
+    if (relativeY < 0.5) setDropZone('top');
+    else setDropZone('bottom');
+  };
+
+  useEffect(() => {
+    if (!isOver) setDropZone(null);
+  }, [isOver]);
 
   // Resolve effective color with inheritance
-  const itemColorName = useMemo(() => resolveItemColor(item.id, folders, pages, notebooks), [item.id, folders, pages, notebooks, (item as any).color, (item as any).parentId]);
+  const itemColorName = useMemo(() => resolveItemColor(item.id, folders, pages, notebooks), [item.id, folders, pages, notebooks]);
   const itemColorHex = useThemeColorHex(itemColorName, isDarkMode);
 
   const style = {
@@ -76,26 +92,8 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
   const isFolder = !isNotebook && !(item as Page).updatedAt;
   const isPage = !isNotebook && !isFolder;
 
-  // Determine if this item should highlight as a drop target
-  const canReceiveDrop = useMemo(() => {
-    if (!isOver || !activeDragItem || isDragging) return false;
-
-    // Check if the dragged item is a notebook (notebooks can't be moved into folders)
-    const isDraggingNotebook = !(activeDragItem as any).notebookId;
-    if (isDraggingNotebook) return false;
-
-    // Notebooks can always receive drops (they are never siblings with content)
-    if (isNotebook) return true;
-
-    // Folders can receive drops if the active item is NOT a sibling
-    if (isFolder) {
-      const activeParentId = (activeDragItem as any).parentId;
-      const overParentId = (item as any).parentId;
-      return activeParentId !== overParentId;
-    }
-
-    return false;
-  }, [isOver, activeDragItem, isDragging, isNotebook, isFolder, item]);
+  // No longer allowing nesting by dropping ON an item (middle zone removed)
+  const canReceiveDrop = false;
 
   let Icon = File;
   if (isNotebook) Icon = Book;
@@ -131,14 +129,28 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
       } as React.CSSProperties}
       {...attributes}
       {...listeners}
-      className={clsx(styles.item, isActive && styles.itemActive, canReceiveDrop && styles.itemOver)}
+      className={clsx(
+        styles.item,
+        isActive && styles.itemActive,
+        canReceiveDrop && styles.dropInside
+      )}
+      onPointerMove={handlePointerMove}
+      onPointerDown={(e) => {
+        onPointerDown?.(e);
+        listeners?.onPointerDown(e);
+      }}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest(`.${styles.itemActions}`)) return;
         onSelect(item);
       }}
       onDoubleClick={onDoubleClick}
-      onPointerDown={onPointerDown}
     >
+      {isOver && dropZone === 'top' && !isDragging && !canReceiveDrop && (
+        <div className={clsx(styles.dropIndicator, styles.dropIndicatorTop)} />
+      )}
+      {isOver && dropZone === 'bottom' && !isDragging && !canReceiveDrop && (
+        <div className={clsx(styles.dropIndicator, styles.dropIndicatorBottom)} />
+      )}
       <Icon
         className={styles.icon}
         style={{ color: !isActive ? itemColorHex : undefined }}
@@ -210,7 +222,6 @@ interface ColumnProps {
   onRename: (id: string, name: string, strokes?: string, color?: string) => void;
   onDelete?: (id: string) => void;
   type: 'notebook' | 'content';
-  activeDragItem: Notebook | Folder | Page | null;
   folders: Record<string, Folder>;
   pages: Record<string, Page>;
   notebooks: Notebook[];
@@ -218,7 +229,7 @@ interface ColumnProps {
 }
 
 
-const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRename, onDelete, type, activeDragItem, folders, pages, notebooks, isDarkMode }: ColumnProps) => {
+const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRename, onDelete, type, folders, pages, notebooks, isDarkMode }: ColumnProps) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl';
 
@@ -261,7 +272,6 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 }}
                 onDelete={onDelete}
                 styles={styles}
-                activeDragItem={activeDragItem}
                 isRtl={isRtl}
                 folders={folders}
                 pages={pages}
@@ -315,6 +325,16 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
   );
 };
 
+// Local helper to check for descendant relationship
+const checkIsDescendant = (childFolderId: string, potentialAncestorId: string, folders: Record<string, Folder>): boolean => {
+  let current = folders[childFolderId];
+  while (current && current.parentId) {
+    if (current.parentId === potentialAncestorId) return true;
+    current = folders[current.parentId];
+  }
+  return false;
+};
+
 export const Sidebar = () => {
   const { t } = useTranslation();
   const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
@@ -325,7 +345,7 @@ export const Sidebar = () => {
     createNotebook, createFolder, createPage,
     deleteNotebook, deleteFolder, deletePage,
     setActiveNotebook, selectPage, isSidebarOpen, toggleSidebar, renameNode,
-    reorderNotebooks, moveNode, dominantHand
+    reorderNotebooks, moveNode, dominantHand, navigatePath
   } = useFileSystemStore();
 
   // Update global accent color based on active item
@@ -386,7 +406,17 @@ export const Sidebar = () => {
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragItem(event.active.data.current?.item);
+    const item = event.active.data.current?.item;
+    setActiveDragItem(item);
+
+    // If dragging a folder, close its children columns if open
+    if (item && !(item as any).notebookId === false && !(item as any).updatedAt) {
+      const folderId = item.id as string;
+      const index = activePath.indexOf(folderId);
+      if (index !== -1) {
+        navigatePath(activePath.slice(0, index));
+      }
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -396,60 +426,64 @@ export const Sidebar = () => {
     if (!over) return;
 
     if (active.id !== over.id) {
-      // Check if it is a notebook reorder
-      const isNotebookMove = notebooks.find(n => n.id === active.id);
+      const activeData = active.data.current;
+      const overData = over.data.current;
+      const activeItem = activeData?.item;
+      const overItem = overData?.item;
 
-      if (isNotebookMove) {
-        // Notebooks can be reordered relative to other notebooks (which are items)
-        // Or dropped into the "root-notebooks" container (append)
-        // If dropped on container-root-notebooks
-        if (over.id === 'container-root-notebooks' || notebooks.find(n => n.id === over.id)) {
-          // For notebooks, we currently only support reordering, so we can ignore container drops for now
-          // or treating them as "move to end".
-          // Let's pass the raw ID and let store handle or just ignore container drops for notebooks for now if strict reorder.
-          // Simpler: If container, assume swap with last? Or separate action?
-          // Existing reorderNotebooks expects 'overId' to be an item.
+      const isActiveNotebook = activeItem && !(activeItem as any).notebookId;
+      const isOverNotebook = overItem && !(overItem as any).notebookId;
+      const isOverContainer = (over.id as string).startsWith('container-');
+
+      // --- CASE 1: Notebook Movements ---
+      if (isActiveNotebook) {
+        // Notebooks can ONLY reorder. They can't be put inside anything.
+        if (isOverNotebook || over.id === 'container-root-notebooks') {
           if (over.id === 'container-root-notebooks') {
-            // append to end?
-            // Not implemented in reorderNotebooks yet. keeping simple.
-            return;
-          }
-          reorderNotebooks(active.id as string, over.id as string);
-        }
-      } else {
-        // Content move
-        const overIdString = over.id as string;
-        if (overIdString.startsWith('container-')) {
-          // Dropped onto a column (empty space) -> Append to that container
-          const containerId = overIdString.replace('container-', '');
-
-          // CONSTRAINT: Cannot drop content (Folder/Page) into 'root-notebooks' container
-          if (containerId === 'root-notebooks') {
-            return;
-          }
-
-          moveNode(active.id as string, containerId, true);
-        } else {
-          // Dropped onto an item.
-          // Check if it is a Notebook
-          const isOverNotebook = notebooks.find(n => n.id === overIdString);
-          if (isOverNotebook) {
-            // Dropped content onto a Notebook Item -> Move Into (Container Drop)
-            moveNode(active.id as string, overIdString, true);
-          } else {
-            // Check if it's a folder and NOT a sibling
-            const overItem = folders[overIdString] || pages[overIdString];
-            const isOverFolder = folders[overIdString];
-            const activeItem = folders[active.id] || pages[active.id];
-
-            if (isOverFolder && activeItem && activeItem.parentId !== overItem.parentId) {
-              // Non-sibling folder -> Move Into
-              moveNode(active.id as string, overIdString, true);
-            } else {
-              // Sibling or over a page -> Reorder
-              moveNode(active.id as string, overIdString, false);
+            const lastNotebook = notebooks[notebooks.length - 1];
+            if (lastNotebook && active.id !== lastNotebook.id) {
+              reorderNotebooks(active.id as string, lastNotebook.id);
             }
+          } else {
+            reorderNotebooks(active.id as string, over.id as string);
           }
+        }
+        return;
+      }
+
+      // --- CASE 2: Content Movements (Pages/Folders) ---
+
+      // Step A: Determine Target Parent and Insertion Mode
+      let targetParentId: string | null = null;
+      let isContainerDrop = false;
+
+      if (isOverContainer) {
+        // Dropped on a column header/empty space
+        const containerId = (over.id as string).replace('container-', '');
+        if (containerId === 'root-notebooks') return; // Should not happen for content
+        targetParentId = containerId;
+        isContainerDrop = true;
+      } else if (isOverNotebook) {
+        // Dropped on a notebook in the first column
+        targetParentId = over.id as string;
+        isContainerDrop = true;
+      } else if (overItem) {
+        // Dropped on another Folder or Page -> ALWAYS Reorder (no more middle-zone nesting)
+        targetParentId = (overItem as any).parentId || (overItem as any).notebookId;
+        isContainerDrop = false;
+      }
+
+      if (targetParentId) {
+        // Security: Prevent circular moves
+        if (active.id === targetParentId || checkIsDescendant(targetParentId, active.id as string, folders)) {
+          return;
+        }
+
+        // Move or Reorder
+        if (isContainerDrop) {
+          moveNode(active.id as string, targetParentId, true);
+        } else {
+          moveNode(active.id as string, over.id as string, false);
         }
       }
     }
@@ -457,18 +491,6 @@ export const Sidebar = () => {
 
 
   const columns = useMemo(() => {
-
-    // Recursive check helper: is 'childId' a descendant of 'parentId'?
-    const isDescendant = (childFolderId: string, potentialAncestorId: string): boolean => {
-      let current = folders[childFolderId];
-      while (current) {
-        if (current.id === potentialAncestorId) return true;
-        if (!current.parentId) return false;
-        current = folders[current.parentId];
-      }
-      return false;
-    };
-
 
     const cols = [];
 
@@ -532,7 +554,7 @@ export const Sidebar = () => {
       }
 
       // Also if 'parentId' is a descendant of the dragged folder (if deeply nested open)
-      if (activeDragItem && isDescendant(parentId, activeDragItem.id)) {
+      if (activeDragItem && checkIsDescendant(parentId, activeDragItem.id, folders)) {
         break;
       }
 
@@ -629,7 +651,7 @@ export const Sidebar = () => {
     }
 
     return cols;
-  }, [notebooks, folders, pages, activePath, activeNotebookId, activePageId, setActiveNotebook, createFolder, createPage, selectPage, renameNode, createNotebook, activeDragItem]);
+  }, [notebooks, folders, pages, activePath, activeNotebookId, activePageId, setActiveNotebook, createFolder, createPage, selectPage, createNotebook, activeDragItem, t, deleteFolder, deleteNotebook, deletePage, setPendingDelete]);
 
   if (!isSidebarOpen) return null;
 
@@ -677,7 +699,6 @@ export const Sidebar = () => {
             onRename={renameNode}
             onDelete={col.onDelete}
             type={col.type}
-            activeDragItem={activeDragItem}
           />
         ))}
       </div>

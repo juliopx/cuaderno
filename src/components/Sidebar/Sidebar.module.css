@@ -97,10 +97,34 @@
 }
 
 .itemOver {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
   background-color: var(--color-accent-soft);
-  /* Assuming accent-soft is also wrapped in index.css or opaque */
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+
+/* Indicators for "drop inside" specific to containers */
+.dropInside {
+  background-color: var(--color-accent-soft) !important;
+  box-shadow: inset 0 0 0 2px var(--color-accent) !important;
+}
+
+/* Specific indicator for reordering (between items) */
+.dropIndicator {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  height: 2px;
+  background-color: var(--color-accent);
+  z-index: 10;
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+.dropIndicatorTop {
+  top: -1px;
+}
+
+.dropIndicatorBottom {
+  bottom: -1px;
 }
 
 
