@@ -1,3 +1,16 @@
+## [1.1.0] - 2026-01-17
+
+<!-- Release notes generated using configuration in .github/release.yml at 23d4a909f43cefb623188c0e8e5a792d35eab21c -->
+
+## What's Changed
+### 🚀 Features
+* feat: sync welcome screen colors with active accent color by @juliopx in https://github.com/juliopx/cuaderno/pull/5
+
+## New Contributors
+* @juliopx made their first contribution in https://github.com/juliopx/cuaderno/pull/2
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.0.0...v1.1.0
+
 ## [1.0.0] - 2026-01-17
 
 <!-- Release notes generated using configuration in .github/release.yml at af9c84b96075ae0612aa787d06a7ddaeab58c020 -->
