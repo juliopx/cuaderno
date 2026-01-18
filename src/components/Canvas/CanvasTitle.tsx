@@ -2,51 +2,13 @@ import { useMemo, Fragment } from 'react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useTranslation } from 'react-i18next';
 import styles from './CanvasTitle.module.css';
-import { getSvgPathBoundingBox } from '../../lib/svgUtils';
+import { HybridName } from '../UI/HybridName';
 
 interface PathItem {
   id: string;
   name: string;
   nameStrokes?: string;
 }
-
-const HybridPathItem = ({ item, isRtl }: { item: PathItem; isRtl: boolean }) => {
-  const bbox = useMemo(() => {
-    if (!item.nameStrokes) return null;
-    return getSvgPathBoundingBox(item.nameStrokes);
-  }, [item.nameStrokes]);
-
-  const drawingWidth = (bbox && !bbox.isEmpty) ? bbox.x + bbox.width : 0;
-  const svgWidth = Math.max(250, drawingWidth);
-  const viewBox = `0 0 ${svgWidth} 40`;
-
-  return (
-    <div className={styles.itemWrapper}>
-      <span className={styles.nameText}>{item.name}</span>
-      {item.nameStrokes && (
-        <div className={styles.drawingSpacer} style={{ width: drawingWidth }}>
-          <div className={styles.strokeOverlay}>
-            <svg
-              viewBox={viewBox}
-              width={svgWidth}
-              height={40}
-              style={{ display: 'block' }}
-            >
-              <path
-                d={item.nameStrokes}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                transform={isRtl ? `translate(${svgWidth - drawingWidth}, 0)` : undefined}
-              />
-            </svg>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const CanvasTitle = () => {
   const { t, i18n } = useTranslation();
@@ -89,7 +51,12 @@ export const CanvasTitle = () => {
       <div className={styles.breadcrumb} onClick={toggleSidebar} title={t('click_to_show_sidebar')}>
         {breadcrumbItems.map((item, i) => (
           <Fragment key={item.id}>
-            <HybridPathItem item={item} isRtl={isRtl} />
+            <HybridName
+              name={item.name}
+              strokes={item.nameStrokes}
+              isRtl={isRtl}
+              className={styles.itemWrapper}
+            />
             {i < breadcrumbItems.length - 1 && <span className={styles.separator}>/</span>}
           </Fragment>
         ))}

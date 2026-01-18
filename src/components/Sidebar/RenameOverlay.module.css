@@ -6,7 +6,8 @@
   height: 100vh;
   z-index: 1000;
   background: rgba(0, 0, 0, 0.1);
-  /* Subtle backdrop to focus */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .overlay {
@@ -18,7 +19,11 @@
   box-shadow: var(--shadow-lg);
   padding: 1rem;
   overflow: visible;
-  /* Removed backdrop-filter as requested */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .container {
@@ -26,48 +31,96 @@
   flex-direction: column;
   gap: 0.5rem;
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .inputWrapper {
   position: relative;
-  height: 5rem;
-  /* 80px (2x height of sidebar item) */
+  height: 80px;
+  /* Exactly 2.0x Sidebar height */
   display: flex;
   align-items: center;
   background: hsl(var(--color-bg-secondary));
   /* Solid background, no transparency */
   border-radius: var(--radius-sm);
-  padding: 0 16px;
-  /* 8px * 2 */
-  border: 1px solid hsl(var(--color-text-secondary) / 0.1);
+  padding: 0;
+  /* Marginal Logic moved to children */
+  box-sizing: border-box;
   touch-action: none;
 }
 
 .input {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 17px;
+  width: calc(100% - 34px);
+  height: 80px;
+  line-height: 80px;
   border: none;
   background: transparent;
-  font-family: inherit;
-  font-size: 1.8rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-size: 28px;
   font-weight: normal;
-  letter-spacing: normal;
-  /* 0.9rem * 2 */
+  letter-spacing: 0;
+  text-rendering: geometricPrecision;
+  font-variant-ligatures: none;
+  font-kerning: none;
   padding: 0;
+  margin: 0;
   color: inherit;
-  /* inherit from wrapper which gets color from prop */
-  /* Ensure high contrast */
+  caret-color: currentColor;
   outline: none;
+  z-index: 10;
+  white-space: nowrap;
 }
 
 .svgOverlay {
   position: absolute;
   top: 0;
-  left: 16px;
-  /* 8px * 2 */
-  width: calc(100% - 32px);
+  left: 17px;
+  /* 1px border + 16px padding */
+  width: calc(100% - 34px);
   height: 100%;
   pointer-events: none;
+}
+
+.textModeDrawing {
+  position: absolute !important;
+  top: 0;
+  left: 17px;
+  width: calc(100% - 34px);
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.6;
+}
+
+.penModeBackground {
+  position: absolute !important;
+  top: 0;
+  left: 17px;
+  width: calc(100% - 34px);
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.penModeName {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: normal;
+  letter-spacing: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: inherit;
+  transform: scale(2);
+  transform-origin: left center;
+  height: 20px;
+  /* 40px visual / 2 */
 }
 
 
@@ -86,6 +139,7 @@
   width: 100%;
   height: 100%;
   cursor: crosshair;
+  z-index: 10;
 }
 
 .actions {
