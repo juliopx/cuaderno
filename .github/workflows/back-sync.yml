@@ -24,7 +24,7 @@ jobs:
         id: check
         run: |
           git fetch origin develop
-          BEHIND=$(git rev-list --count develop..main)
+          BEHIND=$(git rev-list --count origin/develop..main)
           echo "commits_behind=$BEHIND" >> $GITHUB_OUTPUT
           
           if [ "$BEHIND" -gt 0 ]; then
