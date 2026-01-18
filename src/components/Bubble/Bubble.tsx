@@ -17,9 +17,11 @@ import {
   Italic,
   Underline,
   Strikethrough,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { Dropdown } from '../UI/Dropdown';
 import { useTranslation } from 'react-i18next';
+import { LinkInputModal } from '../UI/LinkInputModal';
 
 // Generic Scribble SVG
 const Scribble = ({ strokeWidth, color = 'currentColor' }: { strokeWidth: number, color?: string }) => (
@@ -122,7 +124,55 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFontOpen, setIsFontOpen] = useState(false);
   const [isSizeOpen, setIsSizeOpen] = useState(false);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [relativeClickPoint, setRelativeClickPoint] = useState({ x: 0, y: 0 });
+  const savedRange = useRef<Range | null>(null);
+
+  const openLinkModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedRange.current = selection.getRangeAt(0).cloneRange();
+    } else {
+      savedRange.current = null;
+    }
+    setIsLinkModalOpen(true);
+  };
+
+  const handleLinkConfirm = (url: string) => {
+    const editingId = editor.getEditingShapeId();
+    if (!editingId) {
+      setIsLinkModalOpen(false);
+      return;
+    }
+
+    const shapeEl = document.getElementById(editingId)?.querySelector('.rich-text-container');
+    if (shapeEl) {
+      (shapeEl as HTMLElement).focus();
+
+      // Ensure we hit the next frame for focus and range to be fully restored
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (savedRange.current && selection) {
+          selection.removeAllRanges();
+          selection.addRange(savedRange.current);
+        }
+
+        const currentSelection = window.getSelection();
+        if (currentSelection && currentSelection.isCollapsed) {
+          // If no selection, insert the URL as the link text
+          document.execCommand('insertHTML', false, `<a href="${url}">${url}</a>`);
+        } else {
+          // If there is a selection, wrap it in a link
+          document.execCommand('createLink', false, url);
+        }
+        setIsLinkModalOpen(false);
+        savedRange.current = null;
+      }, 50);
+    } else {
+      setIsLinkModalOpen(false);
+    }
+  };
 
   const textStyles = useTextStyleStore();
 
@@ -713,6 +763,16 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
                 >
                   <Strikethrough size={16} />
                 </button>
+                <div className={styles.verticalDivider} />
+                <button
+                  className={styles.iconBtn}
+                  onClick={openLinkModal}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  title={t('format_link')}
+                >
+                  <LinkIcon size={16} />
+                </button>
+                <div className={styles.verticalDivider} />
               </div>
               <div className={styles.styleGroup}>
                 {['start', 'middle', 'end', 'justify'].filter(h => {
@@ -803,6 +863,13 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
             />
           ))}
         </div>
+        {isLinkModalOpen && (
+          <LinkInputModal
+            onConfirm={handleLinkConfirm}
+            onCancel={() => setIsLinkModalOpen(false)}
+            title={t('format_link')}
+          />
+        )}
       </div>
     </UIPortal >
   );
