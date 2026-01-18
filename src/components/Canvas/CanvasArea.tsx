@@ -926,10 +926,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     window.addEventListener('keyup', handleKeyUp);
 
     // Longpress event listeners for touch and pen
-    container.addEventListener('pointerdown', handlePointerDownForLongpress);
-    container.addEventListener('pointermove', handlePointerMoveForLongpress);
-    container.addEventListener('pointerup', handlePointerUpForLongpress);
-    container.addEventListener('pointercancel', handlePointerUpForLongpress);
+    container.addEventListener('pointerdown', handlePointerDownForLongpress, { capture: true });
+    container.addEventListener('pointermove', handlePointerMoveForLongpress, { capture: true });
+    container.addEventListener('pointerup', handlePointerUpForLongpress, { capture: true });
+    container.addEventListener('pointercancel', handlePointerUpForLongpress, { capture: true });
 
 
     // --- Gesture Detection (2/3 Finger Tap) ---
