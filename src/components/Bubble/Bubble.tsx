@@ -866,7 +866,6 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         {isLinkModalOpen && (
           <LinkInputModal
             onConfirm={handleLinkConfirm}
-            onUpload={() => { }}
             onCancel={() => setIsLinkModalOpen(false)}
             title={t('format_link')}
           />

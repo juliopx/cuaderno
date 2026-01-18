@@ -6,7 +6,7 @@ import { Upload } from 'lucide-react';
 
 interface LinkInputModalProps {
   onConfirm: (url: string) => void;
-  onUpload: (files: File[]) => void;
+  onUpload?: (files: File[]) => void;
   onCancel: () => void;
   title?: string;
 }
@@ -35,7 +35,7 @@ export const LinkInputModal = ({ onConfirm, onUpload, onCancel, title }: LinkInp
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
+    if (files.length > 0 && onUpload) {
       onUpload(files);
       onCancel(); // Close modal after selection
     }
@@ -46,26 +46,30 @@ export const LinkInputModal = ({ onConfirm, onUpload, onCancel, title }: LinkInp
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h3>{title || t('tool_image')}</h3>
 
-        <button
-          className={styles.uploadBtn}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload size={20} />
-          {t('upload_from_device')}
-        </button>
+        {onUpload && (
+          <>
+            <button
+              className={styles.uploadBtn}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload size={20} />
+              {t('upload_from_device')}
+            </button>
 
-        <input
-          type="file"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          multiple
-          accept="image/*"
-          onChange={handleFileChange}
-        />
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              multiple
+              accept="image/*"
+              onChange={handleFileChange}
+            />
 
-        <div className={styles.divider}>
-          <span>{t('or_paste_url')}</span>
-        </div>
+            <div className={styles.divider}>
+              <span>{t('or_paste_url')}</span>
+            </div>
+          </>
+        )}
 
         <input
           ref={inputRef}
