@@ -1,9 +1,9 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './RenameOverlay.module.css';
-import { X, Eraser } from 'lucide-react';
 import { DefaultColorThemePalette } from 'tldraw';
+import { RenameOverlayTextMode } from './RenameOverlayTextMode';
+import { RenameOverlayPenMode } from './RenameOverlayPenMode';
 
 interface RenameOverlayProps {
   initialName: string;
@@ -15,31 +15,68 @@ interface RenameOverlayProps {
   initialPointerType?: string;
 }
 
-export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onSave, onCancel, anchorRect, initialPointerType = 'mouse' }: RenameOverlayProps) => {
-  const [name, setName] = useState(initialName);
-  const [paths, setPaths] = useState<string[]>(initialStrokes ? [initialStrokes] : []);
-  const [currentPath, setCurrentPath] = useState<string>("");
-  const [selectedColor, setSelectedColor] = useState<string>(initialColor || 'auto');
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [lastPointerType, setLastPointerType] = useState<string>('mouse');
-  const isDrawing = useRef(false);
+export const RenameOverlayV2 = ({
+  initialName,
+  initialStrokes,
+  initialColor,
+  onSave,
+  onCancel,
+  anchorRect,
+  initialPointerType = 'mouse'
+}: RenameOverlayProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const scrollGroupRef = useRef<SVGGElement>(null);
 
-  // Use DefaultColorThemePalette logic directly since we are outside Tldraw context
-  // We can just rely on basic "light" mode palette for mapping, or CSS vars.
-  // Actually, we want to know if it is dark mode to pick the right HEX for the swatch background.
-  // Since we are outside Tldraw, we can check the 'data-theme' attribute on the document element or use a media query.
-  // But simpler: just use CSS variables for background colors of swatches, or map them to the Palette.
+
+  // Add a class to body to help CanvasArea and others know we are editing
+  useLayoutEffect(() => {
+    document.body.classList.add('rename-overlay-active');
+
+    // Aggressively kill system gestures on body
+    const oldTouchAction = document.body.style.touchAction;
+    const oldUserSelect = document.body.style.userSelect;
+    const oldWebkitUserSelect = document.body.style.webkitUserSelect;
+
+    document.body.style.touchAction = 'none';
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+
+    return () => {
+      document.body.classList.remove('rename-overlay-active');
+      document.body.style.touchAction = oldTouchAction;
+      document.body.style.userSelect = oldUserSelect;
+      document.body.style.webkitUserSelect = oldWebkitUserSelect;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [onCancel]);
+
+
+
+  // Position logic
+  const width = 450;
+  const height = 165;
+  const margin = 10;
+  let top = anchorRect.top - (height - anchorRect.height) / 2;
+  let left = anchorRect.left - (width - anchorRect.width) / 2;
+  top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+
+  // Theme & Colors
   const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
     (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
   const theme = isDarkMode ? DefaultColorThemePalette.darkMode : DefaultColorThemePalette.lightMode;
-
-  // Colors mapping (using Tldraw's actual theme engine)
   const colorsMap: Record<string, string> = {
-    auto: theme.black.solid, // Represents "Auto" / Inherit
+    auto: theme.black.solid,
     grey: theme.grey.solid,
     blue: theme.blue.solid,
     red: theme.red.solid,
@@ -48,113 +85,39 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
     violet: theme.violet.solid,
   };
 
-  // Position logic: centered over the anchor, but slightly larger
-  const width = 450; // Increased from 340
-  const height = 165; // Adjusted to be even tighter per user request
-  const margin = 10;
+  const isPenMode = initialPointerType === 'pen';
 
-  let top = anchorRect.top - (height - anchorRect.height) / 2;
-  let left = anchorRect.left - (width - anchorRect.width) / 2;
+  const [name, setName] = useState(initialName);
+  const [strokes, setStrokes] = useState(initialStrokes);
+  const [selectedColor, setSelectedColor] = useState<string>(initialColor || 'auto');
 
-  // Clamp to viewport
-  top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
-  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
-
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        onSave(name, paths.join(' '), selectedColor);
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [name, paths, selectedColor, onCancel, onSave]);
-
-  const handleScroll = (e: React.UIEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    const sl = e.currentTarget.scrollLeft;
-    setScrollLeft(sl);
-    if (scrollGroupRef.current) {
-      scrollGroupRef.current.setAttribute('transform', `translate(${-sl}, 0)`);
-    }
+  const handleSave = () => {
+    // Trim whitespaces as requested
+    onSave(name.trim(), strokes, selectedColor);
   };
 
-  const startDrawing = (e: React.PointerEvent) => {
-    // Only allow drawing with pen
-    if (e.pointerType !== 'pen') return;
-
-    // For pen/touch, we prevent default to stop focus/text selection on the input below
-    e.preventDefault();
-    e.stopPropagation();
-
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    isDrawing.current = true;
-    const pos = getPos(e);
-    // pos.x is relative to inputWrapper padding start now
-    setCurrentPath(`M ${pos.x} ${pos.y}`);
+  const handleClear = () => {
+    setName('');
+    setStrokes(undefined);
   };
-
-  const draw = (e: React.PointerEvent) => {
-    e.stopPropagation();
-    setLastPointerType(e.pointerType);
-    if (!isDrawing.current) return;
-    if (e.pointerType === 'pen') e.preventDefault();
-    const pos = getPos(e);
-    setCurrentPath(prev => `${prev} L ${pos.x} ${pos.y}`);
-  };
-
-  const stopDrawing = (e: React.PointerEvent) => {
-    e.stopPropagation();
-    if (isDrawing.current && currentPath) {
-      setPaths(prev => [...prev, currentPath]);
-    }
-    isDrawing.current = false;
-    setCurrentPath("");
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch (err) { }
-  };
-
-  const getPos = (e: React.PointerEvent) => {
-    // Crucial: Use the inputWrapper (currentTarget) or containerRef for coordinates
-    // If listeners are on inputWrapper, currentTarget is inputWrapper.
-    // However, if we draw over the input, the rect should be relative to where the SVG starts.
-    const wrapper = containerRef.current?.querySelector(`.${styles.inputWrapper}`);
-    const rect = wrapper?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-
-    // SVG coordinate space is 1x (height 40). UI is 2x (height 80).
-    // Padding 16px in UI = 8px in SVG space.
-    const SCALE = 2;
-    return {
-      x: (e.clientX - rect.left - 16 + scrollLeft) / SCALE,
-      y: (e.clientY - rect.top) / SCALE
-    };
-  };
-
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onCancel();
-  };
-
-  // Sync scroll on text change (input auto-scrolls when typing)
-  useEffect(() => {
-    if (inputRef.current) {
-      const sl = inputRef.current.scrollLeft;
-      setScrollLeft(sl);
-      if (scrollGroupRef.current) {
-        scrollGroupRef.current.setAttribute('transform', `translate(${-sl}, 0)`);
-      }
-    }
-  }, [name]);
-
-
 
   return createPortal(
-    <div className={styles.backdrop} onClick={handleOverlayClick}>
+    <div
+      className={styles.backdrop}
+      data-is-ui="true"
+      onPointerDown={(e) => {
+        // Close if click is on the backdrop itself
+        if (e.target === e.currentTarget) onCancel();
+        e.stopPropagation();
+      }}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onPointerCancel={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div
         className={styles.overlay}
+        data-is-ui="true"
         style={{
           top: `${top}px`,
           left: `${left}px`,
@@ -162,103 +125,39 @@ export const RenameOverlayV2 = ({ initialName, initialStrokes, initialColor, onS
           height: `${height}px`
         }}
         ref={containerRef}
-        onClick={(e) => e.stopPropagation()} // Stop propagation from clicking inside the overlay
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+        }}
+        onPointerMove={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onPointerCancel={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.preventDefault()}
       >
-        <div className={styles.container}>
-          <div
-            className={styles.inputWrapper}
-            onPointerDown={startDrawing}
-            onPointerMove={draw}
-            onPointerUp={stopDrawing}
-            onPointerLeave={(e) => {
-              if (e.pointerType !== 'pen') stopDrawing(e);
-            }}
-            onPointerEnter={(e) => {
-              e.stopPropagation();
-              setLastPointerType(e.pointerType);
-            }}
-            style={{
-              cursor: lastPointerType === 'pen' ? 'crosshair' : 'text',
-              direction: 'ltr', /* Force LTR for the coordinate system to match SVG, but handle visual RTL via CSS */
-              userSelect: initialPointerType === 'pen' ? 'none' : 'auto',
-              WebkitUserSelect: initialPointerType === 'pen' ? 'none' : 'auto',
-            } as React.CSSProperties}
-          >
-            <input
-              ref={inputRef}
-              autoFocus
-              className={styles.input}
-              value={name}
-              readOnly={initialPointerType === 'pen'}
-              onFocus={(e) => {
-                if (initialPointerType === 'pen') {
-                  // For pen, we don't want to select text or show keyboard / focus cursor necessarily
-                  e.target.blur();
-                } else {
-                  e.target.select();
-                }
-              }}
-              onChange={(e) => setName(e.target.value)}
-              onScroll={handleScroll}
-              style={{
-                cursor: initialPointerType === 'pen' ? 'default' : 'text',
-                textAlign: 'start'
-              }}
-            />
-            <svg className={styles.svgOverlay} viewBox="0 0 2000 40" preserveAspectRatio="xMinYMin slice">
-              {/* The strokes AND the guide move with the text scroll */}
-              <g ref={scrollGroupRef} transform={`translate(${-scrollLeft / 2}, 0)`}>
-                {/* Visible Area Guide - now anchored to text start */}
-                <rect
-                  x="0"
-                  y="0"
-                  width="140"
-                  height="40"
-                  rx="4"
-                  className={styles.guideRect}
-                />
-                {paths.map((p, i) => <path key={i} d={p} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />)}
-                {currentPath && <path d={currentPath} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
-              </g>
-            </svg>
-
-          </div>
-
-          <div className={styles.actions}>
-            <div className={styles.colorsRow}>
-              {Object.entries(colorsMap).map(([key, hex]) => (
-                <button
-                  key={key}
-                  className={styles.colorSwatch}
-                  style={{
-                    backgroundColor: hex,
-                    boxShadow: selectedColor === key
-                      ? `0 0 0 2px hsl(var(--color-bg-primary)), 0 0 0 4px ${hex}`
-                      : undefined
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedColor(key);
-                  }}
-                  title={key === 'auto' ? 'Auto' : key}
-                >
-                  {/* Visual cue for auto handled by box-shadow or just plain */}
-                </button>
-              ))}
-            </div>
-
-            <div className={styles.buttonsGroup}>
-              <button className={styles.btn} onClick={(e) => { e.stopPropagation(); setName(""); setPaths([]); }} title="Clear All"><Eraser size={20} /></button>
-              <button className={styles.btn} onClick={(e) => { e.stopPropagation(); onCancel(); }} title="Cancel"><X size={20} /></button>
-              <button
-                className={styles.confirm}
-                onClick={(e) => { e.stopPropagation(); onSave(name, paths.join(' '), selectedColor); }}
-              >
-                SAVE
-              </button>
-            </div>
-          </div>
-        </div>
+        {isPenMode ? (
+          <RenameOverlayPenMode
+            name={name}
+            strokes={strokes}
+            setStrokes={setStrokes}
+            selectedColor={selectedColor}
+            setSelectedColor={setSelectedColor}
+            onSave={handleSave}
+            onClear={handleClear}
+            colorsMap={colorsMap}
+          />
+        ) : (
+          <RenameOverlayTextMode
+            name={name}
+            setName={setName}
+            strokes={strokes}
+            selectedColor={selectedColor}
+            setSelectedColor={setSelectedColor}
+            onSave={handleSave}
+            onClear={handleClear}
+            onCancel={onCancel}
+            colorsMap={colorsMap}
+          />
+        )}
       </div>
     </div>,
     document.body

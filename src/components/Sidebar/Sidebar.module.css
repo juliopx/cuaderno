@@ -218,9 +218,7 @@
   overflow: hidden;
   display: flex;
   align-items: center;
-  height: 2rem;
-  padding: 0 8px;
-  /* Standardize padding */
+  height: 40px;
 }
 
 .nameText {

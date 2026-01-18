@@ -43,37 +43,24 @@
   font-size: 0.9rem;
   font-weight: normal;
   letter-spacing: normal;
-  padding: 0 8px;
 }
 
-/* Breadcrumb text is subtle but readable */
-.breadcrumb .itemWrapper .nameText {
-  opacity: 0.8;
-}
-
-/* Drawings follow text opacity */
-.breadcrumb .itemWrapper .strokeOverlay {
-  opacity: 0.8;
+/* Breadcrumb items are subtle by default */
+.breadcrumb .itemWrapper {
+  opacity: 0.6;
+  color: hsl(var(--color-text-secondary));
 }
 
 /* The last item (active page) should be prominent */
-.container>.itemWrapper:last-of-type,
 .breadcrumb>.itemWrapper:last-of-type {
   opacity: 1;
-  color: var(--color-accent);
-}
-
-.container>.itemWrapper:last-of-type .nameText,
-.breadcrumb>.itemWrapper:last-of-type .nameText,
-.container>.itemWrapper:last-of-type .strokeOverlay,
-.breadcrumb>.itemWrapper:last-of-type .strokeOverlay {
-  opacity: 1;
+  color: var(--color-accent) !important;
 }
 
 .separator {
   opacity: 0.3;
   font-size: 0.9rem;
-  margin: 0;
+  margin: 0 4px;
   color: hsl(var(--color-text-secondary));
 }
 
@@ -92,7 +79,7 @@
 .strokeOverlay {
   position: absolute;
   top: 0;
-  insetInlineStart: 0;
+  insetInlineStart: 8px;
   /* changed from left: 0 */
   width: 100%;
   height: 100%;
