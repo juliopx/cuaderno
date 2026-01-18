@@ -1,7 +1,7 @@
 ## [1.3.1] - 2026-01-18
 
 ### Features
-* Fix hybrid name editor by @juliopx in https://github.com/juliopx/cuaderno/pull/20
+* **Fix hybrid name editor**: Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.3.0...v1.3.1
 
