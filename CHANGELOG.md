@@ -1,11 +1,7 @@
 ## [1.3.1] - 2026-01-18
 
-<!-- Release notes generated using configuration in .github/release.yml at develop -->
-
-## What's Changed
 ### Features
 * Fix hybrid name editor by @juliopx in https://github.com/juliopx/cuaderno/pull/20
-
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.3.0...v1.3.1
 
