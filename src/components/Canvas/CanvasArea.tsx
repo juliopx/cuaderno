@@ -7,7 +7,8 @@ import {
   DefaultSizeStyle,
   DefaultFontStyle,
   DefaultTextAlignStyle,
-  transact
+  transact,
+  DefaultContextMenu
 } from 'tldraw'
 import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
@@ -163,7 +164,7 @@ interface CanvasInterfaceProps {
 
 // Main Component Logic (Reactive)
 const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef, sidebarColumns, leftHandedMode }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number, leftHandedMode: boolean }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const editor = useEditor();
   // State to prevent flickering when switching focus between text shapes
   const forceTextModeRef = useRef(false);
@@ -556,6 +557,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     editor.user.updateUserPreferences({ colorScheme: isDark ? 'dark' : 'light' });
   }, [editor, isDark]);
 
+  // Sync Tldraw locale with app language
+  useEffect(() => {
+    editor.user.updateUserPreferences({ locale: i18n.language });
+  }, [editor, i18n.language]);
+
   // --- Interaction Engine ---
   useEffect(() => {
     const container = editor.getContainer();
@@ -721,6 +727,8 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   const isPanningRef = useRef(false);
   const isZoomingRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
+  const startPanningPointRef = useRef({ x: 0, y: 0 });
+  const startPanningCameraRef = useRef({ x: 0, y: 0, z: 1 });
   // We'll store the previous tool to restore it after Space panning
   const previousToolRef = useRef('select');
 
@@ -730,14 +738,72 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     const container = editor.getContainer();
     if (!container) return;
 
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
+    // Context menu is now handled by TLDraw's DefaultContextMenu component
+    // No custom handler needed
+
+    // Longpress detection for touch and pen
+    const LONGPRESS_DURATION = 600; // ms
+    const MOVEMENT_THRESHOLD = 10; // px
+    let longpressTimer: number | null = null;
+    let longpressStart: { x: number; y: number; target: EventTarget | null } | null = null;
+
+    const handlePointerDownForLongpress = (e: PointerEvent) => {
+      // Only for touch and pen in selection mode
+      const currentTool = editor.getCurrentToolId();
+      const isEditingText = !!editor.getEditingShapeId();
+
+      if ((e.pointerType === 'touch' || e.pointerType === 'pen') &&
+        currentTool === 'select' &&
+        !isEditingText &&
+        e.button === 0) {
+        longpressStart = { x: e.clientX, y: e.clientY, target: e.target };
+
+        longpressTimer = setTimeout(() => {
+          if (longpressStart) {
+            // Trigger context menu at pointer position
+            const contextMenuEvent = new MouseEvent('contextmenu', {
+              bubbles: true,
+              cancelable: true,
+              clientX: longpressStart.x,
+              clientY: longpressStart.y,
+            });
+            longpressStart.target?.dispatchEvent(contextMenuEvent);
+            longpressStart = null;
+          }
+        }, LONGPRESS_DURATION);
+      }
+    };
+
+    const handlePointerMoveForLongpress = (e: PointerEvent) => {
+      if (longpressStart && longpressTimer) {
+        const distance = Math.hypot(
+          e.clientX - longpressStart.x,
+          e.clientY - longpressStart.y
+        );
+
+        if (distance > MOVEMENT_THRESHOLD) {
+          clearTimeout(longpressTimer);
+          longpressTimer = null;
+          longpressStart = null;
+        }
+      }
+    };
+
+    const handlePointerUpForLongpress = () => {
+      if (longpressTimer) {
+        clearTimeout(longpressTimer);
+        longpressTimer = null;
+        longpressStart = null;
+      }
     };
 
     const handlePointerDown = (e: PointerEvent) => {
-      if (e.button === 2 || e.button === 1) {
+      // Only middle mouse button for panning (button 1)
+      // Right-click (button 2) is now reserved for context menu
+      if (e.button === 1) {
         isPanningRef.current = true;
-        lastPointRef.current = { x: e.clientX, y: e.clientY };
+        startPanningPointRef.current = { x: e.clientX, y: e.clientY };
+        startPanningCameraRef.current = editor.getCamera();
         container.setPointerCapture(e.pointerId);
         e.preventDefault();
         return;
@@ -753,10 +819,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
     const handlePointerMove = (e: PointerEvent) => {
       if (isPanningRef.current) {
-        const deltaX = e.clientX - lastPointRef.current.x;
-        const deltaY = e.clientY - lastPointRef.current.y;
-        lastPointRef.current = { x: e.clientX, y: e.clientY };
-        const { x, y, z } = editor.getCamera();
+        const deltaX = e.clientX - startPanningPointRef.current.x;
+        const deltaY = e.clientY - startPanningPointRef.current.y;
+
+        const { x, y, z } = startPanningCameraRef.current;
+        // Panning 1:1 - add total delta divided by initial zoom to get follow-mouse behavior
         editor.setCamera({ x: x + deltaX / z, y: y + deltaY / z, z });
         return;
       }
@@ -851,13 +918,19 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
     };
 
-    container.addEventListener('contextmenu', handleContextMenu);
     container.addEventListener('pointerdown', handlePointerDown);
     container.addEventListener('pointermove', handlePointerMove);
     container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+
+    // Longpress event listeners for touch and pen
+    container.addEventListener('pointerdown', handlePointerDownForLongpress);
+    container.addEventListener('pointermove', handlePointerMoveForLongpress);
+    container.addEventListener('pointerup', handlePointerUpForLongpress);
+    container.addEventListener('pointercancel', handlePointerUpForLongpress);
+
 
     // --- Gesture Detection (2/3 Finger Tap) ---
     let touchStartTime = 0;
@@ -910,13 +983,23 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('pointerdown', handlePointerDown);
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('wheel', handleWheel, { capture: true } as any);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+
+      // Cleanup longpress event listeners
+      container.removeEventListener('pointerdown', handlePointerDownForLongpress);
+      container.removeEventListener('pointermove', handlePointerMoveForLongpress);
+      container.removeEventListener('pointerup', handlePointerUpForLongpress);
+      container.removeEventListener('pointercancel', handlePointerUpForLongpress);
+
+      // Clear any pending longpress timer
+      if (longpressTimer) {
+        clearTimeout(longpressTimer);
+      }
 
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
@@ -1118,6 +1201,18 @@ export const CanvasArea = () => {
         inferDarkMode={isDark}
         shapeUtils={customShapeUtils}
         licenseKey={import.meta.env.VITE_TLDRAW_LICENSE}
+        options={{ maxPages: 1 }}
+        components={{
+          ContextMenu: DefaultContextMenu,
+        }}
+        overrides={{
+          actions(_editor, actions) {
+            // Remove the "move-to-page" action if it still exists
+            delete actions['move-to-page'];
+            delete actions['context-menu.move-to-page'];
+            return actions;
+          },
+        }}
       >
         <CanvasInterface
           pageId={activePageId}
