@@ -1,3 +1,15 @@
+## [1.4.1] - 2026-01-18
+
+### Features
+* Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
+* Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
+
+### Bug Fixes
+* - Corregido el cierre prematuro del menú contextual en dispositivos táctiles tras una pulsación larga.
+- Habilitado el rectángulo de selección en pantallas táctiles eliminando la interferencia de gestos del navegador. (#31)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.4.0...v1.4.1
+
 ## [1.4.0] - 2026-01-18
 
 ### Features
