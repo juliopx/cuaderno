@@ -180,27 +180,6 @@ body {
   }
 }
 
-/* Hybrid strokes brightness inversion (preserving color) */
-[data-theme='dark'] [class*="strokeOverlay"],
-[data-theme='dark'] [class*="nameStrokes"],
-[data-theme='dark'] [class*="svgOverlay"] {
-  /* Use absolute black as base so invert(1) produces absolute white. */
-  color: #000000 !important;
-  /* Boost brightness and contrast for "almost black" -> "almost white" conversion */
-  filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
-}
-
-@media (prefers-color-scheme: dark) {
-
-  :root:not([data-theme='light']) [class*="strokeOverlay"],
-  :root:not([data-theme='light']) [class*="nameStrokes"],
-  :root:not([data-theme='light']) [class*="svgOverlay"] {
-    /* Use absolute black as base so invert(1) produces absolute white. */
-    color: #000000 !important;
-    /* Boost brightness and contrast for "almost black" -> "almost white" conversion */
-    filter: invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.2);
-  }
-}
 
 /* Tldraw Accent Color Overrides */
 .tl-theme__light,

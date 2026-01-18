@@ -482,6 +482,14 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     let didSwitchToHand = false;
 
     const handlePointerDown = (e: PointerEvent) => {
+      if (document.body.classList.contains('rename-overlay-active')) {
+        return;
+      }
+
+      const target = e.target as HTMLElement;
+      if (target.closest?.('[data-is-ui="true"]')) return;
+
+      console.log(`[CanvasArea] pointerdown type=${e.pointerType} src=${target.constructor.name}`);
       const { penMode } = useFileSystemStore.getState();
       const currentTool = editor.getCurrentToolId();
 
@@ -499,6 +507,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
 
     const handlePointerUp = (e: PointerEvent) => {
+      if (document.body.classList.contains('rename-overlay-active')) return;
+
+      const target = e.target as HTMLElement;
+      if (target.closest?.('[data-is-ui="true"]')) return;
+      console.log(`[CanvasArea] pointerup type=${e.pointerType} target=${target.tagName}#${target.id}.${target.className}`);
       if (activeTouchIds.has(e.pointerId)) {
         activeTouchIds.delete(e.pointerId);
 

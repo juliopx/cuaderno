@@ -52,26 +52,31 @@ jobs:
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Generate Release Notes
-        id: release_notes
-        uses: actions/github-script@v7
-        with:
-          result-encoding: string
-          script: |
-            const { data } = await github.rest.repos.generateReleaseNotes({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: `v${require('./package.json').version}`,
-              target_commitish: context.sha
-            });
-            return data.body;
+      - name: Extract CHANGELOG for version
+        id: changelog
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          
+          # Extract the section for this version from CHANGELOG.md
+          # Find lines between "## [VERSION]" and next "## [" or "# Changelog"
+          NOTES=$(awk -v version="$VERSION" '
+            /^## \['"$VERSION"'\]/ { found=1; print; next }
+            found && /^## \[|^# Changelog/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+          
+          # Save to output, handling multiline
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "notes<<$EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: v${{ steps.get_version.outputs.version }}
-          body: ${{ steps.release_notes.outputs.result }}
+          body: ${{ steps.changelog.outputs.notes }}
           draft: false
           prerelease: false
 

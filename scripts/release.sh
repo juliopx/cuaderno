@@ -15,6 +15,9 @@ if [ "$CURRENT_BRANCH" != "develop" ]; then
         echo "❌ Release must be performed from the 'develop' branch."
         exit 1
     fi
+else
+    echo "📥 Pulling latest changes from develop..."
+    git pull origin develop
 fi
 
 # 2. Run checks

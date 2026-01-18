@@ -8,7 +8,7 @@ import clsx from 'clsx';
 import { RenameOverlayV2 } from './RenameOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { CircularButton } from '../UI/CircularButton';
-import { getSvgPathBoundingBox } from '../../lib/svgUtils';
+import { HybridName } from '../UI/HybridName';
 import { resolveItemColor, getThemeColorHex } from '../../lib/colorUtils';
 import { useThemeColorHex } from '../../hooks/useThemeColor';
 import {
@@ -46,9 +46,10 @@ interface SortableItemProps {
   pages: Record<string, Page>;
   notebooks: Notebook[];
   isDarkMode: boolean; // Add this
+  isDraggingDisabled?: boolean;
 }
 
-const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, onDelete, styles, isRtl, folders, pages, notebooks, isDarkMode }: SortableItemProps) => {
+const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, onDelete, styles, isRtl, folders, pages, notebooks, isDarkMode, isDraggingDisabled }: SortableItemProps) => {
   const [dropZone, setDropZone] = useState<'top' | 'bottom' | null>(null);
 
   const {
@@ -59,7 +60,7 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
     transition,
     isDragging,
     isOver
-  } = useSortable({ id: item.id, data: { item, dropZone } });
+  } = useSortable({ id: item.id, data: { item, dropZone }, disabled: isDraggingDisabled });
 
   // Determine the drop zone based on relative Y position
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -88,9 +89,9 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
     zIndex: isDragging ? 999 : 'auto',
   };
 
-  const isNotebook = !(item as any).notebookId;
-  const isFolder = !isNotebook && !(item as Page).updatedAt;
-  const isPage = !isNotebook && !isFolder;
+  const isNotebook = !('notebookId' in item);
+  const isFolder = 'notebookId' in item && !('updatedAt' in item);
+  const isPage = 'updatedAt' in item;
 
   // No longer allowing nesting by dropping ON an item (middle zone removed)
   const canReceiveDrop = false;
@@ -100,21 +101,7 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
   if (isFolder) Icon = FolderIcon;
   if (isPage) Icon = File;
 
-  const nameStrokes = (item as any).nameStrokes;
-  let svgWidth = 250;
-  let viewBox = "0 0 250 40";
-  let drawingWidth = 0;
-  let bbox: any = null;
-
-  if (nameStrokes) {
-    bbox = getSvgPathBoundingBox(nameStrokes);
-    if (bbox && !bbox.isEmpty) {
-      drawingWidth = bbox.x + bbox.width;
-      const w = Math.max(250, drawingWidth);
-      svgWidth = w;
-      viewBox = `0 0 ${w} 40`;
-    }
-  }
+  const nameStrokes = item.nameStrokes;
 
   return (
     <div
@@ -155,40 +142,12 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
         className={styles.icon}
         style={{ color: !isActive ? itemColorHex : undefined }}
       />
-      <div className={styles.nameContainer}>
-        <span className={styles.nameText}>{item.name}</span>
-        {nameStrokes && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              insetInlineStart: '8px',
-              width: `${svgWidth}px`,
-              minWidth: `${svgWidth}px`,
-              maxWidth: 'none',
-              height: '100%',
-              pointerEvents: 'none',
-              overflow: 'visible'
-            }}
-          >
-            <svg
-              viewBox={viewBox}
-              width={svgWidth}
-              height={32}
-              style={{ display: 'block' }}
-            >
-              <path
-                d={nameStrokes}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                transform={isRtl ? `translate(${svgWidth - (bbox?.x + bbox?.width || 0)}, 0)` : undefined}
-              />
-            </svg>
-          </div>
-        )}
-      </div>
+      <HybridName
+        className={styles.nameContainer}
+        name={item.name}
+        strokes={nameStrokes}
+        isRtl={isRtl}
+      />
       <div className={styles.itemActions}>
         {onDelete && (
           <button
@@ -220,21 +179,21 @@ interface ColumnProps {
   onAddPage?: () => void;
   onAddNotebook?: () => void;
   onRename: (id: string, name: string, strokes?: string, color?: string) => void;
+  onRenameStart: (item: any, rect: DOMRect, pointerType: string) => void;
   onDelete?: (id: string) => void;
   type: 'notebook' | 'content';
   folders: Record<string, Folder>;
   pages: Record<string, Page>;
   notebooks: Notebook[];
   isDarkMode: boolean;
+  isDraggingDisabled?: boolean;
 }
 
 
-const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRename, onDelete, type, folders, pages, notebooks, isDarkMode }: ColumnProps) => {
+const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRenameStart, onDelete, type, folders, pages, notebooks, isDarkMode, isDraggingDisabled }: ColumnProps) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl';
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [pointerType, setPointerType] = useState<string>('mouse');
 
   // Use Droppable for the column itself (for dropping into empty space)
@@ -267,8 +226,7 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  setAnchorRect(rect);
-                  setEditingId(item.id);
+                  onRenameStart(item, rect, pointerType);
                 }}
                 onDelete={onDelete}
                 styles={styles}
@@ -277,26 +235,15 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 pages={pages}
                 notebooks={notebooks}
                 isDarkMode={isDarkMode}
+                isDraggingDisabled={isDraggingDisabled}
               />
-
-              {editingId === item.id && anchorRect && (
-                <RenameOverlayV2
-                  initialName={item.name}
-                  initialStrokes={(item as any).nameStrokes}
-                  initialColor={(item as any).color}
-                  initialPointerType={pointerType}
-                  onSave={(name, strokes, color) => {
-                    onRename(item.id, name, strokes, color);
-                    setEditingId(null);
-                  }}
-                  onCancel={() => setEditingId(null)}
-                  anchorRect={anchorRect}
-                />
-              )}
             </div>
           ))}
         </SortableContext>
       </div>
+
+
+
       <div className={styles.toolbar}>
         {type === 'notebook' && (
           <button className={styles.toolbarButton} onClick={onAddNotebook} title={t('new_notebook')}>
@@ -339,6 +286,8 @@ export const Sidebar = () => {
   const { t } = useTranslation();
   const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
     (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  const [editingItem, setEditingItem] = useState<{ item: any, rect: DOMRect, pointerType: string } | null>(null);
 
   const {
     notebooks, folders, pages, activePath, activeNotebookId, activePageId,
@@ -404,6 +353,10 @@ export const Sidebar = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+  const isDraggingDisabled = !!editingItem;
+
+  // If editing, we should probably disable all dnd-kit sensors to prevent stealing events
+
 
   const handleDragStart = (event: DragStartEvent) => {
     const item = event.active.data.current?.item;
@@ -667,7 +620,7 @@ export const Sidebar = () => {
 
   return (
     <DndContext
-      sensors={sensors}
+      sensors={editingItem ? [] : sensors}
       collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -696,12 +649,33 @@ export const Sidebar = () => {
             onAddFolder={col.onAddFolder}
             onAddPage={col.onAddPage}
             onAddNotebook={col.onAddNotebook}
+            onRenameStart={(item, rect, pointerType) => {
+              console.log(`[Sidebar] onRenameStart id=${item.id} type=${pointerType}`);
+              setEditingItem({ item, rect, pointerType });
+            }}
             onRename={renameNode}
             onDelete={col.onDelete}
             type={col.type}
+            isDraggingDisabled={isDraggingDisabled}
           />
         ))}
       </div>
+
+      {editingItem && (
+        <RenameOverlayV2
+          key={editingItem.item.id}
+          initialName={editingItem.item.name}
+          initialStrokes={editingItem.item.nameStrokes}
+          initialColor={editingItem.item.color}
+          initialPointerType={editingItem.pointerType}
+          onSave={(name, strokes, color) => {
+            renameNode(editingItem.item.id, name, strokes, color);
+            setEditingItem(null);
+          }}
+          onCancel={() => setEditingItem(null)}
+          anchorRect={editingItem.rect}
+        />
+      )}
 
       <CircularButton
         onClick={toggleSidebar}
@@ -728,16 +702,6 @@ export const Sidebar = () => {
           if (isPage) Icon = File;
 
           const nameStrokes = (activeDragItem as any).nameStrokes;
-          let svgWidth = 250;
-          let viewBox = "0 0 250 40";
-          if (nameStrokes) {
-            const bbox = getSvgPathBoundingBox(nameStrokes);
-            if (bbox && !bbox.isEmpty) {
-              const w = Math.max(250, bbox.x + bbox.width);
-              svgWidth = w;
-              viewBox = `0 0 ${w} 40`;
-            }
-          }
 
           return (
             <div
@@ -752,33 +716,11 @@ export const Sidebar = () => {
               }}
             >
               <Icon className={styles.icon} />
-              <div className={styles.nameContainer}>
-                <span className={styles.nameText}>{activeDragItem.name}</span>
-                {nameStrokes && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      insetInlineStart: '8px',
-                      width: `${svgWidth}px`,
-                      minWidth: `${svgWidth}px`,
-                      maxWidth: 'none',
-                      height: '100%',
-                      pointerEvents: 'none',
-                      overflow: 'visible'
-                    }}
-                  >
-                    <svg
-                      viewBox={viewBox}
-                      width={svgWidth}
-                      height={32}
-                      style={{ display: 'block' }}
-                    >
-                      <path d={nameStrokes} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                )}
-              </div>
+              <HybridName
+                name={activeDragItem.name}
+                strokes={nameStrokes}
+                className={styles.nameContainer}
+              />
               <div className={styles.itemActions}>
                 {(isNotebook || isFolder) && <ChevronRight size={14} style={{ opacity: 0.5 }} />}
               </div>
