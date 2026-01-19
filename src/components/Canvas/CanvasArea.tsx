@@ -748,6 +748,14 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     let longpressStart: { x: number; y: number; target: EventTarget | null } | null = null;
     let contextMenuJustOpened = false;
 
+    const clearLongpressState = () => {
+      if (longpressTimer) {
+        clearTimeout(longpressTimer);
+        longpressTimer = null;
+      }
+      longpressStart = null;
+    };
+
     const handlePointerDownForLongpress = (e: PointerEvent) => {
       // Only for touch and pen in selection mode
       const currentTool = editor.getCurrentToolId();
@@ -786,9 +794,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         );
 
         if (distance > MOVEMENT_THRESHOLD) {
-          clearTimeout(longpressTimer);
-          longpressTimer = null;
-          longpressStart = null;
+          clearLongpressState();
         }
       }
     };
@@ -803,19 +809,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         return;
       }
       
-      if (longpressTimer) {
-        clearTimeout(longpressTimer);
-        longpressTimer = null;
-        longpressStart = null;
-      }
+      clearLongpressState();
     };
 
     const handlePointerCancelForLongpress = () => {
-      if (longpressTimer) {
-        clearTimeout(longpressTimer);
-        longpressTimer = null;
-        longpressStart = null;
-      }
+      clearLongpressState();
       contextMenuJustOpened = false;
     };
 
