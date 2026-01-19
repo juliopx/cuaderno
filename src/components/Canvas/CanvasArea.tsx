@@ -746,6 +746,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     const MOVEMENT_THRESHOLD = 10; // px
     let longpressTimer: number | null = null;
     let longpressStart: { x: number; y: number; target: EventTarget | null } | null = null;
+    let contextMenuJustOpened = false;
 
     const handlePointerDownForLongpress = (e: PointerEvent) => {
       // Only for touch and pen in selection mode
@@ -757,6 +758,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         !isEditingText &&
         e.button === 0) {
         longpressStart = { x: e.clientX, y: e.clientY, target: e.target };
+        contextMenuJustOpened = false;
 
         longpressTimer = setTimeout(() => {
           if (longpressStart) {
@@ -769,6 +771,8 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
             });
             longpressStart.target?.dispatchEvent(contextMenuEvent);
             longpressStart = null;
+            // Mark that context menu was just opened
+            contextMenuJustOpened = true;
           }
         }, LONGPRESS_DURATION);
       }
@@ -789,12 +793,30 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
     };
 
-    const handlePointerUpForLongpress = () => {
+    const handlePointerUpForLongpress = (e: PointerEvent) => {
+      // If context menu was just opened, prevent the event from propagating
+      // to avoid closing the menu immediately
+      if (contextMenuJustOpened) {
+        e.preventDefault();
+        e.stopPropagation();
+        contextMenuJustOpened = false;
+        return;
+      }
+      
       if (longpressTimer) {
         clearTimeout(longpressTimer);
         longpressTimer = null;
         longpressStart = null;
       }
+    };
+
+    const handlePointerCancelForLongpress = () => {
+      if (longpressTimer) {
+        clearTimeout(longpressTimer);
+        longpressTimer = null;
+        longpressStart = null;
+      }
+      contextMenuJustOpened = false;
     };
 
     const handlePointerDown = (e: PointerEvent) => {
@@ -929,7 +951,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     container.addEventListener('pointerdown', handlePointerDownForLongpress, { capture: true });
     container.addEventListener('pointermove', handlePointerMoveForLongpress, { capture: true });
     container.addEventListener('pointerup', handlePointerUpForLongpress, { capture: true });
-    container.addEventListener('pointercancel', handlePointerUpForLongpress, { capture: true });
+    container.addEventListener('pointercancel', handlePointerCancelForLongpress, { capture: true });
 
 
     // --- Gesture Detection (2/3 Finger Tap) ---
@@ -994,7 +1016,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       container.removeEventListener('pointerdown', handlePointerDownForLongpress);
       container.removeEventListener('pointermove', handlePointerMoveForLongpress);
       container.removeEventListener('pointerup', handlePointerUpForLongpress);
-      container.removeEventListener('pointercancel', handlePointerUpForLongpress);
+      container.removeEventListener('pointercancel', handlePointerCancelForLongpress);
 
       // Clear any pending longpress timer
       if (longpressTimer) {
