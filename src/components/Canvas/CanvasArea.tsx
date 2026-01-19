@@ -748,12 +748,15 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     let longpressStart: { x: number; y: number; target: EventTarget | null } | null = null;
     let contextMenuJustOpened = false;
 
-    const clearLongpressState = () => {
+    const clearLongpressState = (resetContextMenuFlag = true) => {
       if (longpressTimer) {
         clearTimeout(longpressTimer);
         longpressTimer = null;
       }
       longpressStart = null;
+      if (resetContextMenuFlag) {
+        contextMenuJustOpened = false;
+      }
     };
 
     const handlePointerDownForLongpress = (e: PointerEvent) => {
@@ -806,6 +809,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         e.preventDefault();
         e.stopPropagation();
         contextMenuJustOpened = false;
+        clearLongpressState(false); // Don't reset contextMenuJustOpened flag again
         return;
       }
       
@@ -814,7 +818,6 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
     const handlePointerCancelForLongpress = () => {
       clearLongpressState();
-      contextMenuJustOpened = false;
     };
 
     const handlePointerDown = (e: PointerEvent) => {
