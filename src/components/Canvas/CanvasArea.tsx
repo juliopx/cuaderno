@@ -14,7 +14,7 @@ import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   LocateFixed,
   PanelLeftOpen,
@@ -161,6 +161,35 @@ interface CanvasInterfaceProps {
   isDark: boolean;
 }
 
+// Custom context menu wrapper that prevents closing on touch
+let contextMenuJustOpenedRef: React.MutableRefObject<boolean> | null = null;
+
+const CustomContextMenu = (props: any) => {
+  useEffect(() => {
+    if (!contextMenuJustOpenedRef) return;
+    
+    const handleClick = (e: MouseEvent) => {
+      if (contextMenuJustOpenedRef?.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
+    };
+
+    // Add listener to the menu container
+    document.addEventListener('click', handleClick, { capture: true });
+    document.addEventListener('mousedown', handleClick, { capture: true });
+    document.addEventListener('pointerdown', handleClick, { capture: true });
+
+    return () => {
+      document.removeEventListener('click', handleClick, { capture: true });
+      document.removeEventListener('mousedown', handleClick, { capture: true });
+      document.removeEventListener('pointerdown', handleClick, { capture: true });
+    };
+  }, []);
+
+  return <DefaultContextMenu {...props} />;
+};
 
 // Main Component Logic (Reactive)
 const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, isDark, parentRef, sidebarColumns, leftHandedMode }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number, leftHandedMode: boolean }) => {
@@ -170,6 +199,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   const forceTextModeRef = useRef(false);
   const [isLockingUI, setIsLockingUI] = useState(false);
   const manualToolRef = useRef<string>('select');
+  const contextMenuJustOpenedRefLocal = useRef(false);
+  
+  // Share ref with CustomContextMenu
+  contextMenuJustOpenedRef = contextMenuJustOpenedRefLocal;
 
   const { isSidebarOpen, toggleSidebar } = useFileSystemStore();
   const textStyles = useTextStyleStore();
@@ -490,7 +523,6 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       const target = e.target as HTMLElement;
       if (target.closest?.('[data-is-ui="true"]')) return;
 
-      console.log(`[CanvasArea] pointerdown type=${e.pointerType} src=${target.constructor.name}`);
       const { penMode } = useFileSystemStore.getState();
       const currentTool = editor.getCurrentToolId();
 
@@ -512,7 +544,12 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
       const target = e.target as HTMLElement;
       if (target.closest?.('[data-is-ui="true"]')) return;
-      console.log(`[CanvasArea] pointerup type=${e.pointerType} target=${target.tagName}#${target.id}.${target.className}`);
+      
+      // Don't process if context menu was just opened
+      if (contextMenuJustOpenedRefLocal.current) {
+        return;
+      }
+      
       if (activeTouchIds.has(e.pointerId)) {
         activeTouchIds.delete(e.pointerId);
 
@@ -756,7 +793,9 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         currentTool === 'select' &&
         !isEditingText &&
         e.button === 0) {
+        
         longpressStart = { x: e.clientX, y: e.clientY, target: e.target };
+        contextMenuJustOpenedRefLocal.current = false;
 
         longpressTimer = setTimeout(() => {
           if (longpressStart) {
@@ -768,8 +807,31 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
               clientY: longpressStart.y,
             });
             longpressStart.target?.dispatchEvent(contextMenuEvent);
-            longpressStart = null;
+            
+            // Mark that context menu was just opened
+            contextMenuJustOpenedRefLocal.current = true;
+            
+            // Add a global click blocker temporarily
+            const clickBlocker = (e: Event) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+            };
+            
+            document.addEventListener('click', clickBlocker, { capture: true });
+            document.addEventListener('pointerup', clickBlocker, { capture: true });
+            document.addEventListener('mouseup', clickBlocker, { capture: true });
+            
+            setTimeout(() => {
+              document.removeEventListener('click', clickBlocker, { capture: true });
+              document.removeEventListener('pointerup', clickBlocker, { capture: true });
+              document.removeEventListener('mouseup', clickBlocker, { capture: true });
+            }, 500);
+            
+            // Don't reset the flag here - let pointerup handle it
           }
+          longpressStart = null;
+          longpressTimer = null;
         }, LONGPRESS_DURATION);
       }
     };
@@ -789,12 +851,33 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
     };
 
-    const handlePointerUpForLongpress = () => {
+    const handlePointerUpForLongpress = (e: PointerEvent) => {
+      // If context menu was just opened, prevent everything
+      if (contextMenuJustOpenedRefLocal.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        // Reset flag after a small delay to let touchend also see it
+        setTimeout(() => {
+          contextMenuJustOpenedRefLocal.current = false;
+        }, 100);
+        return;
+      }
+      
+      // Clear longpress if it's still pending
       if (longpressTimer) {
         clearTimeout(longpressTimer);
         longpressTimer = null;
-        longpressStart = null;
       }
+      longpressStart = null;
+    };
+
+    const handlePointerCancelForLongpress = () => {
+      if (longpressTimer) {
+        clearTimeout(longpressTimer);
+        longpressTimer = null;
+      }
+      longpressStart = null;
     };
 
     const handlePointerDown = (e: PointerEvent) => {
@@ -929,7 +1012,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     container.addEventListener('pointerdown', handlePointerDownForLongpress, { capture: true });
     container.addEventListener('pointermove', handlePointerMoveForLongpress, { capture: true });
     container.addEventListener('pointerup', handlePointerUpForLongpress, { capture: true });
-    container.addEventListener('pointercancel', handlePointerUpForLongpress, { capture: true });
+    container.addEventListener('pointercancel', handlePointerCancelForLongpress, { capture: true });
 
 
     // --- Gesture Detection (2/3 Finger Tap) ---
@@ -965,6 +1048,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
+      // Prevent gesture detection if context menu was just opened
+      if (contextMenuJustOpenedRefLocal.current) {
+        return;
+      }
+      
       if (initialTouches.length > 0 && e.touches.length === 0) {
         const duration = Date.now() - touchStartTime;
         if (duration < 300 && !touchMoving) {
@@ -994,7 +1082,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       container.removeEventListener('pointerdown', handlePointerDownForLongpress);
       container.removeEventListener('pointermove', handlePointerMoveForLongpress);
       container.removeEventListener('pointerup', handlePointerUpForLongpress);
-      container.removeEventListener('pointercancel', handlePointerUpForLongpress);
+      container.removeEventListener('pointercancel', handlePointerCancelForLongpress);
 
       // Clear any pending longpress timer
       if (longpressTimer) {
@@ -1222,7 +1310,7 @@ export const CanvasArea = () => {
         licenseKey={import.meta.env.VITE_TLDRAW_LICENSE}
         options={{ maxPages: 1 }}
         components={{
-          ContextMenu: DefaultContextMenu,
+          ContextMenu: CustomContextMenu,
         }}
         overrides={{
           actions(_editor, actions) {
