@@ -448,11 +448,17 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   useEffect(() => {
     if (isSelectTool && isAllText && selectedShapes[0]) {
       const first = selectedShapes[0] as any;
+      const html = first.props.html || '';
+
+      // Heuristic to detect if style is active in HTML (since we force global prop to false for these)
+      const hasStrike = html.includes('line-through') || html.includes('<s>') || html.includes('<strike>') || html.includes('<del>');
+      const hasUnderline = html.includes('underline') || html.includes('<u>');
+
       setRichStats({
         bold: first.props.bold || false,
         italic: first.props.italic || false,
-        underline: first.props.underline || false,
-        strike: first.props.strike || false,
+        underline: first.props.underline || hasUnderline, // Trust prop OR html
+        strike: first.props.strike || hasStrike,           // Trust prop OR html
         font: first.props.font || 'draw',
         size: first.props.size || 'm',
         color: first.props.color || 'black',
@@ -501,15 +507,35 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
       if (selectedShapes.length > 0) {
         const textUpdates = selectedShapes
           .filter(s => s.type === 'rich-text')
-          .map(s => ({
-            id: s.id,
-            type: 'rich-text',
-            props: {
-              [key]: !(s.props as any)[key],
-              // Unified HTML: Remove internal toggles
-              html: unifyStyleForRichText((s.props as any).html, key)
+          .map(s => {
+            const propValue = (s.props as any)[key];
+            let isActive = propValue;
+
+            // For decorators, check HTML too because we might have forced prop to false
+            if (key === 'strike') {
+              const html = (s.props as any).html || '';
+              isActive = propValue || html.includes('line-through') || html.includes('<s>') || html.includes('<strike>') || html.includes('<del>');
+            } else if (key === 'underline') {
+              const html = (s.props as any).html || '';
+              isActive = propValue || html.includes('underline') || html.includes('<u>');
             }
-          }));
+
+            const newValue = !isActive;
+
+            // Prevent double rendering: For strike/underline, ALWAYS set global prop to false
+            // The visual style is handled by the HTML content update
+            const newPropValue = (key === 'strike' || key === 'underline') ? false : newValue;
+
+            return {
+              id: s.id,
+              type: 'rich-text',
+              props: {
+                [key]: newPropValue,
+                // Unified HTML: Apply or remove style based on new value
+                html: applyStyleToRichText((s.props as any).html, key, newValue)
+              }
+            };
+          });
 
         if (textUpdates.length > 0) {
           editor.updateShapes(textUpdates as any);
@@ -518,6 +544,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
       // Sync local state and store
       setRichStats(prev => {
+        // Toggle the UI state based on the assumption that we successfully toggled it
         const next = { ...prev, [key]: !prev[key as keyof typeof prev] };
         const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof userPrefs;
         userPrefs.updatePreferences({ [storeKey]: next[key as keyof typeof next] });
@@ -581,53 +608,101 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   };
 
   /**
-   * Deeply applies a style to the entire HTML content of a rich-text shape.
-   * Ensures that changing a global property (from the bubble) overrides all internal partial formatting.
+   * Applies a style strictly to all elements within the rich-text content,
+   * preserving structure but enforcing the new property value on every node.
+   * This replaces the old "unify" behavior which stripped styles and wrapped globally.
    */
-  const unifyStyleForRichText = (html: string, prop: string): string => {
+  const applyStyleToRichText = (html: string, prop: string, value: any): string => {
     if (!html) return html;
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
 
-    // Use a flat array to avoid mutation issues during iteration
     const elements = Array.from(tempDiv.querySelectorAll('*'));
+    // Also include the root if it's not empty (though querySelectorAll('*') gets children)
+    // Tldraw rich text is usually <div>...</div>. The tempDiv wraps it.
+    // If the content is just text, it might be directly in tempDiv.
+    // However, usually we want to target the tags.
+
+    if (elements.length === 0 && tempDiv.textContent?.trim()) {
+      // If pure text, wrap it so we can style it
+      const wrapper = document.createElement('span');
+      while (tempDiv.firstChild) {
+        wrapper.appendChild(tempDiv.firstChild);
+      }
+      tempDiv.appendChild(wrapper);
+      elements.push(wrapper);
+    }
 
     elements.forEach((el) => {
       const htmlEl = el as HTMLElement;
-      // Clear individual styles for the target property so they inherit from the root container
-      if (prop === 'color') htmlEl.style.color = '';
-      if (prop === 'font') htmlEl.style.fontFamily = '';
+
+      if (prop === 'color') {
+        htmlEl.style.color = value;
+      }
+      if (prop === 'font') {
+        const fonts: Record<string, string> = {
+          draw: '"Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif',
+          sans: 'Inter, sans-serif',
+          serif: 'serif',
+          mono: 'monospace'
+        };
+        htmlEl.style.fontFamily = fonts[value] || 'sans-serif';
+      }
       if (prop === 'size') htmlEl.style.fontSize = '';
+
+      if (prop === 'size') htmlEl.style.fontSize = '';
+      if (prop === 'font') htmlEl.style.fontFamily = '';
       if (prop === 'align') htmlEl.style.textAlign = '';
 
-      // Toggles: Remove semantic tags and specific styles
+      // Toggles
       if (prop === 'bold') {
-        htmlEl.style.fontWeight = '';
-        if (htmlEl.tagName === 'B' || htmlEl.tagName === 'STRONG') {
-          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+        if (value) {
+          htmlEl.style.fontWeight = 'bold';
+        } else {
+          htmlEl.style.fontWeight = 'normal';
+          if (htmlEl.tagName === 'B' || htmlEl.tagName === 'STRONG') {
+            htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+          }
         }
       }
       if (prop === 'italic') {
-        htmlEl.style.fontStyle = '';
-        if (htmlEl.tagName === 'I' || htmlEl.tagName === 'EM') {
-          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+        if (value) {
+          htmlEl.style.fontStyle = 'italic';
+        } else {
+          htmlEl.style.fontStyle = 'normal';
+          if (htmlEl.tagName === 'I' || htmlEl.tagName === 'EM') {
+            htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+          }
         }
       }
       if (prop === 'underline') {
-        if (htmlEl.style.textDecoration.includes('underline')) {
-          htmlEl.style.textDecoration = htmlEl.style.textDecoration.replace('underline', '').trim();
+        const current = htmlEl.style.textDecoration;
+        let parts = current.split(' ').map(s => s.trim()).filter(Boolean);
+        if (value) {
+          if (!parts.includes('underline')) parts.push('underline');
+        } else {
+          parts = parts.filter(p => p !== 'underline');
+          if (htmlEl.tagName === 'U') {
+            htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+            return; // Element is gone, stop processing it
+          }
         }
-        if (htmlEl.tagName === 'U') {
-          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
-        }
+        htmlEl.style.textDecoration = parts.join(' ');
       }
       if (prop === 'strike') {
-        if (htmlEl.style.textDecoration.includes('line-through')) {
-          htmlEl.style.textDecoration = htmlEl.style.textDecoration.replace('line-through', '').trim();
+        const current = htmlEl.style.textDecoration;
+        let parts = current.split(' ').map(s => s.trim()).filter(Boolean);
+        if (value) {
+          // 'line-through' is standard
+          if (!parts.includes('line-through')) parts.push('line-through');
+        } else {
+          parts = parts.filter(p => p !== 'line-through');
+          if (htmlEl.tagName === 'S' || htmlEl.tagName === 'STRIKE' || htmlEl.tagName === 'DEL') {
+            htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+            return; // Element is gone
+          }
         }
-        if (htmlEl.tagName === 'S' || htmlEl.tagName === 'STRIKE' || htmlEl.tagName === 'DEL') {
-          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
-        }
+        htmlEl.style.textDecoration = parts.join(' ');
       }
     });
 
@@ -730,7 +805,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
           type: 'rich-text',
           props: {
             [finalPropKey]: value,
-            html: unifyStyleForRichText((s.props as any).html, finalPropKey)
+            html: applyStyleToRichText((s.props as any).html, finalPropKey, value)
           }
         }));
 
