@@ -8,7 +8,7 @@ export const FillColorStyle = StyleProp.defineEnum('cuaderno:fillColor', {
 // Using T.any to be as permissive as possible and avoid validation crashes
 // during the transition or if tldraw sends numbers instead of strings.
 export const FillOpacityStyle = StyleProp.define('cuaderno:fillOpacity', {
-  defaultValue: '1',
+  defaultValue: '0.1',
   type: T.any,
 });
 

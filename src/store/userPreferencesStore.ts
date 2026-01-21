@@ -45,7 +45,7 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       dashStyle: 'solid',
       fillStyle: 'none',
       fillColor: 'black',
-      fillOpacity: '1',
+      fillOpacity: '0.1',
       lastUsedGeo: 'rectangle',
 
       updatePreferences: (prefs) => set((state) => ({ ...state, ...prefs })),

@@ -15,7 +15,7 @@ export class CustomDrawShapeUtil extends DrawShapeUtil {
     return {
       ...super.getDefaultProps(),
       [FillColorStyle.id]: 'black',
-      [FillOpacityStyle.id]: '1',
+      [FillOpacityStyle.id]: '0.1',
       [StrokeOpacityStyle.id]: '1',
     }
   }

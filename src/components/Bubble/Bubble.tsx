@@ -1037,9 +1037,12 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                   className={clsx(styles.switch, currentStrokeOpacity > 0 && styles.switchActive)}
                   onClick={() => {
                     const newOpacity = currentStrokeOpacity > 0 ? '0' : '1';
+                    // Safety: Don't allow both off. If turning off stroke, turn on fill.
+                    if (newOpacity === '0' && currentFill === 'none') {
+                      setStyle(DefaultFillStyle, 'solid');
+                      if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
+                    }
                     setStyle(StrokeOpacityStyle, newOpacity);
-                    editor.setOpacityForSelectedShapes(parseFloat(newOpacity));
-                    editor.setOpacityForNextShapes(parseFloat(newOpacity));
                   }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 >
@@ -1085,7 +1088,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                     <>
                       <div className={styles.verticalDivider} />
                       <div className={styles.styleGroup} style={{ flex: 1, justifyContent: 'space-between' }}>
-                        {['xs', 's', 'm', 'l', 'xl', 'xxl'].map((sz) => {
+                        {(activeTool === 'draw' ? ['xs', 's', 'm', 'l', 'xl', 'xxl'] : ['s', 'm', 'l', 'xl']).map((sz) => {
                           const strokeWidths: Record<string, number> = { xs: 1, s: 1.5, m: 2.5, l: 4, xl: 6, xxl: 10 };
                           return (
                             <button
@@ -1128,9 +1131,12 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                     value={currentStrokeOpacity * 100}
                     onChange={(e) => {
                       const newOpacity = (parseInt(e.target.value) / 100).toString();
+                      // Safety: if moving to 0 and fill is off, turn fill on
+                      if (newOpacity === '0' && currentFill === 'none') {
+                        setStyle(DefaultFillStyle, 'solid');
+                        if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
+                      }
                       setStyle(StrokeOpacityStyle, newOpacity);
-                      editor.setOpacityForSelectedShapes(parseFloat(newOpacity));
-                      editor.setOpacityForNextShapes(parseFloat(newOpacity));
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                     className={styles.opacitySlider}
@@ -1151,10 +1157,14 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                 onClick={() => {
                   if (currentFill === 'none') {
                     setStyle(DefaultFillStyle, 'solid');
-                    setStyle(FillOpacityStyle, '1');
+                    // Reset opacity if it was 0
+                    if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
                   } else {
+                    // Safety: if turning off fill, make sure stroke is on
+                    if (currentStrokeOpacity === 0) {
+                      setStyle(StrokeOpacityStyle, '1');
+                    }
                     setStyle(DefaultFillStyle, 'none');
-                    setStyle(FillOpacityStyle, '0');
                   }
                 }}
                 onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -1190,6 +1200,10 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                     value={currentFillOpacity * 100}
                     onChange={(e) => {
                       const newOpacity = (parseInt(e.target.value) / 100).toString();
+                      // Safety: if moving to 0 and stroke is off, turn stroke on
+                      if (newOpacity === '0' && currentStrokeOpacity === 0) {
+                        setStyle(StrokeOpacityStyle, '1');
+                      }
                       setStyle(FillOpacityStyle, newOpacity);
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
