@@ -1,3 +1,11 @@
+## [1.5.2] - 2026-01-21
+
+### Bug Fixes
+* Fix: Corregido el cierre prematuro del menú contextual en dispositivos táctiles al usar la aplicación instalada como PWA. (#42)
+* Fixed context menu immediately closing after long press on touch devices in selection mode (#38)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.5.1...v1.5.2
+
 ## [1.5.1] - 2026-01-19
 
 ### Features
