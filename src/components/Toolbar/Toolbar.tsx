@@ -24,6 +24,7 @@ export const Toolbar = ({ activeTool, onSelectTool, onUpload, onAddUrl }: Toolba
     if (onAddUrl) {
       onAddUrl(url);
     }
+    onSelectTool('select');
     setIsMediaModalOpen(false);
   };
 
@@ -31,6 +32,7 @@ export const Toolbar = ({ activeTool, onSelectTool, onUpload, onAddUrl }: Toolba
     if (onUpload) {
       onUpload(files);
     }
+    onSelectTool('select');
     setIsMediaModalOpen(false);
   };
 
@@ -74,18 +76,14 @@ export const Toolbar = ({ activeTool, onSelectTool, onUpload, onAddUrl }: Toolba
           <Type size={20} />
         </button>
 
-        {activeTool === 'select' && (
-          <>
-            <div className={styles.divider} />
-            <button
-              className={styles.button}
-              onClick={() => setIsMediaModalOpen(true)}
-              title={t('tool_image')}
-            >
-              <ImagePlus size={20} />
-            </button>
-          </>
-        )}
+        <div className={styles.divider} />
+        <button
+          className={clsx(styles.button, isMediaModalOpen && styles.active)}
+          onClick={() => setIsMediaModalOpen(true)}
+          title={t('tool_image')}
+        >
+          <ImagePlus size={20} />
+        </button>
       </div>
 
       {isMediaModalOpen && (
