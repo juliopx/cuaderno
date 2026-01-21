@@ -746,18 +746,6 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     const MOVEMENT_THRESHOLD = 10; // px
     let longpressTimer: number | null = null;
     let longpressStart: { x: number; y: number; target: EventTarget | null } | null = null;
-    let contextMenuJustOpened = false;
-
-    const clearLongpressState = (clearFlag = true) => {
-      if (longpressTimer) {
-        clearTimeout(longpressTimer);
-        longpressTimer = null;
-      }
-      longpressStart = null;
-      if (clearFlag) {
-        contextMenuJustOpened = false;
-      }
-    };
 
     const handlePointerDownForLongpress = (e: PointerEvent) => {
       // Only for touch and pen in selection mode
@@ -769,10 +757,72 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         !isEditingText &&
         e.button === 0) {
         longpressStart = { x: e.clientX, y: e.clientY, target: e.target };
-        contextMenuJustOpened = false;
 
         longpressTimer = setTimeout(() => {
           if (longpressStart) {
+            // Only use the blocker in PWA standalone mode
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+              (window.navigator as any).standalone ||
+              document.referrer.includes('android-app://');
+
+            if (isStandalone) {
+              // Create a visual blocker div to intercept trailing events
+              const blocker = document.createElement('div');
+              blocker.style.position = 'fixed';
+              blocker.style.inset = '0';
+              blocker.style.zIndex = '100000';
+              blocker.style.backgroundColor = 'transparent';
+              blocker.style.pointerEvents = 'auto';
+              blocker.style.touchAction = 'none';
+
+              let isRemoving = false;
+              const cleanup = () => {
+                if (blocker.parentNode) {
+                  document.body.removeChild(blocker);
+                }
+                window.removeEventListener('pointerdown', handleEvent, { capture: true });
+                window.removeEventListener('pointerup', handleEvent, { capture: true });
+                window.removeEventListener('touchend', handleEvent, { capture: true });
+                window.removeEventListener('click', handleEvent, { capture: true });
+                window.removeEventListener('contextmenu', handleEvent, { capture: true });
+              };
+
+              const handleEvent = (e: any) => {
+                const x = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+                const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+
+                // If we are waiting to remove (finger already lifted) and user clicks somewhere else (likely the menu)
+                if ((e.type === 'pointerdown' || e.type === 'touchstart') && isRemoving) {
+                  const dist = Math.hypot(x - longpressStart!.x, y - longpressStart!.y);
+                  if (dist > 40) {
+                    cleanup();
+                    return; // Let this interaction pass to Tldraw
+                  }
+                }
+
+                // Otherwise, block everything
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                if (e.type === 'pointerup' || e.type === 'touchend' || e.type === 'click') {
+                  if (!isRemoving) {
+                    isRemoving = true;
+                    // Safety cleanup if user never interacts again
+                    setTimeout(cleanup, 250);
+                  }
+                }
+              };
+
+              // Capture phase on window to intercept BEFORE Tldraw 
+              window.addEventListener('pointerdown', handleEvent, { capture: true });
+              window.addEventListener('pointerup', handleEvent, { capture: true });
+              window.addEventListener('touchend', handleEvent, { capture: true });
+              window.addEventListener('click', handleEvent, { capture: true });
+              window.addEventListener('contextmenu', handleEvent, { capture: true });
+
+              document.body.appendChild(blocker);
+            }
+
             // Trigger context menu at pointer position
             const contextMenuEvent = new MouseEvent('contextmenu', {
               bubbles: true,
@@ -782,8 +832,6 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
             });
             longpressStart.target?.dispatchEvent(contextMenuEvent);
             longpressStart = null;
-            // Mark that context menu was just opened
-            contextMenuJustOpened = true;
           }
         }, LONGPRESS_DURATION);
       }
@@ -797,27 +845,19 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         );
 
         if (distance > MOVEMENT_THRESHOLD) {
-          clearLongpressState();
+          clearTimeout(longpressTimer);
+          longpressTimer = null;
+          longpressStart = null;
         }
       }
     };
 
-    const handlePointerUpForLongpress = (e: PointerEvent) => {
-      // If context menu was just opened, prevent the event from propagating
-      // to avoid closing the menu immediately
-      if (contextMenuJustOpened) {
-        e.preventDefault();
-        e.stopPropagation();
-        contextMenuJustOpened = false;
-        clearLongpressState(false); // Skip flag reset since we already handled it
-        return;
+    const handlePointerUpForLongpress = () => {
+      if (longpressTimer) {
+        clearTimeout(longpressTimer);
+        longpressTimer = null;
+        longpressStart = null;
       }
-      
-      clearLongpressState();
-    };
-
-    const handlePointerCancelForLongpress = () => {
-      clearLongpressState();
     };
 
     const handlePointerDown = (e: PointerEvent) => {
@@ -949,10 +989,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     window.addEventListener('keyup', handleKeyUp);
 
     // Longpress event listeners for touch and pen
-    container.addEventListener('pointerdown', handlePointerDownForLongpress, { capture: true });
-    container.addEventListener('pointermove', handlePointerMoveForLongpress, { capture: true });
-    container.addEventListener('pointerup', handlePointerUpForLongpress, { capture: true });
-    container.addEventListener('pointercancel', handlePointerCancelForLongpress, { capture: true });
+    container.addEventListener('pointerdown', handlePointerDownForLongpress);
+    container.addEventListener('pointermove', handlePointerMoveForLongpress);
+    container.addEventListener('pointerup', handlePointerUpForLongpress);
+    container.addEventListener('pointercancel', handlePointerUpForLongpress);
 
 
     // --- Gesture Detection (2/3 Finger Tap) ---
@@ -1017,7 +1057,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       container.removeEventListener('pointerdown', handlePointerDownForLongpress);
       container.removeEventListener('pointermove', handlePointerMoveForLongpress);
       container.removeEventListener('pointerup', handlePointerUpForLongpress);
-      container.removeEventListener('pointercancel', handlePointerCancelForLongpress);
+      container.removeEventListener('pointercancel', handlePointerUpForLongpress);
 
       // Clear any pending longpress timer
       if (longpressTimer) {
@@ -1092,26 +1132,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         </UIPortal>
       )}
 
-      <Toolbar
-        activeTool={activeTool}
-        onSelectTool={handleSelectTool}
-        onUpload={(files) => {
-          const center = editor.getViewportPageBounds().center;
-          editor.putExternalContent({
-            type: 'files',
-            files,
-            point: center
-          });
-        }}
-        onAddUrl={(url) => {
-          const center = editor.getViewportPageBounds().center;
-          editor.putExternalContent({
-            type: 'url',
-            url,
-            point: center
-          });
-        }}
-      />
+      <Toolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
       <Bubble activeTool={activeTool} />
 
       <HistoryControls sidebarColumns={sidebarColumns} leftHandedMode={leftHandedMode} />

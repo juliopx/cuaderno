@@ -2,9 +2,8 @@
   position: absolute;
   right: var(--toolbar-right, 1rem);
   left: var(--toolbar-left, auto);
-  /* Center based on the first 4 buttons to keep layout stable when extras appear */
-  top: calc(50% - 108px);
-  /* transform: translateY(-50%); REMOVED to prevent shifting when height changes */
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -16,13 +15,6 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   z-index: 100;
-}
-
-.divider {
-  width: 100%;
-  height: 1px;
-  background-color: hsl(var(--color-text-secondary) / 0.2);
-  margin: 0.25rem 0;
 }
 
 .button {

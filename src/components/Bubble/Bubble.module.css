@@ -14,16 +14,9 @@
   flex-direction: column;
   gap: 12px;
   align-items: center;
-  width: 340px;
+  width: 300px;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   touch-action: none;
-}
-
-.verticalDivider {
-  width: 1px;
-  height: 20px;
-  background-color: hsl(var(--color-text-secondary) / 0.2);
-  margin: 0 4px;
 }
 
 .dragging {

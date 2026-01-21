@@ -106,7 +106,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       overflow: 'visible',
       whiteSpace: shape.props.autoSize ? 'pre' : 'pre-wrap',
       wordBreak: 'break-word',
-      pointerEvents: 'all',
+      pointerEvents: isEditing ? 'all' : 'none',
       transformOrigin: 'top left',
       transform: `scale(${sx}, ${sy})`,
       userSelect: isEditing ? 'text' : 'none',
@@ -297,25 +297,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
           style={style}
           contentEditable={isEditing}
           suppressContentEditableWarning
-          onPointerDown={(e) => {
-            const isLink = (e.target as HTMLElement).closest('a');
-            if (isEditing || isLink) {
-              stopEventPropagation(e);
-            }
-          }}
-          onClick={(e) => {
-            if (isEditing) return;
-            const target = e.target as HTMLElement;
-            const link = target.closest('a');
-            if (link) {
-              const href = link.getAttribute('href');
-              if (href) {
-                window.open(href, '_blank', 'noopener,noreferrer');
-                e.preventDefault();
-                e.stopPropagation();
-              }
-            }
-          }}
+          onPointerDown={isEditing ? stopEventPropagation : undefined}
           onInput={handleInput}
           onFocus={() => {
             // Redundant priming on manual focus if empty
@@ -339,12 +321,6 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
               text-align: inherit;
               cursor: text;
               color: inherit;
-            }
-            .rich-text-container a {
-              color: var(--color-accent) !important;
-              text-decoration: underline !important;
-              cursor: pointer !important;
-              pointer-events: all !important;
             }
             /* Force Pointer instead of Crosshair for Text Tool */
           .tl-canvas.tl-cursor-cross, 
