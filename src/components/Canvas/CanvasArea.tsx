@@ -6,7 +6,10 @@ import {
   DefaultColorStyle,
   DefaultSizeStyle,
   DefaultFontStyle,
+  DefaultDashStyle,
+  DefaultFillStyle,
   DefaultTextAlignStyle,
+  GeoShapeGeoStyle,
   transact,
   DefaultContextMenu
 } from 'tldraw'
@@ -26,16 +29,27 @@ import {
 import { CircularButton } from '../UI/CircularButton';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore'; // Assuming this is the correct path, user provided 'useSyncStore'
-import { useTextStyleStore } from '../../store/textStyleStore';
+import { useUserPreferencesStore } from '../../store/userPreferencesStore';
 import { opfs } from '../../lib/opfs';
 import { RichTextShapeUtil } from '../../shapes/RichTextShapeUtil';
+import { CustomGeoShapeUtil } from '../../shapes/CustomGeoShapeUtil';
+import { CustomDrawShapeUtil } from '../../shapes/CustomDrawShapeUtil';
+import { CustomLineShapeUtil } from '../../shapes/CustomLineShapeUtil';
+import { CustomArrowShapeUtil } from '../../shapes/CustomArrowShapeUtil';
 import { syncLog } from '../../lib/debugLog';
 import { CanvasTitle } from './CanvasTitle';
 import { UIPortal } from '../UIPortal';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx'; // Added clsx for HistoryControls
 
-const customShapeUtils = [RichTextShapeUtil];
+const customShapeUtils = [
+  RichTextShapeUtil,
+  CustomGeoShapeUtil,
+  CustomDrawShapeUtil,
+  CustomLineShapeUtil,
+  CustomArrowShapeUtil
+];
+
 
 const CenterMark = track(() => {
   const isDebug = new URLSearchParams(window.location.search).get('debug') === 'true';
@@ -173,7 +187,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   const manualToolRef = useRef<string>('select');
 
   const { isSidebarOpen, toggleSidebar } = useFileSystemStore();
-  const textStyles = useTextStyleStore();
+  const userPrefs = useUserPreferencesStore();
 
   const lastLoadRef = useRef<{ pageId: string | null; version: number | null }>({ pageId: null, version: null });
   const isLoadingRef = useRef(false);
@@ -223,15 +237,14 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           };
           (editor as any).isShapeErasable = (editor as any).isErasable;
 
-          // 💡 RESET defaults
-          editor.setStyleForNextShapes(DefaultColorStyle, 'black');
-          textStyles.updateStyles({ color: 'black' });
-          editor.setStyleForNextShapes(DefaultSizeStyle, 'm');
-          textStyles.updateStyles({ size: 'm' });
-          editor.setStyleForNextShapes(DefaultFontStyle, 'sans');
-          textStyles.updateStyles({ font: 'sans' });
-          editor.setStyleForNextShapes(DefaultTextAlignStyle, 'start');
-          textStyles.updateStyles({ align: 'start' });
+          // 💡 PRIMING with User Preferences
+          editor.setStyleForNextShapes(DefaultColorStyle, userPrefs.textColor);
+          editor.setStyleForNextShapes(DefaultSizeStyle, userPrefs.textSize);
+          editor.setStyleForNextShapes(DefaultFontStyle, userPrefs.textFont);
+          editor.setStyleForNextShapes(DefaultTextAlignStyle, userPrefs.textAlign === 'justify' ? 'start' : userPrefs.textAlign as any);
+          editor.setStyleForNextShapes(DefaultDashStyle, userPrefs.dashStyle as any);
+          editor.setStyleForNextShapes(DefaultFillStyle, userPrefs.fillStyle as any);
+          editor.setStyleForNextShapes(GeoShapeGeoStyle, userPrefs.lastUsedGeo as any);
         } catch (e) {
           console.error("Failed to load snapshot", e);
         }
@@ -267,7 +280,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       lastLoadRef.current = { pageId, version: pageVersion };
     }
 
-  }, [editor, pageId, pageVersion, lastModifier, clientId]); // sidebarColumns intentionally omitted to prevent reloads on toggle
+  }, [editor, pageId, pageVersion, lastModifier, clientId, userPrefs, sidebarColumns, leftHandedMode]);
 
   // Save Snapshot Listener
   const hasUnsavedChangesRef = useRef(false);
@@ -414,7 +427,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     // 3. User intentional Sticky Tool
     if (manualToolRef.current === 'text' && currentToolId === 'select') return 'text';
 
-    // 4. Fallback to real tool
+    // 4. Fallback to real tool (handling geo, arrow, line as 'shapes')
+    if (currentToolId === 'geo' || currentToolId === 'arrow' || currentToolId === 'line') {
+      return 'shapes';
+    }
+
     return currentToolId;
   })();
 
@@ -614,7 +631,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         const startY = p.y;
 
         // Initial: Auto Size (Click default)
-        const currentStyles = useTextStyleStore.getState();
+        const currentPrefs = useUserPreferencesStore.getState();
 
         editor.createShape({
           id,
@@ -627,14 +644,14 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
             w: 200, h: 50,
             isCreating: true, // Show dashed border
             // Inject saved configuration
-            color: currentStyles.color,
-            size: currentStyles.size,
-            font: currentStyles.font,
-            align: currentStyles.align,
-            bold: currentStyles.bold,
-            italic: currentStyles.italic,
-            underline: currentStyles.underline,
-            strike: currentStyles.strike
+            color: currentPrefs.textColor,
+            size: currentPrefs.textSize,
+            font: currentPrefs.textFont,
+            align: currentPrefs.textAlign,
+            bold: currentPrefs.textBold,
+            italic: currentPrefs.textItalic,
+            underline: currentPrefs.textUnderline,
+            strike: currentPrefs.textStrike
           }
         });
 
@@ -1091,6 +1108,24 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     lastSidebarColumnsRef.current = sidebarColumns;
   }, [editor, sidebarColumns]);
 
+  // Dash Style Memory
+  const lastShapesDashRef = useRef<string>('solid');
+  const lastPencilDashRef = useRef<string>('draw');
+
+  useEffect(() => {
+    // Sync memory with current editor state when styles change
+    const unlisten = editor.store.listen(({ changes }) => {
+      const currentDash = editor.getStyleForNextShape(DefaultDashStyle) as string;
+      const currentTool = editor.getCurrentToolId();
+      if (currentTool === 'geo' || currentTool === 'arrow' || currentTool === 'line' || currentTool === 'note') {
+        lastShapesDashRef.current = currentDash;
+      } else if (currentTool === 'draw') {
+        lastPencilDashRef.current = currentDash;
+      }
+    }, { source: 'user', scope: 'session' });
+    return () => unlisten();
+  }, [editor]);
+
   const handleSelectTool = (tool: string) => {
     manualToolRef.current = tool;
 
@@ -1100,15 +1135,31 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     }
 
     editor.setEditingShape(null); // Exit edit mode first
-    editor.setCurrentTool(tool);
+
+    // Handle special cases before setting the tool
+    if (tool === 'shapes') {
+      editor.setCurrentTool('geo');
+      // Restore last shapes dash (defaults to solid)
+      editor.setStyleForNextShapes(DefaultDashStyle, lastShapesDashRef.current);
+    } else if (tool.startsWith('geo-')) {
+      editor.setCurrentTool(tool);
+      editor.setStyleForNextShapes(DefaultDashStyle, lastShapesDashRef.current);
+    } else if (tool === 'draw') {
+      editor.setCurrentTool(tool);
+      // Restore last pencil dash (defaults to draw/irregular)
+      editor.setStyleForNextShapes(DefaultDashStyle, lastPencilDashRef.current);
+    } else {
+      // Normal tool activation
+      editor.setCurrentTool(tool);
+    }
 
     if (tool === 'text') {
       // Re-apply styles...
-      editor.setStyleForNextShapes(DefaultColorStyle, textStyles.color);
-      editor.setStyleForNextShapes(DefaultSizeStyle, textStyles.size);
-      editor.setStyleForNextShapes(DefaultFontStyle, textStyles.font);
-      const validAlign = textStyles.align === 'justify' ? 'start' : textStyles.align;
-      editor.setStyleForNextShapes(DefaultTextAlignStyle, validAlign);
+      editor.setStyleForNextShapes(DefaultColorStyle, userPrefs.textColor);
+      editor.setStyleForNextShapes(DefaultSizeStyle, userPrefs.textSize);
+      editor.setStyleForNextShapes(DefaultFontStyle, userPrefs.textFont);
+      const validAlign = userPrefs.textAlign === 'justify' ? 'start' : userPrefs.textAlign;
+      editor.setStyleForNextShapes(DefaultTextAlignStyle, validAlign as any);
     }
   };
 

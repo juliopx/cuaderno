@@ -1,13 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
-import { useEditor, useIsDarkMode, getDefaultColorTheme } from 'tldraw';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
+  track,
+  useEditor,
+  useIsDarkMode,
+  getDefaultColorTheme,
   DefaultColorStyle,
   DefaultSizeStyle,
   DefaultFontStyle,
   DefaultTextAlignStyle,
+  DefaultDashStyle,
+  DefaultFillStyle,
+  GeoShapeGeoStyle,
 } from 'tldraw';
 import styles from './Bubble.module.css';
-import { useTextStyleStore } from '../../store/textStyleStore';
+import { useUserPreferencesStore } from '../../store/userPreferencesStore';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import clsx from 'clsx';
 import { UIPortal } from '../UIPortal';
@@ -18,15 +24,43 @@ import {
   Underline,
   Strikethrough,
   Link as LinkIcon,
+  Square,
+  Circle,
+  Triangle,
+  Diamond,
+  ArrowBigUp,
+  ArrowBigDown,
+  ArrowBigLeft,
+  ArrowBigRight,
+  Minus,
+  Star,
+  Hexagon,
+  Cloud,
+  Heart,
+  Pentagon,
+  Octagon,
+  X,
+  Check,
+  Shapes,
 } from 'lucide-react';
-import { Dropdown } from '../UI/Dropdown';
 import { useTranslation } from 'react-i18next';
 import { LinkInputModal } from '../UI/LinkInputModal';
+import {
+  FillColorStyle,
+  FillOpacityStyle,
+  StrokeOpacityStyle,
+} from '../../styles/customStyles';
 
 // Generic Scribble SVG
 const Scribble = ({ strokeWidth, color = 'currentColor' }: { strokeWidth: number, color?: string }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 14c2-4 5-6 8-2s6 2 8 0" />
+  </svg>
+);
+
+const TrapezoidIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 5h8l4 10H2L6 5z" />
   </svg>
 );
 
@@ -43,6 +77,14 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
   const handlePointerDown = (e: React.PointerEvent) => {
     // Only left click for mouse; all pointer types for touch/pen
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    // Don't drag if the event comes from the opacity slider
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('opacitySlider') ||
+      target.closest('.opacityRow') ||
+      (target instanceof HTMLInputElement && target.type === 'range')) {
+      return;
+    }
 
     // e.preventDefault(); // Don't prevent default on pointerdown or clicks might break
     isDragging.current = true;
@@ -83,7 +125,7 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
 
     try {
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch (err) {
+    } catch {
       // Ignore if already released or invalid
     }
   };
@@ -116,14 +158,13 @@ interface BubbleProps {
 }
 
 
-export const Bubble = ({ activeTool }: BubbleProps) => {
+export const Bubble = track(({ activeTool }: BubbleProps) => {
   const { t } = useTranslation();
   const editor = useEditor();
   const isDarkMode = useIsDarkMode();
   const theme = getDefaultColorTheme({ isDarkMode });
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isFontOpen, setIsFontOpen] = useState(false);
-  const [isSizeOpen, setIsSizeOpen] = useState(false);
+  // No longer using Dropdown states for text settings
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [relativeClickPoint, setRelativeClickPoint] = useState({ x: 0, y: 0 });
   const savedRange = useRef<Range | null>(null);
@@ -174,14 +215,14 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
     }
   };
 
-  const textStyles = useTextStyleStore();
+  const userPrefs = useUserPreferencesStore();
 
   const editingId = editor.getEditingShapeId();
   const editingShape = editingId ? editor.getShape(editingId) : null;
   const isEditingRichText = editingShape?.type === 'rich-text';
 
   // Colors mapping (using Tldraw's actual theme engine for 100% match)
-  const colorsMap: Record<string, string> = {
+  const colorsMap: Record<string, string> = useMemo(() => ({
     black: theme.black.solid,
     grey: theme.grey.solid,
     red: theme.red.solid,
@@ -189,18 +230,18 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
     green: theme.green.solid,
     blue: theme.blue.solid,
     violet: theme.violet.solid,
-  };
+  }), [theme]);
 
   // Rich Text State (Persistent context, initialized from global store)
   const [richStats, setRichStats] = useState({
-    bold: textStyles.bold,
-    italic: textStyles.italic,
-    underline: textStyles.underline,
-    strike: textStyles.strike,
-    font: textStyles.font,
-    size: textStyles.size,
-    color: textStyles.color,
-    align: textStyles.align
+    bold: userPrefs.textBold,
+    italic: userPrefs.textItalic,
+    underline: userPrefs.textUnderline,
+    strike: userPrefs.textStrike,
+    font: userPrefs.textFont,
+    size: userPrefs.textSize,
+    color: userPrefs.textColor,
+    align: userPrefs.textAlign
   });
 
   // Sync state with cursor position
@@ -298,15 +339,15 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         };
 
         // Sync back to global "saved configuration"
-        textStyles.updateStyles({
-          bold: next.bold,
-          italic: next.italic,
-          underline: next.underline,
-          strike: next.strike,
-          font: next.font,
-          size: next.size,
-          color: next.color,
-          align: next.align
+        userPrefs.updatePreferences({
+          textBold: next.bold,
+          textItalic: next.italic,
+          textUnderline: next.underline,
+          textStrike: next.strike,
+          textFont: next.font,
+          textSize: next.size,
+          textColor: next.color,
+          textAlign: next.align
         });
 
         return next;
@@ -320,12 +361,12 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
     const applyPersistentStyles = () => {
       const active = document.activeElement as HTMLElement;
       if (active?.getAttribute('contenteditable') === 'true') {
-        if (textStyles.bold) document.execCommand('bold');
-        if (textStyles.italic) document.execCommand('italic');
-        if (textStyles.underline) document.execCommand('underline');
-        if (textStyles.strike) document.execCommand('strikethrough');
+        if (userPrefs.textBold) document.execCommand('bold');
+        if (userPrefs.textItalic) document.execCommand('italic');
+        if (userPrefs.textUnderline) document.execCommand('underline');
+        if (userPrefs.textStrike) document.execCommand('strikethrough');
 
-        const hex = colorsMap[textStyles.color] || '#000000';
+        const hex = colorsMap[userPrefs.textColor] || '#000000';
         document.execCommand('styleWithCSS', false, 'true');
         document.execCommand('foreColor', false, hex);
 
@@ -335,20 +376,20 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
           serif: 'serif',
           mono: 'monospace'
         };
-        document.execCommand('fontName', false, fonts[textStyles.font] || 'sans-serif');
+        document.execCommand('fontName', false, fonts[userPrefs.textFont] || 'sans-serif');
 
         const sizes: Record<string, string> = { xs: '3', s: '4', m: '5', l: '6', xl: '7', xxl: '7' };
-        document.execCommand('fontSize', false, sizes[textStyles.size] || '4');
+        document.execCommand('fontSize', false, sizes[userPrefs.textSize] || '4');
 
         setRichStats({
-          bold: textStyles.bold,
-          italic: textStyles.italic,
-          underline: textStyles.underline,
-          strike: textStyles.strike,
-          font: textStyles.font,
-          size: textStyles.size,
-          color: textStyles.color,
-          align: textStyles.align
+          bold: userPrefs.textBold,
+          italic: userPrefs.textItalic,
+          underline: userPrefs.textUnderline,
+          strike: userPrefs.textStrike,
+          font: userPrefs.textFont,
+          size: userPrefs.textSize,
+          color: userPrefs.textColor,
+          align: userPrefs.textAlign
         });
       } else {
         requestAnimationFrame(applyPersistentStyles);
@@ -368,7 +409,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
       document.removeEventListener('pointerup', updateStats);
       document.removeEventListener('keyup', updateStats);
     };
-  }, [editor.getEditingShapeId(), t]);
+  }, [editor, t, colorsMap, userPrefs]);
 
   // 💡 PROACTIVE SYNC: When switching to text tool, push current persistent stats to Tldraw context
   // This ensures new shapes inherit the correct color/size from the very first frame.
@@ -382,7 +423,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
       const validAlign = richStats.align === 'justify' ? 'start' : richStats.align;
       editor.setStyleForNextShapes(DefaultTextAlignStyle, validAlign);
     }
-  }, [activeTool, editor, richStats]);
+  }, [activeTool, editor, richStats.color, richStats.size, richStats.font, richStats.align]);
 
   const toggleStyle = (command: string) => {
     const key = command === 'strikethrough' ? 'strike' : command;
@@ -413,24 +454,32 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
       }
 
       // Force sync stats and store
-      setRichStats(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
-      textStyles.updateStyles({ [key]: !(textStyles as any)[key] });
+      setRichStats(prev => {
+        const next = { ...prev, [key]: !prev[key as keyof typeof prev] };
+        const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof userPrefs;
+        userPrefs.updatePreferences({ [storeKey]: next[key as keyof typeof next] });
+        return next;
+      });
     } else {
       // Just update local state if no shape is being edited (e.g. strict selection)
-      setRichStats(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
-      textStyles.updateStyles({ [key]: !(textStyles as any)[key] });
+      setRichStats(prev => {
+        const next = { ...prev, [key]: !prev[key as keyof typeof prev] };
+        const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof userPrefs;
+        userPrefs.updatePreferences({ [storeKey]: next[key as keyof typeof next] });
+        return next;
+      });
     }
   };
 
   // Dimensions depend on state
-  // Match CSS width: 300px for expanded, 48px for collapsed
-  const width = isCollapsed ? 48 : 300;
-  // Increase height for text tool (has font row)
-  const height = isCollapsed ? 48 : (activeTool === 'text' ? 240 : 170);
+  // Match CSS width: 340px for expanded, 48px for collapsed
+  const width = isCollapsed ? 48 : 340;
+  // Increase height for shapes tool (has options)
+  const height = isCollapsed ? 48 : (activeTool === 'text' ? 240 : (activeTool === 'shapes' ? 300 : 170));
 
   const { dominantHand } = useFileSystemStore();
   const leftHandedMode = dominantHand === 'left';
-  const initialX = leftHandedMode ? 100 : window.innerWidth / 2 - 150;
+  const initialX = leftHandedMode ? 100 : window.innerWidth / 2 - 170;
   const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: initialX, y: 100 }, width, height);
 
   // Custom "Smart Double Click" handler
@@ -502,7 +551,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
           // as the primary fallback since the browser's insertion style might get lost
           editor.setStyleForNextShapes(DefaultColorStyle, value);
           // Sync to Zustand global store
-          textStyles.updateStyles({ color: value });
+          userPrefs.updatePreferences({ textColor: value });
         }
 
         if (style.id === 'tldraw:font') {
@@ -515,7 +564,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
           document.execCommand('fontName', false, fonts[value] || 'sans-serif');
           setRichStats(prev => ({ ...prev, font: value }));
           editor.setStyleForNextShapes(DefaultFontStyle, value);
-          textStyles.updateStyles({ font: value });
+          userPrefs.updatePreferences({ textFont: value });
         }
 
         if (style.id === 'tldraw:size') {
@@ -523,7 +572,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
           document.execCommand('fontSize', false, sizes[value] || '5');
           setRichStats(prev => ({ ...prev, size: value }));
           editor.setStyleForNextShapes(DefaultSizeStyle, value);
-          textStyles.updateStyles({ size: value });
+          userPrefs.updatePreferences({ textSize: value });
         }
 
         if (style.id === 'tldraw:textAlign') {
@@ -581,7 +630,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
     if ('setStyleForNextShapes' in editor) {
       // VALIDATION FIX: 'justify' is not a valid value for Tldraw's DefaultTextAlignStyle (start, middle, end)
       // We only pass it to the editor context if it matches the schema.
-      // For 'justify', we rely on our custom store (useTextStyleStore) which injects it into props.
+      // For 'justify', we rely on our custom store (useUserPreferencesStore) which injects it into props.
       if (style.id === 'tldraw:textAlign' && value === 'justify') {
         // Do not update Tldraw's default style context for justify
         // or fallback to start
@@ -595,14 +644,40 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
     const propKey = style.id.replace('tldraw:', '');
     const finalPropKey = propKey === 'textAlign' ? 'align' : propKey;
     setRichStats(prev => ({ ...prev, [finalPropKey]: value }));
-    textStyles.updateStyles({ [finalPropKey]: value });
+
+    // Persist to store
+    const prefUpdate: any = {};
+    if (style.id === DefaultColorStyle.id) {
+      prefUpdate.textColor = value;
+      prefUpdate.strokeColor = value;
+    } else if (style.id === DefaultSizeStyle.id) {
+      prefUpdate.textSize = value;
+      prefUpdate.strokeSize = value;
+    } else if (style.id === DefaultFontStyle.id) {
+      prefUpdate.textFont = value;
+    } else if (style.id === DefaultTextAlignStyle.id) {
+      prefUpdate.textAlign = value;
+    } else if (style.id === DefaultDashStyle.id) {
+      prefUpdate.dashStyle = value;
+    } else if (style.id === DefaultFillStyle.id) {
+      prefUpdate.fillStyle = value;
+    } else if (style.id === GeoShapeGeoStyle.id) {
+      prefUpdate.lastUsedGeo = value;
+    } else if (style.id === FillColorStyle.id) {
+      prefUpdate.fillColor = value;
+    } else if (style.id === FillOpacityStyle.id) {
+      prefUpdate.fillOpacity = value;
+    } else if (style.id === StrokeOpacityStyle.id) {
+      prefUpdate.strokeOpacity = value;
+    }
+    userPrefs.updatePreferences(prefUpdate);
   };
 
-  // Show for:
-  // 1. Draw Tool
+  // 1. Draw/Shape Tools
   // 2. Text Tool
   // 3. Selection Tool IF we are editing Rich Text
-  if (activeTool !== 'draw' && activeTool !== 'text' && !(activeTool === 'select' && isEditingRichText)) {
+  const isShapeTool = activeTool === 'draw' || activeTool === 'shapes';
+  if (!isShapeTool && activeTool !== 'text' && !(activeTool === 'select' && isEditingRichText)) {
     return null;
   }
 
@@ -640,7 +715,25 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
   const currentSize = isTextMode ? richStats.size : ((getStyle(DefaultSizeStyle, 'm') as string) || richStats.size || 'm');
   const currentColor = isTextMode ? richStats.color : ((getStyle(DefaultColorStyle, 'black') as string) || richStats.color || 'black');
   const currentFont = isTextMode ? richStats.font : ((getStyle(DefaultFontStyle, 'draw') as string) || richStats.font || 'draw');
+
+  const currentGeo = (getStyle(GeoShapeGeoStyle, 'rectangle') as string);
+  const currentDash = (getStyle(DefaultDashStyle, 'solid') as string);
+  const currentFill = (getStyle(DefaultFillStyle, 'none') as string);
+  const currentTldrawTool = editor.getCurrentToolId();
+
+  // Get current values for custom styles
+  const currentFillColor = (getStyle(FillColorStyle, 'black') as string);
+  const currentFillOpacity = parseFloat(getStyle(FillOpacityStyle, '1') as string);
+  const currentStrokeOpacity = parseFloat(getStyle(StrokeOpacityStyle, '1') as string);
+
   const activeColorHex = colorsMap[currentColor] || theme.black.solid;
+
+  const currentShapeOption = (() => {
+    if (currentTldrawTool === 'arrow') return 'arrow';
+    if (currentTldrawTool === 'line') return 'line';
+    return currentGeo;
+  })();
+
 
   if (isCollapsed) {
     return (
@@ -659,7 +752,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         >
           {activeTool === 'text' || isEditingRichText ? (
             <div style={{
-              fontFamily: `var(--tl - font - ${currentFont})`,
+              fontFamily: `var(--tl-font-${currentFont})`,
               color: activeColorHex,
               fontSize: '24px',
               fontWeight: richStats.bold ? 'bold' : 'normal',
@@ -672,6 +765,8 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
             }}>
               A
             </div>
+          ) : activeTool === 'shapes' ? (
+            <Shapes size={24} />
           ) : (
             <Scribble strokeWidth={sizeMap[currentSize] || 2.5} color={activeColorHex} />
           )}
@@ -692,83 +787,78 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         {(activeTool === 'text' || (activeTool === 'select' && isEditingRichText)) && (
           <div className={styles.textSettings}>
             <div className={styles.topRow}>
-              <div className={styles.dropdownRow}>
-                <Dropdown
-                  value={currentFont}
-                  options={['draw', 'sans', 'serif', 'mono']}
-                  labels={{
-                    draw: t('font_draw'),
-                    sans: t('font_sans'),
-                    serif: t('font_serif'),
-                    mono: t('font_mono'),
-                  }}
-                  onChange={(f: string) => setStyle(DefaultFontStyle, f)}
-                  isOpen={isFontOpen}
-                  onToggle={() => {
-                    if (!hasMoved.current) {
-                      setIsFontOpen(!isFontOpen);
-                      setIsSizeOpen(false);
-                    }
-                  }}
-                  width="140px"
-                  applyFontToLabel
-                />
-                <Dropdown
-                  value={currentSize}
-                  options={['xs', 's', 'm', 'l', 'xl', 'xxl']}
-                  labels={{
-                    xs: t('font_size_xs'),
-                    s: t('font_size_s'),
-                    m: t('font_size_m'),
-                    l: t('font_size_l'),
-                    xl: t('font_size_xl'),
-                    xxl: t('font_size_xxl'),
-                  }}
-                  onChange={(s: string) => setStyle(DefaultSizeStyle, s)}
-                  isOpen={isSizeOpen}
-                  onToggle={() => {
-                    if (!hasMoved.current) {
-                      setIsSizeOpen(!isSizeOpen);
-                      setIsFontOpen(false);
-                    }
-                  }}
-                  width="120px"
-                />
+              <div className={styles.textToolsRow}>
+                {['draw', 'sans', 'serif', 'mono'].map(f => (
+                  <button
+                    key={f}
+                    className={clsx(styles.iconBtnTiny, currentFont === f && styles.active)}
+                    style={{
+                      fontFamily: `var(--font-${f})`,
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                    }}
+                    onClick={() => setStyle(DefaultFontStyle, f)}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    title={t(`font_${f}`)}
+                  >
+                    A
+                  </button>
+                ))}
+                <div className={styles.verticalDivider} />
+                {['xs', 's', 'm', 'l', 'xl', 'xxl'].map(s => (
+                  <button
+                    key={s}
+                    className={clsx(styles.iconBtnTiny, currentSize === s && styles.active)}
+                    style={{
+                      fontSize: s === 'xs' ? '10px' :
+                        s === 's' ? '12px' :
+                          s === 'm' ? '14px' :
+                            s === 'l' ? '18px' :
+                              s === 'xl' ? '22px' : '26px',
+                      fontWeight: 'bold',
+                    }}
+                    onClick={() => setStyle(DefaultSizeStyle, s)}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    title={t(`font_size_${s}`)}
+                  >
+                    A
+                  </button>
+                ))}
               </div>
             </div>
             <div className={styles.toolsRow}>
               <div className={styles.styleGroup}>
                 <button
                   className={clsx(styles.iconBtn, richStats.bold && styles.active)}
-                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('bold'); }}
+                  onClick={(e) => { e.stopPropagation(); if (!hasMoved.current) toggleStyle('bold'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   title={t('format_bold')}
                 >
-                  <Bold size={16} />
+                  <Bold strokeWidth={2.5} size={16} />
                 </button>
                 <button
                   className={clsx(styles.iconBtn, richStats.italic && styles.active)}
-                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('italic'); }}
+                  onClick={(e) => { e.stopPropagation(); if (!hasMoved.current) toggleStyle('italic'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   title={t('format_italic')}
                 >
-                  <Italic size={16} />
+                  <Italic strokeWidth={2.5} size={16} />
                 </button>
                 <button
                   className={clsx(styles.iconBtn, richStats.underline && styles.active)}
-                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('underline'); }}
+                  onClick={(e) => { e.stopPropagation(); if (!hasMoved.current) toggleStyle('underline'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   title={t('format_underline')}
                 >
-                  <Underline size={16} />
+                  <Underline strokeWidth={2.5} size={16} />
                 </button>
                 <button
                   className={clsx(styles.iconBtn, richStats.strike && styles.active)}
-                  onClick={(e) => { e.stopPropagation(); !hasMoved.current && toggleStyle('strikethrough'); }}
+                  onClick={(e) => { e.stopPropagation(); if (!hasMoved.current) toggleStyle('strikethrough'); }}
                   onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                   title={t('format_strikethrough')}
                 >
-                  <Strikethrough size={16} />
+                  <Strikethrough strokeWidth={2.5} size={16} />
                 </button>
                 <div className={styles.verticalDivider} />
                 <button
@@ -820,70 +910,297 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
                 })}
               </div>
             </div>
+            <div className={styles.colorsRow}>
+              {colors.map(c => (
+                <button
+                  key={c}
+                  className={clsx(styles.colorSwatch, richStats.color === c && styles.activeColor)}
+                  style={{
+                    backgroundColor: colorsMap[c],
+                    boxShadow: richStats.color === c
+                      ? `0 0 0 2px var(--glass-bg), 0 0 0 4px ${colorsMap[c]}`
+                      : undefined
+                  }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={() => !hasMoved.current && setStyle(DefaultColorStyle, c)}
+                />
+              ))}
+            </div>
           </div>
         )}
-        {activeTool === 'draw' && (
-          <div className={styles.sizeRow}>
-            <button
-              className={clsx(styles.sizeBtn, currentSize === 'xs' && styles.active)}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xs')}
-            >
-              <Scribble strokeWidth={1} color={activeColorHex} />
-            </button>
-            <button
-              className={clsx(styles.sizeBtn, currentSize === 's' && styles.active)}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 's')}
-            >
-              <Scribble strokeWidth={1.5} color={activeColorHex} />
-            </button>
-            <button
-              className={clsx(styles.sizeBtn, currentSize === 'm' && styles.active)}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'm')}
-            >
-              <Scribble strokeWidth={2.5} color={activeColorHex} />
-            </button>
-            <button
-              className={clsx(styles.sizeBtn, currentSize === 'l' && styles.active)}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'l')}
-            >
-              <Scribble strokeWidth={4} color={activeColorHex} />
-            </button>
-            <button
-              className={clsx(styles.sizeBtn, currentSize === 'xl' && styles.active)}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xl')}
-            >
-              <Scribble strokeWidth={6} color={activeColorHex} />
-            </button>
-            <button
-              className={clsx(styles.sizeBtn, currentSize === 'xxl' && styles.active)}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xxl')}
-            >
-              <Scribble strokeWidth={10} color={activeColorHex} />
-            </button>
+        {(activeTool === 'shapes' || (activeTool === 'select' && isEditingRichText)) && (
+          <div className={styles.shapeSettings}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionTitle}>{t('tool_shapes')}</span>
+            </div>
+            {/* Shape Type Selection */}
+            <div className={styles.styleGroup} style={{ justifyContent: 'space-between' }}>
+              {['rectangle', 'ellipse', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon'].map((shape) => {
+                const isActive = currentShapeOption === shape;
+                return (
+                  <button
+                    key={shape}
+                    className={clsx(styles.iconBtn, isActive && styles.active)}
+                    onClick={() => {
+                      if (!hasMoved.current) {
+                        editor.setCurrentTool('geo');
+                        setStyle(GeoShapeGeoStyle, shape);
+                      }
+                    }}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    title={t(`tool_${shape === 'rectangle' ? 'square' : shape === 'ellipse' ? 'circle' : shape}`)}
+                  >
+                    {shape === 'rectangle' && <Square size={16} />}
+                    {shape === 'ellipse' && <Circle size={16} />}
+                    {shape === 'triangle' && <Triangle size={16} />}
+                    {shape === 'diamond' && <Diamond size={16} />}
+                    {shape === 'pentagon' && <Pentagon size={16} />}
+                    {shape === 'hexagon' && <Hexagon size={16} />}
+                    {shape === 'octagon' && <Octagon size={16} />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className={styles.styleGroup} style={{ justifyContent: 'space-between' }}>
+              {['star', 'cloud', 'heart', 'oval', 'trapezoid', 'rhombus', 'x-box'].map((shape) => {
+                const isActive = currentShapeOption === shape;
+                return (
+                  <button
+                    key={shape}
+                    className={clsx(styles.iconBtn, isActive && styles.active)}
+                    onClick={() => {
+                      if (!hasMoved.current) {
+                        editor.setCurrentTool('geo');
+                        setStyle(GeoShapeGeoStyle, shape);
+                      }
+                    }}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    title={t(`tool_${shape === 'x-box' ? 'star' : shape}`)}
+                  >
+                    {shape === 'star' && <Star size={16} />}
+                    {shape === 'cloud' && <Cloud size={16} />}
+                    {shape === 'heart' && <Heart size={16} />}
+                    {shape === 'oval' && <Circle size={16} />}
+                    {shape === 'trapezoid' && <TrapezoidIcon size={16} />}
+                    {shape === 'rhombus' && <Diamond size={16} />}
+                    {shape === 'x-box' && <X size={16} />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className={styles.styleGroup} style={{ justifyContent: 'space-between' }}>
+              {['check-box', 'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'arrow', 'line'].map((shape) => {
+                const isActive = currentShapeOption === shape;
+                return (
+                  <button
+                    key={shape}
+                    className={clsx(styles.iconBtn, isActive && styles.active)}
+                    onClick={() => {
+                      if (!hasMoved.current) {
+                        if (shape === 'arrow' || shape === 'line') {
+                          editor.setCurrentTool(shape);
+                        } else {
+                          editor.setCurrentTool('geo');
+                          setStyle(GeoShapeGeoStyle, shape);
+                        }
+                      }
+                    }}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    title={t(`tool_${shape}`)}
+                  >
+                    {shape === 'check-box' && <Check size={16} />}
+                    {shape === 'arrow-up' && <ArrowBigUp size={16} />}
+                    {shape === 'arrow-down' && <ArrowBigDown size={16} />}
+                    {shape === 'arrow-left' && <ArrowBigLeft size={16} />}
+                    {shape === 'arrow-right' && <ArrowBigRight size={16} />}
+                    {shape === 'arrow' && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(45deg)' }}>
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
+                    )}
+                    {shape === 'line' && <Minus size={16} />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
-        <div className={styles.colorsRow}>
-          {colors.map(c => (
-            <button
-              key={c}
-              className={clsx(styles.colorSwatch, currentColor === c && styles.activeColor)}
-              style={{
-                backgroundColor: colorsMap[c],
-                boxShadow: currentColor === c
-                  ? `0 0 0 2px var(--glass-bg), 0 0 0 4px ${colorsMap[c]}`
-                  : undefined
-              }}
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onClick={() => !hasMoved.current && setStyle(DefaultColorStyle, c)}
-            />
-          ))}
-        </div>
+
+        {/* STROKE SECTION */}
+        {(activeTool === 'shapes' || activeTool === 'draw') && (
+          <div className={styles.strokeSettings}>
+            {activeTool === 'shapes' ? (
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionTitle}>{t('style_stroke')}</span>
+                <button
+                  className={clsx(styles.switch, currentStrokeOpacity > 0 && styles.switchActive)}
+                  onClick={() => {
+                    const newOpacity = currentStrokeOpacity > 0 ? '0' : '1';
+                    setStyle(StrokeOpacityStyle, newOpacity);
+                    editor.setOpacityForSelectedShapes(parseFloat(newOpacity));
+                    editor.setOpacityForNextShapes(parseFloat(newOpacity));
+                  }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <div className={styles.switchHandle} />
+                </button>
+              </div>
+            ) : null}
+
+            {(currentStrokeOpacity > 0 || activeTool === 'draw') && (
+              <>
+                <div className={styles.sizeRow}>
+                  {/* Dash Style */}
+                  <div className={styles.styleGroup}>
+                    {['draw', 'solid', 'dashed', 'dotted'].map((dash) => {
+                      const isActive = currentDash === dash;
+                      return (
+                        <button
+                          key={dash}
+                          className={clsx(styles.iconBtnCompact, isActive && styles.active)}
+                          onClick={() => {
+                            if (!hasMoved.current) {
+                              setStyle(DefaultDashStyle, dash);
+                            }
+                          }}
+                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          title={t(`style_border_${dash}`)}
+                        >
+                          {dash === 'draw' ? (
+                            <Scribble strokeWidth={2} />
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                              {dash === 'solid' && <line x1="2" y1="10" x2="18" y2="10" />}
+                              {dash === 'dashed' && <line x1="2" y1="10" x2="18" y2="10" strokeDasharray="4 2" />}
+                              {dash === 'dotted' && <line x1="2" y1="10" x2="18" y2="10" strokeDasharray="1 2" />}
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {isShapeTool && (
+                    <>
+                      <div className={styles.verticalDivider} />
+                      <div className={styles.styleGroup} style={{ flex: 1, justifyContent: 'space-between' }}>
+                        {['xs', 's', 'm', 'l', 'xl', 'xxl'].map((sz) => {
+                          const strokeWidths: Record<string, number> = { xs: 1, s: 1.5, m: 2.5, l: 4, xl: 6, xxl: 10 };
+                          return (
+                            <button
+                              key={sz}
+                              className={clsx(styles.sizeBtnCompact, currentSize === sz && styles.active)}
+                              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, sz)}
+                            >
+                              <Scribble strokeWidth={strokeWidths[sz]} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className={styles.colorsRow}>
+                  {colors.map(c => (
+                    <button
+                      key={c}
+                      className={clsx(styles.colorSwatch, currentColor === c && styles.activeColor)}
+                      style={{
+                        backgroundColor: colorsMap[c],
+                        boxShadow: currentColor === c
+                          ? `0 0 0 2px var(--glass-bg), 0 0 0 4px ${colorsMap[c]}`
+                          : undefined
+                      }}
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onClick={() => !hasMoved.current && setStyle(DefaultColorStyle, c)}
+                    />
+                  ))}
+                </div>
+
+                <div className={styles.opacityRow}>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={currentStrokeOpacity * 100}
+                    onChange={(e) => {
+                      const newOpacity = (parseInt(e.target.value) / 100).toString();
+                      setStyle(StrokeOpacityStyle, newOpacity);
+                      editor.setOpacityForSelectedShapes(parseFloat(newOpacity));
+                      editor.setOpacityForNextShapes(parseFloat(newOpacity));
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className={styles.opacitySlider}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* FILL Section */}
+        {activeTool === 'shapes' && (
+          <div className={styles.fillSettings}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionTitle}>{t('style_fill')}</span>
+              <button
+                className={clsx(styles.switch, currentFill !== 'none' && styles.switchActive)}
+                onClick={() => {
+                  if (currentFill === 'none') {
+                    setStyle(DefaultFillStyle, 'solid');
+                    setStyle(FillOpacityStyle, '1');
+                  } else {
+                    setStyle(DefaultFillStyle, 'none');
+                    setStyle(FillOpacityStyle, '0');
+                  }
+                }}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                <div className={styles.switchHandle} />
+              </button>
+            </div>
+
+            {currentFill !== 'none' && (
+              <>
+                <div className={styles.colorsRow}>
+                  {colors.map(c => (
+                    <button
+                      key={c}
+                      className={clsx(styles.colorSwatch, currentFillColor === c && styles.activeColor)}
+                      style={{
+                        backgroundColor: colorsMap[c],
+                        boxShadow: currentFillColor === c
+                          ? `0 0 0 2px var(--glass-bg), 0 0 0 4px ${colorsMap[c]}`
+                          : undefined
+                      }}
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onClick={() => !hasMoved.current && setStyle(FillColorStyle, c)}
+                    />
+                  ))}
+                </div>
+
+                <div className={styles.opacityRow}>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={currentFillOpacity * 100}
+                    onChange={(e) => {
+                      const newOpacity = (parseInt(e.target.value) / 100).toString();
+                      setStyle(FillOpacityStyle, newOpacity);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className={styles.opacitySlider}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {isLinkModalOpen && (
           <LinkInputModal
             onConfirm={handleLinkConfirm}
@@ -894,4 +1211,4 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
       </div>
     </UIPortal >
   );
-};
+});

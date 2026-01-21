@@ -1,5 +1,5 @@
 import styles from './Toolbar.module.css';
-import { MousePointer2, Pencil, Eraser, Type, ImagePlus } from 'lucide-react';
+import { MousePointer2, Pencil, Eraser, Type, ImagePlus, Shapes } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { UIPortal } from '../UIPortal';
@@ -74,6 +74,13 @@ export const Toolbar = ({ activeTool, onSelectTool, onUpload, onAddUrl }: Toolba
           title={t('tool_text')}
         >
           <Type size={20} />
+        </button>
+        <button
+          className={clsx(styles.button, activeTool === 'shapes' && styles.active)}
+          onClick={() => onSelectTool('shapes')}
+          title={t('tool_shapes')}
+        >
+          <Shapes size={20} />
         </button>
 
         <div className={styles.divider} />

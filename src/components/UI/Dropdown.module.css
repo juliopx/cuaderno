@@ -115,3 +115,15 @@
   color: hsl(var(--color-text-primary));
   font-weight: 500;
 }
+
+.itemContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  color: hsl(var(--color-text-secondary));
+}
