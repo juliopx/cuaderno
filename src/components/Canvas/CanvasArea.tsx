@@ -14,7 +14,8 @@ import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
-import { useRef, useEffect, useState } from 'react';
+import { KeyboardEvent, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { getIsDarkMode } from '../../lib/themeUtils';
 import {
   LocateFixed,
   PanelLeftOpen,
@@ -1198,7 +1199,7 @@ export const CanvasArea = () => {
   const leftHandedMode = dominantHand === 'left';
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark = getIsDarkMode(theme);
 
   const currentVersion = activePageId ? (pages[activePageId]?.version || 0) : 0;
   const lastModifier = activePageId ? pages[activePageId]?.lastModifier : undefined;
