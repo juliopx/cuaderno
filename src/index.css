@@ -240,3 +240,15 @@ textarea,
   --color-selected: var(--color-accent) !important;
   --color-primary: var(--color-accent) !important;
 }
+
+/* 
+  FORCE NO FILL ON DRAW SHAPES (Targeted)
+  We aim to hide the "bucket fill" without hiding the "ink".
+  The bucket fill is usually the first path, and the ink is the second.
+  If there is only one path (open shape), it's the ink.
+  So we target the :first-child only if it is NOT the :last-child.
+*/
+.tl-shape[data-shape-type="draw"] path:first-child:not(:last-child) {
+  display: none !important;
+  fill: none !important;
+}

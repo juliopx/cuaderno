@@ -1253,24 +1253,26 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
         {/* STROKE SECTION */}
         {showStrokeSection && (
           <div className={styles.strokeSettings}>
-            <div className={styles.sectionHeader}>
-              <span className={styles.sectionTitle}>{t('style_stroke')}</span>
-              <button
-                className={clsx(styles.switch, currentStrokeOpacity > 0 && styles.switchActive)}
-                onClick={() => {
-                  const newOpacity = currentStrokeOpacity > 0 ? '0' : '1';
-                  // Safety: Don't allow both off. If turning off stroke, turn on fill.
-                  if (newOpacity === '0' && currentFill === 'none') {
-                    setStyle(DefaultFillStyle, 'solid');
-                    if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
-                  }
-                  setStyle(StrokeOpacityStyle, newOpacity);
-                }}
-                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              >
-                <div className={styles.switchHandle} />
-              </button>
-            </div>
+            {!(activeTool === 'draw' || (isSelectTool && isAllDraw)) && (
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionTitle}>{t('style_stroke')}</span>
+                <button
+                  className={clsx(styles.switch, currentStrokeOpacity > 0 && styles.switchActive)}
+                  onClick={() => {
+                    const newOpacity = currentStrokeOpacity > 0 ? '0' : '1';
+                    // Safety: Don't allow both off. If turning off stroke, turn on fill.
+                    if (newOpacity === '0' && currentFill === 'none') {
+                      setStyle(DefaultFillStyle, 'solid');
+                      if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
+                    }
+                    setStyle(StrokeOpacityStyle, newOpacity);
+                  }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <div className={styles.switchHandle} />
+                </button>
+              </div>
+            )}
 
             {currentStrokeOpacity > 0 && (
               <>
@@ -1344,25 +1346,22 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                   ))}
                 </div>
 
-                <div className={styles.opacityRow}>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={currentStrokeOpacity * 100}
-                    onChange={(e) => {
-                      const newOpacity = (parseInt(e.target.value) / 100).toString();
-                      // Safety: if moving to 0 and fill is off, turn fill on
-                      if (newOpacity === '0' && currentFill === 'none') {
-                        setStyle(DefaultFillStyle, 'solid');
-                        if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
-                      }
-                      setStyle(StrokeOpacityStyle, newOpacity);
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className={styles.opacitySlider}
-                  />
-                </div>
+                {!(activeTool === 'draw' || (isSelectTool && isAllDraw)) && (
+                  <div className={styles.opacityRow}>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      value={currentStrokeOpacity * 100}
+                      onChange={(e) => {
+                        const newOpacity = (parseInt(e.target.value) / 100).toString();
+                        setStyle(StrokeOpacityStyle, newOpacity);
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className={styles.opacitySlider}
+                    />
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1416,15 +1415,11 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                 <div className={styles.opacityRow}>
                   <input
                     type="range"
-                    min="0"
+                    min="10"
                     max="100"
                     value={currentFillOpacity * 100}
                     onChange={(e) => {
                       const newOpacity = (parseInt(e.target.value) / 100).toString();
-                      // Safety: if moving to 0 and stroke is off, turn stroke on
-                      if (newOpacity === '0' && currentStrokeOpacity === 0) {
-                        setStyle(StrokeOpacityStyle, '1');
-                      }
                       setStyle(FillOpacityStyle, newOpacity);
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
