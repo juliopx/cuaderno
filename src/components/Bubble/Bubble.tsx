@@ -198,16 +198,19 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
 
           size: (() => {
             const val = document.queryCommandValue('fontSize');
+            if (val === '3' || val === '14px') return 'xs';
             if (val === '4' || val === '18px') return 's';
             if (val === '5' || val === '24px') return 'm';
             if (val === '6' || val === '32px') return 'l';
             if (val === '7' || val === '48px') return 'xl';
 
             const px = parseInt(computed.fontSize);
+            if (px <= 14) return 'xs';
             if (px <= 18) return 's';
             if (px <= 26) return 'm';
             if (px <= 34) return 'l';
-            return 'xl';
+            if (px <= 50) return 'xl';
+            return 'xxl';
           })(),
 
           color: (() => {
@@ -284,7 +287,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         };
         document.execCommand('fontName', false, fonts[textStyles.font] || 'sans-serif');
 
-        const sizes: Record<string, string> = { s: '3', m: '4', l: '5', xl: '6' };
+        const sizes: Record<string, string> = { xs: '3', s: '4', m: '5', l: '6', xl: '7', xxl: '7' };
         document.execCommand('fontSize', false, sizes[textStyles.size] || '4');
 
         setRichStats({
@@ -415,10 +418,12 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
 
   // Size mapping to numbers for the SVG stroke width
   const sizeMap: Record<string, number> = {
+    xs: 1,
     s: 1.5,
     m: 2.5,
     l: 4,
     xl: 6,
+    xxl: 10,
   };
 
   // Helper to set style
@@ -464,7 +469,7 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         }
 
         if (style.id === 'tldraw:size') {
-          const sizes: Record<string, string> = { s: '4', m: '5', l: '6', xl: '7' };
+          const sizes: Record<string, string> = { xs: '3', s: '4', m: '5', l: '6', xl: '7', xxl: '7' };
           document.execCommand('fontSize', false, sizes[value] || '5');
           setRichStats(prev => ({ ...prev, size: value }));
           editor.setStyleForNextShapes(DefaultSizeStyle, value);
@@ -660,12 +665,14 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
                 />
                 <Dropdown
                   value={currentSize}
-                  options={['s', 'm', 'l', 'xl']}
+                  options={['xs', 's', 'm', 'l', 'xl', 'xxl']}
                   labels={{
+                    xs: t('font_size_xs'),
                     s: t('font_size_s'),
                     m: t('font_size_m'),
                     l: t('font_size_l'),
                     xl: t('font_size_xl'),
+                    xxl: t('font_size_xxl'),
                   }}
                   onChange={(s: string) => setStyle(DefaultSizeStyle, s)}
                   isOpen={isSizeOpen}
@@ -758,6 +765,13 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
         {activeTool === 'draw' && (
           <div className={styles.sizeRow}>
             <button
+              className={clsx(styles.sizeBtn, currentSize === 'xs' && styles.active)}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xs')}
+            >
+              <Scribble strokeWidth={1} color={activeColorHex} />
+            </button>
+            <button
               className={clsx(styles.sizeBtn, currentSize === 's' && styles.active)}
               onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
               onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 's')}
@@ -784,6 +798,13 @@ export const Bubble = ({ activeTool }: BubbleProps) => {
               onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xl')}
             >
               <Scribble strokeWidth={6} color={activeColorHex} />
+            </button>
+            <button
+              className={clsx(styles.sizeBtn, currentSize === 'xxl' && styles.active)}
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onClick={() => !hasMoved.current && setStyle(DefaultSizeStyle, 'xxl')}
+            >
+              <Scribble strokeWidth={10} color={activeColorHex} />
             </button>
           </div>
         )}

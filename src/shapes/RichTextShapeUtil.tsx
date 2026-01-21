@@ -73,10 +73,12 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       mono: 'monospace'
     }
     const sizes: Record<string, string> = {
+      xs: '14px',
       s: '18px',
       m: '24px',
       l: '32px',
-      xl: '48px'
+      xl: '48px',
+      xxl: '64px'
     }
     const isDarkMode = this.editor.user.getIsDarkMode();
     const colorsMap: Record<string, string> = {
@@ -146,7 +148,7 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
               }
 
               const hex = colorsMap[shape.props.color] || shape.props.color;
-              const sizeIntMap: Record<string, string> = { s: '4', m: '5', l: '6', xl: '7' };
+              const sizeIntMap: Record<string, string> = { xs: '3', s: '4', m: '5', l: '6', xl: '7', xxl: '7' };
               const sizeInt = sizeIntMap[shape.props.size] || '5';
               const fontName = fonts[shape.props.font] || 'sans-serif';
 
