@@ -1133,7 +1133,26 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         </UIPortal>
       )}
 
-      <Toolbar activeTool={activeTool} onSelectTool={handleSelectTool} />
+      <Toolbar
+        activeTool={activeTool}
+        onSelectTool={handleSelectTool}
+        onUpload={(files) => {
+          const center = editor.getViewportPageBounds().center;
+          editor.putExternalContent({
+            type: 'files',
+            files,
+            point: center
+          });
+        }}
+        onAddUrl={(url) => {
+          const center = editor.getViewportPageBounds().center;
+          editor.putExternalContent({
+            type: 'url',
+            url,
+            point: center
+          });
+        }}
+      />
       <Bubble activeTool={activeTool} />
 
       <HistoryControls sidebarColumns={sidebarColumns} leftHandedMode={leftHandedMode} />

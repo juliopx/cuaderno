@@ -1,19 +1,40 @@
 import styles from './Toolbar.module.css';
-import { MousePointer2, Pencil, Eraser, Type } from 'lucide-react';
+import { MousePointer2, Pencil, Eraser, Type, ImagePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { UIPortal } from '../UIPortal';
 import { useFileSystemStore } from '../../store/fileSystemStore';
+import { useState } from 'react';
+import { LinkInputModal } from '../UI/LinkInputModal';
 
 interface ToolbarProps {
   activeTool: string;
   onSelectTool: (tool: string) => void;
+  onUpload?: (files: File[]) => void;
+  onAddUrl?: (url: string) => void;
 }
 
-export const Toolbar = ({ activeTool, onSelectTool }: ToolbarProps) => {
+export const Toolbar = ({ activeTool, onSelectTool, onUpload, onAddUrl }: ToolbarProps) => {
   const { t } = useTranslation();
   const { dominantHand } = useFileSystemStore();
   const leftHandedMode = dominantHand === 'left';
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+
+  const handleUrlConfirm = (url: string) => {
+    if (onAddUrl) {
+      onAddUrl(url);
+    }
+    onSelectTool('select');
+    setIsMediaModalOpen(false);
+  };
+
+  const handleUpload = (files: File[]) => {
+    if (onUpload) {
+      onUpload(files);
+    }
+    onSelectTool('select');
+    setIsMediaModalOpen(false);
+  };
 
   return (
     <UIPortal>
@@ -54,7 +75,24 @@ export const Toolbar = ({ activeTool, onSelectTool }: ToolbarProps) => {
         >
           <Type size={20} />
         </button>
+
+        <div className={styles.divider} />
+        <button
+          className={clsx(styles.button, isMediaModalOpen && styles.active)}
+          onClick={() => setIsMediaModalOpen(true)}
+          title={t('tool_image')}
+        >
+          <ImagePlus size={20} />
+        </button>
       </div>
+
+      {isMediaModalOpen && (
+        <LinkInputModal
+          onConfirm={handleUrlConfirm}
+          onUpload={handleUpload}
+          onCancel={() => setIsMediaModalOpen(false)}
+        />
+      )}
     </UIPortal>
   );
 };
