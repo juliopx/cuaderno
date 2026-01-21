@@ -221,6 +221,25 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   const editingShape = editingId ? editor.getShape(editingId) : null;
   const isEditingRichText = editingShape?.type === 'rich-text';
 
+  const selectedShapes = editor.getSelectedShapes();
+  const hasSelectedShapes = selectedShapes.length > 0;
+  const isSelectTool = activeTool === 'select';
+  const isShapeTool = activeTool === 'draw' || activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes';
+  const isTextTool = activeTool === 'text';
+
+  const TEXT_TYPES = ['text', 'rich-text'];
+  const SHAPE_TYPES = ['geo', 'arrow', 'line'];
+  const DRAW_TYPES = ['draw'];
+  const IMAGE_TYPES = ['image', 'asset'];
+
+  const allSelectedMatch = (types: string[]) =>
+    selectedShapes.length > 0 && selectedShapes.every(s => types.includes(s.type));
+
+  const isAllText = allSelectedMatch(TEXT_TYPES);
+  const isAllShape = allSelectedMatch(SHAPE_TYPES);
+  const isAllDraw = allSelectedMatch(DRAW_TYPES);
+  const isAllImage = allSelectedMatch(IMAGE_TYPES);
+
   // Colors mapping (using Tldraw's actual theme engine for 100% match)
   const colorsMap: Record<string, string> = useMemo(() => ({
     black: theme.black.solid,
@@ -425,6 +444,23 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     }
   }, [activeTool, editor, richStats.color, richStats.size, richStats.font, richStats.align]);
 
+  // 💡 SYNC FROM SELECTION: When selecting text objects, sync bubble stats from the first one
+  useEffect(() => {
+    if (isSelectTool && isAllText && selectedShapes[0]) {
+      const first = selectedShapes[0] as any;
+      setRichStats({
+        bold: first.props.bold || false,
+        italic: first.props.italic || false,
+        underline: first.props.underline || false,
+        strike: first.props.strike || false,
+        font: first.props.font || 'draw',
+        size: first.props.size || 'm',
+        color: first.props.color || 'black',
+        align: first.props.align || 'start'
+      });
+    }
+  }, [selectedShapes, isSelectTool, isAllText]);
+
   const toggleStyle = (command: string) => {
     const key = command === 'strikethrough' ? 'strike' : command;
     const editingId = editor.getEditingShapeId();
@@ -461,7 +497,26 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
         return next;
       });
     } else {
-      // Just update local state if no shape is being edited (e.g. strict selection)
+      // 💡 SELECTION MODE: Apply property to all selected text shapes
+      if (selectedShapes.length > 0) {
+        const textUpdates = selectedShapes
+          .filter(s => s.type === 'rich-text')
+          .map(s => ({
+            id: s.id,
+            type: 'rich-text',
+            props: {
+              [key]: !(s.props as any)[key],
+              // Unified HTML: Remove internal toggles
+              html: unifyStyleForRichText((s.props as any).html, key)
+            }
+          }));
+
+        if (textUpdates.length > 0) {
+          editor.updateShapes(textUpdates as any);
+        }
+      }
+
+      // Sync local state and store
       setRichStats(prev => {
         const next = { ...prev, [key]: !prev[key as keyof typeof prev] };
         const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof userPrefs;
@@ -523,6 +578,60 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     l: 4,
     xl: 6,
     xxl: 10,
+  };
+
+  /**
+   * Deeply applies a style to the entire HTML content of a rich-text shape.
+   * Ensures that changing a global property (from the bubble) overrides all internal partial formatting.
+   */
+  const unifyStyleForRichText = (html: string, prop: string): string => {
+    if (!html) return html;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    // Use a flat array to avoid mutation issues during iteration
+    const elements = Array.from(tempDiv.querySelectorAll('*'));
+
+    elements.forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      // Clear individual styles for the target property so they inherit from the root container
+      if (prop === 'color') htmlEl.style.color = '';
+      if (prop === 'font') htmlEl.style.fontFamily = '';
+      if (prop === 'size') htmlEl.style.fontSize = '';
+      if (prop === 'align') htmlEl.style.textAlign = '';
+
+      // Toggles: Remove semantic tags and specific styles
+      if (prop === 'bold') {
+        htmlEl.style.fontWeight = '';
+        if (htmlEl.tagName === 'B' || htmlEl.tagName === 'STRONG') {
+          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+        }
+      }
+      if (prop === 'italic') {
+        htmlEl.style.fontStyle = '';
+        if (htmlEl.tagName === 'I' || htmlEl.tagName === 'EM') {
+          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+        }
+      }
+      if (prop === 'underline') {
+        if (htmlEl.style.textDecoration.includes('underline')) {
+          htmlEl.style.textDecoration = htmlEl.style.textDecoration.replace('underline', '').trim();
+        }
+        if (htmlEl.tagName === 'U') {
+          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+        }
+      }
+      if (prop === 'strike') {
+        if (htmlEl.style.textDecoration.includes('line-through')) {
+          htmlEl.style.textDecoration = htmlEl.style.textDecoration.replace('line-through', '').trim();
+        }
+        if (htmlEl.tagName === 'S' || htmlEl.tagName === 'STRIKE' || htmlEl.tagName === 'DEL') {
+          htmlEl.replaceWith(...Array.from(htmlEl.childNodes));
+        }
+      }
+    });
+
+    return tempDiv.innerHTML;
   };
 
   // Helper to set style
@@ -609,19 +718,29 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
     // 2. Set for currently selected shapes
     if (editor.getSelectedShapes().length > 0) {
+      const selected = editor.getSelectedShapes();
+      const propKey = style.id.replace('tldraw:', '');
+      const finalPropKey = propKey === 'textAlign' ? 'align' : propKey;
+
+      // 💡 DEEP UNIFICATION: For rich-text shapes, unify internal HTML when property changes
+      const textUpdates = selected
+        .filter(s => s.type === 'rich-text')
+        .map(s => ({
+          id: s.id,
+          type: 'rich-text',
+          props: {
+            [finalPropKey]: value,
+            html: unifyStyleForRichText((s.props as any).html, finalPropKey)
+          }
+        }));
+
+      if (textUpdates.length > 0) {
+        editor.updateShapes(textUpdates as any);
+      }
+
       // VALIDATION FIX: Manual update for 'justify' to avoid schema validation error
       if (style.id === 'tldraw:textAlign' && value === 'justify') {
-        const selected = editor.getSelectedShapes();
-        const updates = selected
-          .filter(s => s.type === 'rich-text')
-          .map(s => ({
-            id: s.id,
-            type: 'rich-text',
-            props: { align: 'justify' }
-          }));
-        if (updates.length > 0) {
-          editor.updateShapes(updates as any);
-        }
+        // Already handled in textUpdates above for rich-text
       } else {
         editor.setStyleForSelectedShapes(style, value);
       }
@@ -676,13 +795,6 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   // 1. Draw/Shape Tools
   // 2. Text Tool
   // 3. Selection Tool IF we are editing Rich Text OR if we have selected shapes
-  const selectedShapes = editor.getSelectedShapes();
-  const hasSelectedShapes = selectedShapes.length > 0;
-
-  const isShapeTool = activeTool === 'draw' || activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes';
-  const isTextTool = activeTool === 'text';
-  const isSelectTool = activeTool === 'select';
-
   if (!isShapeTool && !isTextTool && !(isSelectTool && (isEditingRichText || hasSelectedShapes))) {
     return null;
   }
@@ -693,23 +805,32 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     const editingShapeId = editor.getEditingShapeId();
     if (editingShapeId) {
       const shape = editor.getShape(editingShapeId);
-      // We need to map Tldraw style keys to shape props
-      // Style IDs are usually 'tldraw:font', etc. Props are 'font'.
       if (shape && (shape as any).props) {
         const propKey = style.id.replace('tldraw:', '');
-        if ((shape as any).props[propKey]) {
-          return (shape as any).props[propKey];
+        const finalKey = propKey === 'textAlign' ? 'align' : propKey;
+        if ((shape as any).props[finalKey] !== undefined) {
+          return (shape as any).props[finalKey];
         }
       }
     }
 
-    // 2. Check selection
+    // 2. Check first selected shape (Requirement: initial config is from the first in selection)
+    const firstShape = selectedShapes[0];
+    if (firstShape && (firstShape as any).props) {
+      const propKey = style.id.replace('tldraw:', '');
+      const finalKey = propKey === 'textAlign' ? 'align' : propKey;
+      if ((firstShape as any).props[finalKey] !== undefined) {
+        return (firstShape as any).props[finalKey];
+      }
+    }
+
+    // 3. Fallback to shared styles (for editor context/future shapes)
     const sharedStyles = editor.getSharedStyles();
     const shared = sharedStyles.get(style);
     if (shared && shared.type === 'shared') {
       return shared.value;
     }
-    // 3. Check next shape style (tool state)
+    // 4. Check next shape style (tool state)
     if ('getStyleForNextShape' in editor) {
       return (editor as any).getStyleForNextShape(style);
     }
@@ -717,16 +838,19 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   };
 
   // Visibility flags based on state and selection
-  const isSelectionText = selectedShapes.some(s => s.type === 'rich-text');
-  const isSelectionShape = selectedShapes.some(s => s.type === 'geo' || s.type === 'draw' || s.type === 'line' || s.type === 'arrow');
-
-  const isTextMode = isTextTool || isEditingRichText || (isSelectTool && isSelectionText);
+  // Visibility flags based on state and selection
+  const isTextMode = isTextTool || isEditingRichText || (isSelectTool && isAllText);
 
   // Specific visibility for sections
   const showTextSection = isTextMode;
-  const showShapeTypeSection = (activeTool === 'geo' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'shapes') || (isSelectTool && selectedShapes.some(s => s.type === 'geo' || s.type === 'arrow' || s.type === 'line'));
-  const showStrokeSection = isShapeTool || (isSelectTool && isSelectionShape);
-  const showFillSection = (activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'shapes') || (isSelectTool && selectedShapes.some(s => s.type === 'geo' || s.type === 'arrow'));
+  const showShapeTypeSection = (activeTool === 'geo' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'shapes') || (isSelectTool && isAllShape);
+  const showStrokeSection = (activeTool === 'draw' || showShapeTypeSection) || (isSelectTool && (isAllShape || isAllDraw));
+  const showFillSection = showShapeTypeSection;
+
+  // Hide bubble if mixed selection or nothing relevant
+  if (isSelectTool && !isAllText && !isAllShape && !isAllDraw && !isAllImage && !isEditingRichText) {
+    return null;
+  }
 
   const currentSize = isTextMode ? richStats.size : ((getStyle(DefaultSizeStyle, 'm') as string) || richStats.size || 'm');
   const currentColor = isTextMode ? richStats.color : ((getStyle(DefaultColorStyle, 'black') as string) || richStats.color || 'black');
@@ -745,8 +869,8 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   const activeColorHex = colorsMap[currentColor] || theme.black.solid;
 
   const currentShapeOption = (() => {
-    if (currentTldrawTool === 'arrow') return 'arrow';
-    if (currentTldrawTool === 'line') return 'line';
+    if (currentTldrawTool === 'arrow' || (isSelectTool && isAllShape && selectedShapes[0].type === 'arrow')) return 'arrow';
+    if (currentTldrawTool === 'line' || (isSelectTool && isAllShape && selectedShapes[0].type === 'line')) return 'line';
     return currentGeo;
   })();
 
@@ -766,9 +890,17 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
           onClick={handleExpandCheck}
           data-is-ui="true"
         >
-          {activeTool === 'text' || isEditingRichText ? (
+          {(activeTool === 'text' || isEditingRichText || (isSelectTool && isAllText)) ? (
             <div style={{
-              fontFamily: `var(--tl-font-${currentFont})`,
+              fontFamily: (() => {
+                const fonts: Record<string, string> = {
+                  draw: '"Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif',
+                  sans: 'Inter, sans-serif',
+                  serif: 'serif',
+                  mono: 'monospace'
+                };
+                return fonts[currentFont] || fonts.sans;
+              })(),
               color: activeColorHex,
               fontSize: '24px',
               fontWeight: richStats.bold ? 'bold' : 'normal',
@@ -781,7 +913,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
             }}>
               A
             </div>
-          ) : (activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes') ? (
+          ) : (activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes' || (isSelectTool && isAllShape)) ? (
             <Shapes size={24} />
           ) : (
             <Scribble strokeWidth={sizeMap[currentSize] || 2.5} color={activeColorHex} />

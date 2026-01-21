@@ -452,6 +452,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
   // STICKY TOOL: If user intent is 'text' or 'shapes', push back from 'select' if idle
   useEffect(() => {
+    // For shapes or text mode: Do not allow selection boxes after creating/editing
+    if ((manualTool === 'shapes' || manualTool === 'text') && !editingShapeId && editor.getSelectedShapeIds().length > 0) {
+      editor.selectNone();
+    }
+
     if (currentToolId === 'select' && !editingShapeId && !isLockingUI && editor.getSelectedShapeIds().length === 0) {
       if (manualTool === 'text') {
         editor.setCurrentTool('text');
@@ -462,7 +467,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
         }
       }
     }
-  }, [currentToolId, editingShapeId, isLockingUI, editor, manualTool]);
+  }, [currentToolId, editingShapeId, isLockingUI, editor, manualTool, editor.getSelectedShapeIds().length]);
 
   // AUTO-UNLOCK: When editing starts, we can safely reveal the UI
   useEffect(() => {
@@ -610,96 +615,93 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
       // A. Click on Existing Text -> Focus Edit
       if (shape && (shape.type === 'text' || shape.type === 'rich-text')) {
-
         if (editor.getEditingShapeId() === shape.id) {
-          return;
+          return; // Already editing, let browser handle cursor position
         }
 
         // Switching from select or another edit
-
         // LOCK UI: Prevent flicker to 'select' mode
         setIsLockingUI(true);
 
         // Batch operations to prevent intermediate render of "Selection Box"
         transact(() => {
-          // Explicitly set tool back to 'text' to ensure it's "sticky"
+          // Explicitly set tool back to 'text' and start editing
+          editor.setCurrentTool('text');
           editor.setEditingShape(shape.id);
         });
 
-        e.stopPropagation();
+        // Do NOT stop propagation here to allow the browser to place the text cursor
         return;
       }
 
-      // B. Click on Empty -> Create (Wait for Drag decision)
-      if (!shape) {
-        e.stopPropagation();
+      // B. Click on Empty OR Non-text object -> Create (Wait for Drag decision)
+      e.stopPropagation();
 
-        const id = createShapeId();
-        const startX = p.x;
-        const startY = p.y;
+      const id = createShapeId();
+      const startX = p.x;
+      const startY = p.y;
 
-        // Initial: Auto Size (Click default)
-        const currentPrefs = useUserPreferencesStore.getState();
+      // Initial: Auto Size (Click default)
+      const currentPrefs = useUserPreferencesStore.getState();
 
-        editor.createShape({
-          id,
-          type: 'rich-text',
-          x: startX,
-          y: startY,
-          props: {
-            html: '',
-            autoSize: true, // Auto by default
-            w: 200, h: 50,
-            isCreating: true, // Show dashed border
-            // Inject saved configuration
-            color: currentPrefs.textColor,
-            size: currentPrefs.textSize,
-            font: currentPrefs.textFont,
-            align: currentPrefs.textAlign,
-            bold: currentPrefs.textBold,
-            italic: currentPrefs.textItalic,
-            underline: currentPrefs.textUnderline,
-            strike: currentPrefs.textStrike
-          }
-        });
+      editor.createShape({
+        id,
+        type: 'rich-text',
+        x: startX,
+        y: startY,
+        props: {
+          html: '',
+          autoSize: true, // Auto by default
+          w: 200, h: 50,
+          isCreating: true, // Show dashed border
+          // Inject saved configuration
+          color: currentPrefs.textColor,
+          size: currentPrefs.textSize,
+          font: currentPrefs.textFont,
+          align: currentPrefs.textAlign,
+          bold: currentPrefs.textBold,
+          italic: currentPrefs.textItalic,
+          underline: currentPrefs.textUnderline,
+          strike: currentPrefs.textStrike
+        }
+      });
 
-        editor.select(id);
+      editor.select(id);
 
+      if (parentRef.current) parentRef.current.classList.add(styles.hideSelection);
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const curr = editor.screenToPage({ x: moveEvent.clientX, y: moveEvent.clientY });
+        const dist = Math.hypot(curr.x - startX, curr.y - startY);
+
+        if (dist > 5) {
+          // Dragging -> Switch to Fixed Mode
+          const w = Math.max(50, curr.x - startX);
+          const h = Math.max(30, curr.y - startY);
+          editor.updateShape({ id, type: 'rich-text', props: { w, h, autoSize: false } });
+        }
+      };
+
+      const onPointerUp = () => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+
+        // LOCK UI for transition
+        setIsLockingUI(true);
         if (parentRef.current) parentRef.current.classList.add(styles.hideSelection);
 
-        const onPointerMove = (moveEvent: PointerEvent) => {
-          const curr = editor.screenToPage({ x: moveEvent.clientX, y: moveEvent.clientY });
-          const dist = Math.hypot(curr.x - startX, curr.y - startY);
+        transact(() => {
+          editor.updateShape({ id, type: 'rich-text', props: { isCreating: false } });
+          editor.setCurrentTool('text'); // Stay in text mode
+          editor.select(id);
+          editor.setEditingShape(id);
+        });
 
-          if (dist > 5) {
-            // Dragging -> Switch to Fixed Mode
-            const w = Math.max(50, curr.x - startX);
-            const h = Math.max(30, curr.y - startY);
-            editor.updateShape({ id, type: 'rich-text', props: { w, h, autoSize: false } });
-          }
-        };
+        // The useEffect will handle the unlock once editing starts
+      };
 
-        const onPointerUp = () => {
-          window.removeEventListener('pointermove', onPointerMove);
-          window.removeEventListener('pointerup', onPointerUp);
-
-          // LOCK UI for transition
-          setIsLockingUI(true);
-          if (parentRef.current) parentRef.current.classList.add(styles.hideSelection);
-
-          transact(() => {
-            editor.updateShape({ id, type: 'rich-text', props: { isCreating: false } });
-            editor.setCurrentTool('text'); // Stay in text mode
-            editor.select(id);
-            editor.setEditingShape(id);
-          });
-
-          // The useEffect will handle the unlock once editing starts
-        };
-
-        window.addEventListener('pointermove', onPointerMove);
-        window.addEventListener('pointerup', onPointerUp);
-      }
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
     };
 
     // 2. Double Click (Select -> Text Edit)
@@ -709,17 +711,19 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       if (shape && (shape.type === 'rich-text' || shape.type === 'text')) {
         console.log(`[${new Date().toISOString()}] [Click] DoubleClick on:`, shape.id);
         // If we double click a text, we enter edit mode. 
-        // We stay in the current tool or jump to select as Tldraw normally does,
-        // but our activeTool logic will handle the UI if manualToolRef is 'text'.
         editor.setEditingShape(shape.id);
       }
     };
 
+
+
     container.addEventListener('pointerdown', handlePointerDownCapture, { capture: true });
+
     container.addEventListener('dblclick', handleDoubleClick);
 
     return () => {
       container.removeEventListener('pointerdown', handlePointerDownCapture, { capture: true });
+
       container.removeEventListener('dblclick', handleDoubleClick);
     };
   }, [editor]);
@@ -890,21 +894,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       // Ignore clicks on UI elements (toolbar, bubble, etc)
       if ((e.target as HTMLElement).closest('[data-is-ui="true"]')) return;
 
-      // SHAPES HYBRID TOOL: Click on shape -> select, Click empty -> draw
+      // SHAPES STRICT TOOL: Ensure we are in a drawing tool when clicking
       if (manualTool === 'shapes' && e.button === 0) {
-        const point = editor.screenToPage({ x: e.clientX, y: e.clientY });
-        const shapeAtPoint = editor.getShapeAtPoint(point);
-
-        if (shapeAtPoint) {
-          if (editor.getCurrentToolId() !== 'select') {
-            editor.setCurrentTool('select');
-          }
-        } else {
-          // If clicking empty space, ensure we are in a drawing tool
-          const currentMode = editor.getCurrentToolId();
-          if (currentMode === 'select') {
-            editor.setCurrentTool(lastGeoToolRef.current as any);
-          }
+        const currentMode = editor.getCurrentToolId();
+        if (currentMode === 'select') {
+          editor.setCurrentTool(lastGeoToolRef.current as any);
         }
       }
 
