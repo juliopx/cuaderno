@@ -4,6 +4,8 @@ import styles from './RenameOverlay.module.css';
 import { DefaultColorThemePalette } from 'tldraw';
 import { RenameOverlayTextMode } from './RenameOverlayTextMode';
 import { RenameOverlayPenMode } from './RenameOverlayPenMode';
+import { getIsDarkMode } from '../../lib/themeUtils';
+import { useFileSystemStore } from '../../store/fileSystemStore';
 
 interface RenameOverlayProps {
   initialName: string;
@@ -72,8 +74,8 @@ export const RenameOverlayV2 = ({
   left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
 
   // Theme & Colors
-  const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
-    (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const appTheme = useFileSystemStore(state => state.theme);
+  const isDarkMode = getIsDarkMode(appTheme);
   const theme = isDarkMode ? DefaultColorThemePalette.darkMode : DefaultColorThemePalette.lightMode;
   const colorsMap: Record<string, string> = {
     auto: theme.black.solid,

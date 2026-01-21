@@ -14,7 +14,8 @@ import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
 import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
-import { useRef, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { getIsDarkMode } from '../../lib/themeUtils';
 import {
   LocateFixed,
   PanelLeftOpen,
@@ -934,7 +935,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       editor.setCamera({ x: newX, y: newY, z: safeFactor });
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       const activeEl = document.activeElement;
       const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA';
       const isEditingText = activeEl && 'isContentEditable' in activeEl && (activeEl as HTMLElement).isContentEditable;
@@ -975,7 +976,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
+    const handleKeyUp = (e: globalThis.KeyboardEvent) => {
       if (e.code === 'Space' && editor.getCurrentToolId() === 'hand') {
         editor.setCurrentTool(previousToolRef.current);
       }
@@ -1198,7 +1199,7 @@ export const CanvasArea = () => {
   const leftHandedMode = dominantHand === 'left';
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark = getIsDarkMode(theme);
 
   const currentVersion = activePageId ? (pages[activePageId]?.version || 0) : 0;
   const lastModifier = activePageId ? pages[activePageId]?.lastModifier : undefined;

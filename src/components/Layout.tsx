@@ -18,7 +18,7 @@ export const Layout = () => {
     if (theme === 'auto') {
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       activeTheme = isDark ? 'dark' : 'light';
-      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', 'auto');
     } else {
       document.documentElement.setAttribute('data-theme', theme);
     }

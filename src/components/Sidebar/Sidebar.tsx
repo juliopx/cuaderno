@@ -11,6 +11,7 @@ import { CircularButton } from '../UI/CircularButton';
 import { HybridName } from '../UI/HybridName';
 import { resolveItemColor, getThemeColorHex } from '../../lib/colorUtils';
 import { useThemeColorHex } from '../../hooks/useThemeColor';
+import { getIsDarkMode } from '../../lib/themeUtils';
 import {
   DndContext,
   pointerWithin,
@@ -284,8 +285,8 @@ const checkIsDescendant = (childFolderId: string, potentialAncestorId: string, f
 
 export const Sidebar = () => {
   const { t } = useTranslation();
-  const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' ||
-    (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const theme = useFileSystemStore(state => state.theme);
+  const isDarkMode = getIsDarkMode(theme);
 
   const [editingItem, setEditingItem] = useState<{ item: any, rect: DOMRect, pointerType: string } | null>(null);
 
