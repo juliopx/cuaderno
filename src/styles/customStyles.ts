@@ -2,7 +2,7 @@ import { StyleProp, T } from 'tldraw';
 
 export const FillColorStyle = StyleProp.defineEnum('cuaderno:fillColor', {
   defaultValue: 'black',
-  values: ['black', 'grey', 'red', 'orange', 'green', 'blue', 'purple', 'violet'],
+  values: ['black', 'grey', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'violet'],
 });
 
 // Using T.any to be as permissive as possible and avoid validation crashes
