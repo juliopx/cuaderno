@@ -675,9 +675,15 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
   // 1. Draw/Shape Tools
   // 2. Text Tool
-  // 3. Selection Tool IF we are editing Rich Text
-  const isShapeTool = activeTool === 'draw' || activeTool === 'shapes';
-  if (!isShapeTool && activeTool !== 'text' && !(activeTool === 'select' && isEditingRichText)) {
+  // 3. Selection Tool IF we are editing Rich Text OR if we have selected shapes
+  const selectedShapes = editor.getSelectedShapes();
+  const hasSelectedShapes = selectedShapes.length > 0;
+
+  const isShapeTool = activeTool === 'draw' || activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes';
+  const isTextTool = activeTool === 'text';
+  const isSelectTool = activeTool === 'select';
+
+  if (!isShapeTool && !isTextTool && !(isSelectTool && (isEditingRichText || hasSelectedShapes))) {
     return null;
   }
 
@@ -710,8 +716,18 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     return fallback;
   };
 
-  // Determine current active styles for the UI
-  const isTextMode = activeTool === 'text' || isEditingRichText;
+  // Visibility flags based on state and selection
+  const isSelectionText = selectedShapes.some(s => s.type === 'rich-text');
+  const isSelectionShape = selectedShapes.some(s => s.type === 'geo' || s.type === 'draw' || s.type === 'line' || s.type === 'arrow');
+
+  const isTextMode = isTextTool || isEditingRichText || (isSelectTool && isSelectionText);
+
+  // Specific visibility for sections
+  const showTextSection = isTextMode;
+  const showShapeTypeSection = (activeTool === 'geo' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'shapes') || (isSelectTool && selectedShapes.some(s => s.type === 'geo' || s.type === 'arrow' || s.type === 'line'));
+  const showStrokeSection = isShapeTool || (isSelectTool && isSelectionShape);
+  const showFillSection = (activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'shapes') || (isSelectTool && selectedShapes.some(s => s.type === 'geo' || s.type === 'arrow'));
+
   const currentSize = isTextMode ? richStats.size : ((getStyle(DefaultSizeStyle, 'm') as string) || richStats.size || 'm');
   const currentColor = isTextMode ? richStats.color : ((getStyle(DefaultColorStyle, 'black') as string) || richStats.color || 'black');
   const currentFont = isTextMode ? richStats.font : ((getStyle(DefaultFontStyle, 'draw') as string) || richStats.font || 'draw');
@@ -765,7 +781,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
             }}>
               A
             </div>
-          ) : activeTool === 'shapes' ? (
+          ) : (activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes') ? (
             <Shapes size={24} />
           ) : (
             <Scribble strokeWidth={sizeMap[currentSize] || 2.5} color={activeColorHex} />
@@ -784,7 +800,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
         onClick={handleSmartClick}
         data-is-ui="true"
       >
-        {(activeTool === 'text' || (activeTool === 'select' && isEditingRichText)) && (
+        {showTextSection && (
           <div className={styles.textSettings}>
             <div className={styles.topRow}>
               <div className={styles.textToolsRow}>
@@ -928,7 +944,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
             </div>
           </div>
         )}
-        {(activeTool === 'shapes' || (activeTool === 'select' && isEditingRichText)) && (
+        {showShapeTypeSection && (
           <div className={styles.shapeSettings}>
             <div className={styles.sectionHeader}>
               <span className={styles.sectionTitle}>{t('tool_shapes')}</span>
@@ -1028,30 +1044,28 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
         )}
 
         {/* STROKE SECTION */}
-        {(activeTool === 'shapes' || activeTool === 'draw') && (
+        {showStrokeSection && (
           <div className={styles.strokeSettings}>
-            {activeTool === 'shapes' ? (
-              <div className={styles.sectionHeader}>
-                <span className={styles.sectionTitle}>{t('style_stroke')}</span>
-                <button
-                  className={clsx(styles.switch, currentStrokeOpacity > 0 && styles.switchActive)}
-                  onClick={() => {
-                    const newOpacity = currentStrokeOpacity > 0 ? '0' : '1';
-                    // Safety: Don't allow both off. If turning off stroke, turn on fill.
-                    if (newOpacity === '0' && currentFill === 'none') {
-                      setStyle(DefaultFillStyle, 'solid');
-                      if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
-                    }
-                    setStyle(StrokeOpacityStyle, newOpacity);
-                  }}
-                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                >
-                  <div className={styles.switchHandle} />
-                </button>
-              </div>
-            ) : null}
+            <div className={styles.sectionHeader}>
+              <span className={styles.sectionTitle}>{t('style_stroke')}</span>
+              <button
+                className={clsx(styles.switch, currentStrokeOpacity > 0 && styles.switchActive)}
+                onClick={() => {
+                  const newOpacity = currentStrokeOpacity > 0 ? '0' : '1';
+                  // Safety: Don't allow both off. If turning off stroke, turn on fill.
+                  if (newOpacity === '0' && currentFill === 'none') {
+                    setStyle(DefaultFillStyle, 'solid');
+                    if (currentFillOpacity === 0) setStyle(FillOpacityStyle, '1');
+                  }
+                  setStyle(StrokeOpacityStyle, newOpacity);
+                }}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                <div className={styles.switchHandle} />
+              </button>
+            </div>
 
-            {(currentStrokeOpacity > 0 || activeTool === 'draw') && (
+            {currentStrokeOpacity > 0 && (
               <>
                 <div className={styles.sizeRow}>
                   {/* Dash Style */}
@@ -1084,11 +1098,11 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
                     })}
                   </div>
 
-                  {isShapeTool && (
+                  {showStrokeSection && (
                     <>
                       <div className={styles.verticalDivider} />
                       <div className={styles.styleGroup} style={{ flex: 1, justifyContent: 'space-between' }}>
-                        {(activeTool === 'draw' ? ['xs', 's', 'm', 'l', 'xl', 'xxl'] : ['s', 'm', 'l', 'xl']).map((sz) => {
+                        {((activeTool === 'draw' || (isSelectTool && selectedShapes.every(s => s.type === 'draw'))) ? ['xs', 's', 'm', 'l', 'xl', 'xxl'] : ['s', 'm', 'l', 'xl']).map((sz) => {
                           const strokeWidths: Record<string, number> = { xs: 1, s: 1.5, m: 2.5, l: 4, xl: 6, xxl: 10 };
                           return (
                             <button
@@ -1148,7 +1162,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
         )}
 
         {/* FILL Section */}
-        {activeTool === 'shapes' && (
+        {showFillSection && (
           <div className={styles.fillSettings}>
             <div className={styles.sectionHeader}>
               <span className={styles.sectionTitle}>{t('style_fill')}</span>

@@ -184,7 +184,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   // State to prevent flickering when switching focus between text shapes
   const forceTextModeRef = useRef(false);
   const [isLockingUI, setIsLockingUI] = useState(false);
-  const manualToolRef = useRef<string>('select');
+  const [manualTool, setManualTool] = useState<string>('select');
 
   const { isSidebarOpen, toggleSidebar } = useFileSystemStore();
   const userPrefs = useUserPreferencesStore();
@@ -425,7 +425,8 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     if (isEmulatedTextTool) return 'text';
 
     // 3. User intentional Sticky Tool
-    if (manualToolRef.current === 'text' && currentToolId === 'select') return 'text';
+    if (manualTool === 'text' && currentToolId === 'select') return 'text';
+    if (manualTool === 'shapes' && currentToolId === 'select') return 'shapes';
 
     // 4. Fallback to real tool (handling geo, arrow, line as 'shapes')
     if (currentToolId === 'geo' || currentToolId === 'arrow' || currentToolId === 'line') {
@@ -449,12 +450,19 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     }
   }, [isLockingUI, parentRef]);
 
-  // STICKY TOOL: If user intent is 'text', push back from 'select' if idle
+  // STICKY TOOL: If user intent is 'text' or 'shapes', push back from 'select' if idle
   useEffect(() => {
-    if (manualToolRef.current === 'text' && currentToolId === 'select' && !editingShapeId && !isLockingUI) {
-      editor.setCurrentTool('text');
+    if (currentToolId === 'select' && !editingShapeId && !isLockingUI && editor.getSelectedShapeIds().length === 0) {
+      if (manualTool === 'text') {
+        editor.setCurrentTool('text');
+      } else if (manualTool === 'shapes') {
+        const lastTool = lastGeoToolRef.current as any;
+        if (editor.getCurrentToolId() !== lastTool) {
+          editor.setCurrentTool(lastTool);
+        }
+      }
     }
-  }, [currentToolId, editingShapeId, isLockingUI, editor]);
+  }, [currentToolId, editingShapeId, isLockingUI, editor, manualTool]);
 
   // AUTO-UNLOCK: When editing starts, we can safely reveal the UI
   useEffect(() => {
@@ -879,6 +887,27 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
 
     const handlePointerDown = (e: PointerEvent) => {
+      // Ignore clicks on UI elements (toolbar, bubble, etc)
+      if ((e.target as HTMLElement).closest('[data-is-ui="true"]')) return;
+
+      // SHAPES HYBRID TOOL: Click on shape -> select, Click empty -> draw
+      if (manualTool === 'shapes' && e.button === 0) {
+        const point = editor.screenToPage({ x: e.clientX, y: e.clientY });
+        const shapeAtPoint = editor.getShapeAtPoint(point);
+
+        if (shapeAtPoint) {
+          if (editor.getCurrentToolId() !== 'select') {
+            editor.setCurrentTool('select');
+          }
+        } else {
+          // If clicking empty space, ensure we are in a drawing tool
+          const currentMode = editor.getCurrentToolId();
+          if (currentMode === 'select') {
+            editor.setCurrentTool(lastGeoToolRef.current as any);
+          }
+        }
+      }
+
       // Only middle mouse button for panning (button 1)
       // Right-click (button 2) is now reserved for context menu
       if (e.button === 1) {
@@ -999,7 +1028,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
     };
 
-    container.addEventListener('pointerdown', handlePointerDown);
+    container.addEventListener('pointerdown', handlePointerDown, { capture: true });
     container.addEventListener('pointermove', handlePointerMove);
     container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
@@ -1064,7 +1093,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('pointerdown', handlePointerDown);
+      container.removeEventListener('pointerdown', handlePointerDown, { capture: true });
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('wheel', handleWheel, { capture: true } as any);
@@ -1086,7 +1115,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [editor]);
+  }, [editor, manualTool]);
 
   // --- Sidebar Panning Transition ---
   const lastSidebarColumnsRef = useRef(sidebarColumns);
@@ -1111,14 +1140,16 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   // Dash Style Memory
   const lastShapesDashRef = useRef<string>('solid');
   const lastPencilDashRef = useRef<string>('draw');
+  const lastGeoToolRef = useRef<string>('geo');
 
   useEffect(() => {
     // Sync memory with current editor state when styles change
-    const unlisten = editor.store.listen(({ changes }) => {
+    const unlisten = editor.store.listen(() => {
       const currentDash = editor.getStyleForNextShape(DefaultDashStyle) as string;
       const currentTool = editor.getCurrentToolId();
       if (currentTool === 'geo' || currentTool === 'arrow' || currentTool === 'line' || currentTool === 'note') {
         lastShapesDashRef.current = currentDash;
+        if (currentTool !== 'note') lastGeoToolRef.current = currentTool;
       } else if (currentTool === 'draw') {
         lastPencilDashRef.current = currentDash;
       }
@@ -1127,7 +1158,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   }, [editor]);
 
   const handleSelectTool = (tool: string) => {
-    manualToolRef.current = tool;
+    setManualTool(tool);
 
     // Deselect all when switching to drawing tools
     if (tool === 'draw' || tool === 'eraser') {
@@ -1138,8 +1169,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
     // Handle special cases before setting the tool
     if (tool === 'shapes') {
-      editor.setCurrentTool('geo');
-      // Restore last shapes dash (defaults to solid)
+      editor.setCurrentTool(lastGeoToolRef.current as any);
       editor.setStyleForNextShapes(DefaultDashStyle, lastShapesDashRef.current);
     } else if (tool.startsWith('geo-')) {
       editor.setCurrentTool(tool);
