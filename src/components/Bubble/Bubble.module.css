@@ -26,6 +26,14 @@
   margin: 0 4px;
 }
 
+.verticalDividerFull {
+  width: 1px;
+  height: 48px;
+  /* Taller to cover header + icons */
+  background-color: hsl(var(--color-text-secondary) / 0.2);
+  margin: 0 4px;
+}
+
 .dragging {
   transition: none !important;
   cursor: grabbing !important;
@@ -177,6 +185,20 @@
 .styleGroup {
   display: flex;
   gap: 2px;
+  flex-wrap: wrap;
+}
+
+.textToolsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.iconRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .iconBtn {
@@ -208,5 +230,182 @@
   /* Change to default or not-allowed */
 }
 
+.iconBtnTiny {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: hsl(var(--color-text-primary));
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.iconBtnTiny:hover {
+  background: hsl(var(--color-text-secondary) / 0.1);
+}
+
+.iconBtnTiny.active {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.iconBtnCompact,
+.sizeBtnCompact {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: hsl(var(--color-text-primary));
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sizeBtnCompact {
+  border: 1px solid transparent;
+}
+
+.iconBtnCompact:hover,
+.sizeBtnCompact:hover {
+  background: hsl(var(--color-text-secondary) / 0.1);
+}
+
+.iconBtnCompact.active,
+.sizeBtnCompact.active {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.sizeBtnCompact.active {
+  border-color: hsl(var(--color-border));
+}
+
+/* Shape Settings Container */
+.shapeSettings {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.strokeSettings,
+.fillSettings {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.sectionHeader {
+  width: 100%;
+  padding: 8px 0 4px 0;
+  margin-top: 4px;
+  align-self: flex-start;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: hsl(var(--color-text-secondary) / 0.5);
+  letter-spacing: 0.08em;
+}
+
+.switch {
+  width: 28px;
+  height: 16px;
+  background-color: hsl(var(--color-text-secondary) / 0.2);
+  border-radius: 8px;
+  position: relative;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s;
+}
+
+.switchActive {
+  background-color: var(--color-accent);
+}
+
+.switchHandle {
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s;
+}
+
+.switchActive .switchHandle {
+  transform: translateX(12px);
+}
+
+
+/* Opacity Slider Row */
+.opacityRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.opacitySlider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  background: linear-gradient(to right,
+      transparent 0%,
+      hsl(var(--color-text-primary)) 100%);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.opacitySlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: hsl(var(--color-text-primary));
+  cursor: pointer;
+  border: 2px solid var(--glass-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.opacitySlider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: hsl(var(--color-text-primary));
+  cursor: pointer;
+  border: 2px solid var(--glass-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.opacitySlider:hover::-webkit-slider-thumb {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.opacitySlider:hover::-moz-range-thumb {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* Format Divider */
-/* Unused classes removed: formatDivider, alignGridCompact, alignMiniBtn, dot */
+/* Unused classes removed: formatDivider, alignGridCompact, alignMini Btn, dot */

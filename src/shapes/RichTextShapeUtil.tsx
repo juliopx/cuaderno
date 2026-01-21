@@ -1,4 +1,4 @@
-import { BaseBoxShapeUtil, HTMLContainer, stopEventPropagation, useValue } from 'tldraw'
+import { BaseBoxShapeUtil, HTMLContainer, stopEventPropagation, useValue, getDefaultColorTheme } from 'tldraw'
 import type { TLBaseShape } from 'tldraw'
 import * as React from 'react'
 
@@ -81,15 +81,18 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
       xxl: '64px'
     }
     const isDarkMode = this.editor.user.getIsDarkMode();
+    const theme = getDefaultColorTheme({ isDarkMode });
+
     const colorsMap: Record<string, string> = {
-      black: isDarkMode ? '#eeeeee' : '#000000',
-      grey: isDarkMode ? '#999999' : '#666666',
-      red: '#ef4444',
-      orange: '#f59e0b',
-      green: '#22c55e',
-      blue: '#3b82f6',
-      purple: '#a855f7',
-      violet: '#a855f7', // Fallback for violet
+      black: theme.black.solid,
+      grey: theme.grey.solid,
+      red: theme.red.solid,
+      orange: theme.yellow.solid, // tldraw usa 'yellow' pero lo llamamos 'orange' en la UI
+      yellow: theme.yellow.solid,
+      green: theme.green.solid,
+      blue: theme.blue.solid,
+      purple: theme.violet.solid,
+      violet: theme.violet.solid,
     };
 
     // Style for the container
@@ -339,8 +342,10 @@ export class RichTextShapeUtil extends BaseBoxShapeUtil<RichTextShape> {
             }
             .rich-text-container * {
               text-align: inherit;
-              cursor: text;
+              cursor: inherit;
               color: inherit;
+              user-select: inherit;
+              -webkit-user-select: inherit;
             }
             .rich-text-container a {
               color: var(--color-accent) !important;

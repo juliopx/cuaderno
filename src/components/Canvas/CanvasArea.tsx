@@ -6,7 +6,10 @@ import {
   DefaultColorStyle,
   DefaultSizeStyle,
   DefaultFontStyle,
+  DefaultDashStyle,
+  DefaultFillStyle,
   DefaultTextAlignStyle,
+  GeoShapeGeoStyle,
   transact,
   DefaultContextMenu
 } from 'tldraw'
@@ -26,16 +29,27 @@ import {
 import { CircularButton } from '../UI/CircularButton';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore'; // Assuming this is the correct path, user provided 'useSyncStore'
-import { useTextStyleStore } from '../../store/textStyleStore';
+import { useUserPreferencesStore } from '../../store/userPreferencesStore';
 import { opfs } from '../../lib/opfs';
 import { RichTextShapeUtil } from '../../shapes/RichTextShapeUtil';
+import { CustomGeoShapeUtil } from '../../shapes/CustomGeoShapeUtil';
+import { CustomDrawShapeUtil } from '../../shapes/CustomDrawShapeUtil';
+import { CustomLineShapeUtil } from '../../shapes/CustomLineShapeUtil';
+import { CustomArrowShapeUtil } from '../../shapes/CustomArrowShapeUtil';
 import { syncLog } from '../../lib/debugLog';
 import { CanvasTitle } from './CanvasTitle';
 import { UIPortal } from '../UIPortal';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx'; // Added clsx for HistoryControls
 
-const customShapeUtils = [RichTextShapeUtil];
+const customShapeUtils = [
+  RichTextShapeUtil,
+  CustomGeoShapeUtil,
+  CustomDrawShapeUtil,
+  CustomLineShapeUtil,
+  CustomArrowShapeUtil
+];
+
 
 const CenterMark = track(() => {
   const isDebug = new URLSearchParams(window.location.search).get('debug') === 'true';
@@ -170,10 +184,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   // State to prevent flickering when switching focus between text shapes
   const forceTextModeRef = useRef(false);
   const [isLockingUI, setIsLockingUI] = useState(false);
-  const manualToolRef = useRef<string>('select');
+  const [manualTool, setManualTool] = useState<string>('select');
 
   const { isSidebarOpen, toggleSidebar } = useFileSystemStore();
-  const textStyles = useTextStyleStore();
+  const userPrefs = useUserPreferencesStore();
 
   const lastLoadRef = useRef<{ pageId: string | null; version: number | null }>({ pageId: null, version: null });
   const isLoadingRef = useRef(false);
@@ -223,15 +237,14 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
           };
           (editor as any).isShapeErasable = (editor as any).isErasable;
 
-          // 💡 RESET defaults
-          editor.setStyleForNextShapes(DefaultColorStyle, 'black');
-          textStyles.updateStyles({ color: 'black' });
-          editor.setStyleForNextShapes(DefaultSizeStyle, 'm');
-          textStyles.updateStyles({ size: 'm' });
-          editor.setStyleForNextShapes(DefaultFontStyle, 'sans');
-          textStyles.updateStyles({ font: 'sans' });
-          editor.setStyleForNextShapes(DefaultTextAlignStyle, 'start');
-          textStyles.updateStyles({ align: 'start' });
+          // 💡 PRIMING with User Preferences
+          editor.setStyleForNextShapes(DefaultColorStyle, userPrefs.textColor);
+          editor.setStyleForNextShapes(DefaultSizeStyle, userPrefs.textSize);
+          editor.setStyleForNextShapes(DefaultFontStyle, userPrefs.textFont);
+          editor.setStyleForNextShapes(DefaultTextAlignStyle, userPrefs.textAlign === 'justify' ? 'start' : userPrefs.textAlign as any);
+          editor.setStyleForNextShapes(DefaultDashStyle, userPrefs.dashStyle as any);
+          editor.setStyleForNextShapes(DefaultFillStyle, userPrefs.fillStyle as any);
+          editor.setStyleForNextShapes(GeoShapeGeoStyle, userPrefs.lastUsedGeo as any);
         } catch (e) {
           console.error("Failed to load snapshot", e);
         }
@@ -267,7 +280,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       lastLoadRef.current = { pageId, version: pageVersion };
     }
 
-  }, [editor, pageId, pageVersion, lastModifier, clientId]); // sidebarColumns intentionally omitted to prevent reloads on toggle
+  }, [editor, pageId, pageVersion, lastModifier, clientId, userPrefs, sidebarColumns, leftHandedMode]);
 
   // Save Snapshot Listener
   const hasUnsavedChangesRef = useRef(false);
@@ -412,9 +425,14 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     if (isEmulatedTextTool) return 'text';
 
     // 3. User intentional Sticky Tool
-    if (manualToolRef.current === 'text' && currentToolId === 'select') return 'text';
+    if (manualTool === 'text' && currentToolId === 'select') return 'text';
+    if (manualTool === 'shapes' && currentToolId === 'select') return 'shapes';
 
-    // 4. Fallback to real tool
+    // 4. Fallback to real tool (handling geo, arrow, line as 'shapes')
+    if (currentToolId === 'geo' || currentToolId === 'arrow' || currentToolId === 'line') {
+      return 'shapes';
+    }
+
     return currentToolId;
   })();
 
@@ -432,12 +450,24 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     }
   }, [isLockingUI, parentRef]);
 
-  // STICKY TOOL: If user intent is 'text', push back from 'select' if idle
+  // STICKY TOOL: If user intent is 'text' or 'shapes', push back from 'select' if idle
   useEffect(() => {
-    if (manualToolRef.current === 'text' && currentToolId === 'select' && !editingShapeId && !isLockingUI) {
-      editor.setCurrentTool('text');
+    // For shapes or text mode: Do not allow selection boxes after creating/editing
+    if ((manualTool === 'shapes' || manualTool === 'text') && !editingShapeId && editor.getSelectedShapeIds().length > 0) {
+      editor.selectNone();
     }
-  }, [currentToolId, editingShapeId, isLockingUI, editor]);
+
+    if (currentToolId === 'select' && !editingShapeId && !isLockingUI && editor.getSelectedShapeIds().length === 0) {
+      if (manualTool === 'text') {
+        editor.setCurrentTool('text');
+      } else if (manualTool === 'shapes') {
+        const lastTool = lastGeoToolRef.current as any;
+        if (editor.getCurrentToolId() !== lastTool) {
+          editor.setCurrentTool(lastTool);
+        }
+      }
+    }
+  }, [currentToolId, editingShapeId, isLockingUI, editor, manualTool, editor.getSelectedShapeIds().length]);
 
   // AUTO-UNLOCK: When editing starts, we can safely reveal the UI
   useEffect(() => {
@@ -585,96 +615,93 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
 
       // A. Click on Existing Text -> Focus Edit
       if (shape && (shape.type === 'text' || shape.type === 'rich-text')) {
-
         if (editor.getEditingShapeId() === shape.id) {
-          return;
+          return; // Already editing, let browser handle cursor position
         }
 
         // Switching from select or another edit
-
         // LOCK UI: Prevent flicker to 'select' mode
         setIsLockingUI(true);
 
         // Batch operations to prevent intermediate render of "Selection Box"
         transact(() => {
-          // Explicitly set tool back to 'text' to ensure it's "sticky"
+          // Explicitly set tool back to 'text' and start editing
+          editor.setCurrentTool('text');
           editor.setEditingShape(shape.id);
         });
 
-        e.stopPropagation();
+        // Do NOT stop propagation here to allow the browser to place the text cursor
         return;
       }
 
-      // B. Click on Empty -> Create (Wait for Drag decision)
-      if (!shape) {
-        e.stopPropagation();
+      // B. Click on Empty OR Non-text object -> Create (Wait for Drag decision)
+      e.stopPropagation();
 
-        const id = createShapeId();
-        const startX = p.x;
-        const startY = p.y;
+      const id = createShapeId();
+      const startX = p.x;
+      const startY = p.y;
 
-        // Initial: Auto Size (Click default)
-        const currentStyles = useTextStyleStore.getState();
+      // Initial: Auto Size (Click default)
+      const currentPrefs = useUserPreferencesStore.getState();
 
-        editor.createShape({
-          id,
-          type: 'rich-text',
-          x: startX,
-          y: startY,
-          props: {
-            html: '',
-            autoSize: true, // Auto by default
-            w: 200, h: 50,
-            isCreating: true, // Show dashed border
-            // Inject saved configuration
-            color: currentStyles.color,
-            size: currentStyles.size,
-            font: currentStyles.font,
-            align: currentStyles.align,
-            bold: currentStyles.bold,
-            italic: currentStyles.italic,
-            underline: currentStyles.underline,
-            strike: currentStyles.strike
-          }
-        });
+      editor.createShape({
+        id,
+        type: 'rich-text',
+        x: startX,
+        y: startY,
+        props: {
+          html: '',
+          autoSize: true, // Auto by default
+          w: 200, h: 50,
+          isCreating: true, // Show dashed border
+          // Inject saved configuration
+          color: currentPrefs.textColor,
+          size: currentPrefs.textSize,
+          font: currentPrefs.textFont,
+          align: currentPrefs.textAlign,
+          bold: currentPrefs.textBold,
+          italic: currentPrefs.textItalic,
+          underline: currentPrefs.textUnderline,
+          strike: currentPrefs.textStrike
+        }
+      });
 
-        editor.select(id);
+      editor.select(id);
 
+      if (parentRef.current) parentRef.current.classList.add(styles.hideSelection);
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const curr = editor.screenToPage({ x: moveEvent.clientX, y: moveEvent.clientY });
+        const dist = Math.hypot(curr.x - startX, curr.y - startY);
+
+        if (dist > 5) {
+          // Dragging -> Switch to Fixed Mode
+          const w = Math.max(50, curr.x - startX);
+          const h = Math.max(30, curr.y - startY);
+          editor.updateShape({ id, type: 'rich-text', props: { w, h, autoSize: false } });
+        }
+      };
+
+      const onPointerUp = () => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+
+        // LOCK UI for transition
+        setIsLockingUI(true);
         if (parentRef.current) parentRef.current.classList.add(styles.hideSelection);
 
-        const onPointerMove = (moveEvent: PointerEvent) => {
-          const curr = editor.screenToPage({ x: moveEvent.clientX, y: moveEvent.clientY });
-          const dist = Math.hypot(curr.x - startX, curr.y - startY);
+        transact(() => {
+          editor.updateShape({ id, type: 'rich-text', props: { isCreating: false } });
+          editor.setCurrentTool('text'); // Stay in text mode
+          editor.select(id);
+          editor.setEditingShape(id);
+        });
 
-          if (dist > 5) {
-            // Dragging -> Switch to Fixed Mode
-            const w = Math.max(50, curr.x - startX);
-            const h = Math.max(30, curr.y - startY);
-            editor.updateShape({ id, type: 'rich-text', props: { w, h, autoSize: false } });
-          }
-        };
+        // The useEffect will handle the unlock once editing starts
+      };
 
-        const onPointerUp = () => {
-          window.removeEventListener('pointermove', onPointerMove);
-          window.removeEventListener('pointerup', onPointerUp);
-
-          // LOCK UI for transition
-          setIsLockingUI(true);
-          if (parentRef.current) parentRef.current.classList.add(styles.hideSelection);
-
-          transact(() => {
-            editor.updateShape({ id, type: 'rich-text', props: { isCreating: false } });
-            editor.setCurrentTool('text'); // Stay in text mode
-            editor.select(id);
-            editor.setEditingShape(id);
-          });
-
-          // The useEffect will handle the unlock once editing starts
-        };
-
-        window.addEventListener('pointermove', onPointerMove);
-        window.addEventListener('pointerup', onPointerUp);
-      }
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
     };
 
     // 2. Double Click (Select -> Text Edit)
@@ -684,17 +711,19 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       if (shape && (shape.type === 'rich-text' || shape.type === 'text')) {
         console.log(`[${new Date().toISOString()}] [Click] DoubleClick on:`, shape.id);
         // If we double click a text, we enter edit mode. 
-        // We stay in the current tool or jump to select as Tldraw normally does,
-        // but our activeTool logic will handle the UI if manualToolRef is 'text'.
         editor.setEditingShape(shape.id);
       }
     };
 
+
+
     container.addEventListener('pointerdown', handlePointerDownCapture, { capture: true });
+
     container.addEventListener('dblclick', handleDoubleClick);
 
     return () => {
       container.removeEventListener('pointerdown', handlePointerDownCapture, { capture: true });
+
       container.removeEventListener('dblclick', handleDoubleClick);
     };
   }, [editor]);
@@ -862,6 +891,17 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     };
 
     const handlePointerDown = (e: PointerEvent) => {
+      // Ignore clicks on UI elements (toolbar, bubble, etc)
+      if ((e.target as HTMLElement).closest('[data-is-ui="true"]')) return;
+
+      // SHAPES STRICT TOOL: Ensure we are in a drawing tool when clicking
+      if (manualTool === 'shapes' && e.button === 0) {
+        const currentMode = editor.getCurrentToolId();
+        if (currentMode === 'select') {
+          editor.setCurrentTool(lastGeoToolRef.current as any);
+        }
+      }
+
       // Only middle mouse button for panning (button 1)
       // Right-click (button 2) is now reserved for context menu
       if (e.button === 1) {
@@ -982,7 +1022,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       }
     };
 
-    container.addEventListener('pointerdown', handlePointerDown);
+    container.addEventListener('pointerdown', handlePointerDown, { capture: true });
     container.addEventListener('pointermove', handlePointerMove);
     container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('wheel', handleWheel, { passive: false, capture: true });
@@ -1047,7 +1087,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('pointerdown', handlePointerDown);
+      container.removeEventListener('pointerdown', handlePointerDown, { capture: true });
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('wheel', handleWheel, { capture: true } as any);
@@ -1069,7 +1109,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [editor]);
+  }, [editor, manualTool]);
 
   // --- Sidebar Panning Transition ---
   const lastSidebarColumnsRef = useRef(sidebarColumns);
@@ -1091,8 +1131,28 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     lastSidebarColumnsRef.current = sidebarColumns;
   }, [editor, sidebarColumns]);
 
+  // Dash Style Memory
+  const lastShapesDashRef = useRef<string>('solid');
+  const lastPencilDashRef = useRef<string>('draw');
+  const lastGeoToolRef = useRef<string>('geo');
+
+  useEffect(() => {
+    // Sync memory with current editor state when styles change
+    const unlisten = editor.store.listen(() => {
+      const currentDash = editor.getStyleForNextShape(DefaultDashStyle) as string;
+      const currentTool = editor.getCurrentToolId();
+      if (currentTool === 'geo' || currentTool === 'arrow' || currentTool === 'line' || currentTool === 'note') {
+        lastShapesDashRef.current = currentDash;
+        if (currentTool !== 'note') lastGeoToolRef.current = currentTool;
+      } else if (currentTool === 'draw') {
+        lastPencilDashRef.current = currentDash;
+      }
+    }, { source: 'user', scope: 'session' });
+    return () => unlisten();
+  }, [editor]);
+
   const handleSelectTool = (tool: string) => {
-    manualToolRef.current = tool;
+    setManualTool(tool);
 
     // Deselect all when switching to drawing tools
     if (tool === 'draw' || tool === 'eraser') {
@@ -1100,15 +1160,30 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
     }
 
     editor.setEditingShape(null); // Exit edit mode first
-    editor.setCurrentTool(tool);
+
+    // Handle special cases before setting the tool
+    if (tool === 'shapes') {
+      editor.setCurrentTool(lastGeoToolRef.current as any);
+      editor.setStyleForNextShapes(DefaultDashStyle, lastShapesDashRef.current);
+    } else if (tool.startsWith('geo-')) {
+      editor.setCurrentTool(tool);
+      editor.setStyleForNextShapes(DefaultDashStyle, lastShapesDashRef.current);
+    } else if (tool === 'draw') {
+      editor.setCurrentTool(tool);
+      // Restore last pencil dash (defaults to draw/irregular)
+      editor.setStyleForNextShapes(DefaultDashStyle, lastPencilDashRef.current);
+    } else {
+      // Normal tool activation
+      editor.setCurrentTool(tool);
+    }
 
     if (tool === 'text') {
       // Re-apply styles...
-      editor.setStyleForNextShapes(DefaultColorStyle, textStyles.color);
-      editor.setStyleForNextShapes(DefaultSizeStyle, textStyles.size);
-      editor.setStyleForNextShapes(DefaultFontStyle, textStyles.font);
-      const validAlign = textStyles.align === 'justify' ? 'start' : textStyles.align;
-      editor.setStyleForNextShapes(DefaultTextAlignStyle, validAlign);
+      editor.setStyleForNextShapes(DefaultColorStyle, userPrefs.textColor);
+      editor.setStyleForNextShapes(DefaultSizeStyle, userPrefs.textSize);
+      editor.setStyleForNextShapes(DefaultFontStyle, userPrefs.textFont);
+      const validAlign = userPrefs.textAlign === 'justify' ? 'start' : userPrefs.textAlign;
+      editor.setStyleForNextShapes(DefaultTextAlignStyle, validAlign as any);
     }
   };
 

@@ -20,6 +20,7 @@ interface DropdownProps {
   isOpen: boolean;
   onToggle: () => void;
   applyFontToLabel?: boolean; // Special prop for font dropdown
+  optionIcons?: Record<string, ReactNode>; // Optional icons for each option
   className?: string; // Additional wrapper class
 }
 
@@ -34,6 +35,7 @@ export const Dropdown = ({
   isOpen,
   onToggle,
   applyFontToLabel = false,
+  optionIcons,
   className
 }: DropdownProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -104,7 +106,10 @@ export const Dropdown = ({
               style={applyFontToLabel ? { fontFamily: `var(--tl-font-${opt.value})` } : {}}
               type="button"
             >
-              <span>{opt.label}</span>
+              <div className={styles.itemContent}>
+                {optionIcons?.[opt.value] && <span className={styles.itemIcon}>{optionIcons[opt.value]}</span>}
+                <span>{opt.label}</span>
+              </div>
               {value === opt.value && <Check size={14} />}
             </button>
           ))}
