@@ -16,7 +16,6 @@ function exhaustiveSwitchError(value: never, property: string): never {
 }
 import type {
   TLDefaultDashStyle,
-  TLDefaultSizeStyle,
   TLGeoShape,
   VecModel,
 } from '@tldraw/editor'

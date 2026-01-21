@@ -1,13 +1,10 @@
 import {
   approximately,
-  assert,
-  assertExists,
   clamp,
   CubicBezier2d,
   Edge2d,
   Geometry2d,
   getPerfectDashProps,
-  getVerticesCountForArcLength,
   Group2d,
   modulate,
   rng,
@@ -21,7 +18,22 @@ import type {
   VecLike,
   VecModel,
 } from '@tldraw/editor'
-import { ReactNode, SVGProps } from 'react'
+import type { ReactNode, SVGProps } from 'react'
+
+function assert(condition: unknown, message = 'Assertion failed'): asserts condition {
+  if (!condition) {
+    throw new Error(message)
+  }
+}
+
+function assertExists<T>(value: T | null | undefined, message = 'Value does not exist'): T {
+  assert(value !== null && value !== undefined, message)
+  return value
+}
+
+function getVerticesCountForArcLength(arcLength: number): number {
+  return Math.max(2, Math.ceil(arcLength / 5))
+}
 
 function exhaustiveSwitchError(value: never, property: string): never {
   throw new Error(`Unknown ${property}: ${JSON.stringify(value)}`)
@@ -208,7 +220,7 @@ export class PathBuilder {
   private lastMoveTo: MoveToPathBuilderCommand | null = null
   private assertHasMoveTo() {
     assert(this.lastMoveTo, 'Start an SVGPathBuilder with `.moveTo()`')
-    return this.lastMoveTo
+    return this.lastMoveTo!
   }
 
   moveTo(x: number, y: number, opts?: PathBuilderLineOpts) {
@@ -473,7 +485,7 @@ export class PathBuilder {
           )
           break
         default:
-          exhaustiveSwitchError(command, 'type')
+          exhaustiveSwitchError(command as never, 'type')
       }
     }
     return parts.join(' ')
@@ -824,7 +836,7 @@ export class PathBuilder {
               break
             }
             default:
-              exhaustiveSwitchError(command as any, 'type')
+              exhaustiveSwitchError(command as never, 'type')
           }
         } else {
           switch (command.type) {
@@ -859,7 +871,7 @@ export class PathBuilder {
               break
             }
             default:
-              exhaustiveSwitchError(command as any, 'type')
+              exhaustiveSwitchError(command as never, 'type')
           }
         }
       }
@@ -922,7 +934,7 @@ export class PathBuilder {
           break
         }
         default:
-          exhaustiveSwitchError(current, 'type')
+          exhaustiveSwitchError(current as never, 'type')
       }
 
       current._info = {
@@ -945,13 +957,20 @@ const commandsSupportingRoundness = {
 
 /** @public */
 export class PathBuilderGeometry2d extends Geometry2d {
+  private readonly path: PathBuilder
+  private readonly startIdx: number
+  private readonly endIdx: number
+
   constructor(
-    private readonly path: PathBuilder,
-    private readonly startIdx: number,
-    private readonly endIdx: number,
+    path: PathBuilder,
+    startIdx: number,
+    endIdx: number,
     options: Geometry2dOptions
   ) {
     super(options)
+    this.path = path
+    this.startIdx = startIdx
+    this.endIdx = endIdx
   }
 
   private _segments: Geometry2d[] | null = null
@@ -983,7 +1002,7 @@ export class PathBuilderGeometry2d extends Geometry2d {
           break
         }
         default:
-          exhaustiveSwitchError(command, 'type')
+          exhaustiveSwitchError(command as never, 'type')
       }
 
       last = command
@@ -1013,6 +1032,8 @@ export class PathBuilderGeometry2d extends Geometry2d {
   }
 
   override nearestPoint(point: VecLike, _filters?: Geometry2dFilters): Vec {
+
+    void _filters
     let nearest: Vec | null = null
     let nearestDistance = Infinity
 
@@ -1045,7 +1066,7 @@ export class PathBuilderGeometry2d extends Geometry2d {
 const CubicBezier = {
   base3(t: number, p1: number, p2: number, p3: number, p4: number) {
     const t1 = -3 * p1 + 9 * p2 - 9 * p3 + 3 * p4
-    const t2 = t * t2 + 6 * p1 - 12 * p2 + 6 * p3
+    const t2 = t * t1 + 6 * p1 - 12 * p2 + 6 * p3
     return t * t2 - 3 * p1 + 3 * p2
   },
   length(
