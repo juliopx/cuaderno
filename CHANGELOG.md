@@ -1,3 +1,19 @@
+## [1.6.1] - 2026-01-21
+
+### Features
+* - Added Shapes Tool (Square, Circle, Arrow, etc.) to toolbar.
+- Improved text styling: mixed formatting support, fixed double decorations, and clean format removal.
+- Enhanced Selection Mode: Text is no longer selectable unless in Edit Mode.
+- Fixed various localization and interaction issues. (#59)
+* Restored image upload and link features, enhanced toolbar visibility, and improved tool switching logic. (#55)
+* Added extra-small and huge sizes for drawing and text tools. (#54)
+
+### Bug Fixes
+* Fix issue where name editor showed black text strokes in dark mode when theme was set to "Auto". (#52)
+* Fix: Corregido el cierre prematuro del menú contextual en dispositivos táctiles al usar la aplicación instalada como PWA. (#42)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.6.0...v1.6.1
+
 ## [1.6.0] - 2026-01-21
 
 ### Features
