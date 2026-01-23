@@ -69,6 +69,17 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       const isRefreshing = !!localStorage.getItem('cuaderno-drive-token');
       localStorage.setItem('cuaderno-drive-token', token);
       await get().setupConnection(token, isRefreshing);
+    }, (error: any) => {
+      console.error('Google Auth Error:', error);
+      // If silent refresh fails (or any other auth error while we thought we were connected)
+      // we must clear the session to break the loop.
+      if (get().isConfigured) {
+        console.warn('Silent refresh failed or session expired.');
+        localStorage.removeItem('cuaderno-drive-token');
+        localStorage.removeItem('cuaderno-user-info');
+        set({ isConfigured: false, user: null });
+        toast.error('Session expired. Please log in again.');
+      }
     }).then(async () => {
       // Library is ready. Check if we have a stored token to restore session.
       const storedToken = localStorage.getItem('cuaderno-drive-token');
