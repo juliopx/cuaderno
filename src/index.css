@@ -18,7 +18,7 @@
   --color-selection-text: 0 0% 100%;
   --color-selection-hover: color-mix(in srgb, var(--color-accent), white 20%);
 
-  --glass-bg: hsla(0, 0%, 100%, 0.7);
+  --glass-bg: hsla(0, 0%, 100%, 0.85);
   --glass-border: hsla(0, 0%, 100%, 0.15);
   --glass-blur: 16px;
 
@@ -44,7 +44,7 @@
   --color-text-primary: 0 0% 15%;
   --color-text-secondary: 0 0% 50%;
   --color-border: 0 0% 85%;
-  --glass-bg: hsla(0 0% 100% / 0.7);
+  --glass-bg: hsla(0 0% 100% / 0.85);
 }
 
 /* Dark Theme Override */
@@ -56,7 +56,7 @@
   --color-text-primary: 0 0% 92%;
   --color-text-secondary: 220 10% 60%;
   --color-border: 220 15% 20%;
-  --glass-bg: hsla(220, 15%, 12%, 0.7);
+  --glass-bg: hsla(220, 15%, 12%, 0.85);
   --glass-border: hsla(0, 0%, 100%, 0.05);
 
   --color-accent: #5e92ff;
@@ -78,7 +78,7 @@
     --color-text-primary: 0 0% 92%;
     --color-text-secondary: 220 10% 60%;
     --color-border: 220 15% 20%;
-    --glass-bg: hsla(220 15% 12% / 0.65);
+    --glass-bg: hsla(220 15% 12% / 0.85);
     --glass-border: hsla(0 0% 100% / 0.08);
 
     --color-accent: #5e92ff;
