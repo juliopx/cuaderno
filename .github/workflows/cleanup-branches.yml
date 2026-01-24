@@ -6,6 +6,9 @@ on:
     branches:
       - develop
 
+permissions:
+  contents: write
+
 jobs:
   delete-branch:
     runs-on: ubuntu-latest
