@@ -1,3 +1,14 @@
+## [1.8.1] - 2026-01-24
+
+### Documentation
+* Enforce GitHub CLI usage for agents and track `.agent` workflows in Git. (#88)
+
+### Internal
+* Refactored CanvasArea and Bubble components into modular sub-components for improved maintainability. (#89)
+* chore: sync main → develop after release (#87)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.8.0...v1.8.1
+
 ## [1.8.0] - 2026-01-24
 
 ### Features
