@@ -1,3 +1,16 @@
+## [1.9.0] - 2026-01-24
+
+### Features
+* - **Major**: Unified all drawing tools into the floating bubble interface, removing the fixed toolbar
+- **Feature**: Added double-click interactions for quick tool access and eraser toggle
+- **Feature**: Added smooth icon transition animations in collapsed bubble
+- **Enhancement**: Moved tldraw attribution to Settings menu with official branding
+- **Fix**: Resolved infinite loops in Bubble component and multi-tab sync
+- **Fix**: Improved tldraw theme synchronization
+- **Performance**: Optimized store selectors to prevent unnecessary re-renders (#95)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.8.2...v1.9.0
+
 ## [1.8.2] - 2026-01-24
 
 ### Bug Fixes
