@@ -18,13 +18,21 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const branchToDelete = context.payload.pull_request.head.ref;
+            const protectedBranches = ['main', 'develop'];
+            
+            if (protectedBranches.includes(branchToDelete)) {
+              console.log(`Skipping deletion of protected branch: ${branchToDelete}`);
+              return;
+            }
+
             try {
               await github.rest.git.deleteRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                ref: `heads/${context.payload.pull_request.head.ref}`
+                ref: `heads/${branchToDelete}`
               });
-              console.log(`Deleted branch: ${context.payload.pull_request.head.ref}`);
+              console.log(`Deleted branch: ${branchToDelete}`);
             } catch (error) {
-              console.log(`Could not delete branch ${context.payload.pull_request.head.ref}: ${error.message}`);
+              console.log(`Could not delete branch ${branchToDelete}: ${error.message}`);
             }
