@@ -7,9 +7,11 @@ description: Development and Validation Rules
 
 This document establishes the mandatory rules for development in this repository.
 
-## 1. Branch Creation
+## 1. Branch Creation and Issue Management
+- **PREFERENCE**: Use the GitHub CLI (`gh`) for all interactions with issues and PRs.
 - All new feature or bug fix branches must start from `develop`.
 - Use `gh issue develop <ID>` to automate creation and linking.
+- Use `gh issue list` and `gh issue view <ID>` to stay updated on tasks.
 
 ## 2. Pull Request Process
 - Upon completing development, open a PR targeting `develop`.
