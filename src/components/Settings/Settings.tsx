@@ -30,11 +30,9 @@ export const Settings = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [deleteDataOnLogout, setDeleteDataOnLogout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  // langMenuRef removed as it's not needed for the shared Dropdown which handles outside clicks internally
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      // Close main settings menu
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsOpen(false);
         setIsLanguageOpen(false);
@@ -114,7 +112,7 @@ export const Settings = () => {
               <Dropdown
                 value={language}
                 options={languages.map(l => ({ value: l.code, label: l.label }))}
-                onChange={(val) => setLanguage(val as 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar' | 'ca' | 'gl' | 'eu' | 'ru' | 'it' | 'nl' | 'sv' | 'pl' | 'tr')}
+                onChange={(val) => setLanguage(val as any)}
                 isOpen={isLanguageOpen}
                 onToggle={() => setIsLanguageOpen(!isLanguageOpen)}
               />
@@ -131,7 +129,7 @@ export const Settings = () => {
                   key={t.id}
                   className={clsx(styles.themeItem, theme === t.id && styles.themeItemActive)}
                   onClick={() => {
-                    setTheme(t.id as 'auto' | 'light' | 'dark');
+                    setTheme(t.id as any);
                     setIsOpen(false);
                   }}
                 >
@@ -244,9 +242,19 @@ export const Settings = () => {
               {t('learn_more')}
             </a>
           </div>
+
+          <div className={styles.tldrawSection}>
+            <a
+              href="https://www.tldraw.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.tldrawLink}
+            >
+              Powered by <span className={styles.tldrawIcon}>tldraw</span>
+            </a>
+          </div>
         </div>
-      )
-      }
+      )}
 
       {showLogoutConfirm && (
         <ConfirmationModal
@@ -266,7 +274,6 @@ export const Settings = () => {
           </div>
         </ConfirmationModal>
       )}
-
-    </div >
+    </div>
   );
 };

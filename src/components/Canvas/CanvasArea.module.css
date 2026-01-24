@@ -204,3 +204,8 @@
   content: '→';
   order: 2;
 }
+
+/* Hide Tldraw Watermark */
+:global(.tl-watermark) {
+  display: none !important;
+}
