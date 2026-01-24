@@ -6,7 +6,6 @@ import {
 } from 'tldraw'
 import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
-import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
 import { useEffect, useRef, useState } from 'react';
 import { getIsDarkMode } from '../../lib/themeUtils';
@@ -53,7 +52,7 @@ interface CanvasInterfaceProps {
   isDark: boolean;
 }
 
-const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, parentRef, sidebarColumns, leftHandedMode }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number, leftHandedMode: boolean }) => {
+const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, parentRef, sidebarColumns, leftHandedMode, isDark }: CanvasInterfaceProps & { pageVersion: number, lastModifier?: string, clientId: string, parentRef: React.RefObject<HTMLDivElement | null>, sidebarColumns: number, leftHandedMode: boolean }) => {
   const { t } = useTranslation();
   const editor = useEditor();
   const forceTextModeRef = useRef(false);
@@ -63,6 +62,11 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
 
   const userPrefs = useUserPreferencesStore();
   const isLoadingRef = useRef(false);
+
+  // Explicitly sync theme with editor
+  useEffect(() => {
+    editor.user.updateUserPreferences({ colorScheme: isDark ? 'dark' : 'light' });
+  }, [editor, isDark]);
 
   // Use Extracted Hooks
   const { lastGeoToolRef } = useStyleMemory(editor);
@@ -122,7 +126,7 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
     <div className={styles.canvasContainer}>
       <DebugOverlay sidebarColumns={sidebarColumns} />
       <CenterMark />
-      <Toolbar
+      <Bubble
         activeTool={activeTool}
         onSelectTool={handleSelectTool}
         onUpload={(files) => {
@@ -134,7 +138,6 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
           editor.putExternalContent({ type: 'url', url, point: center });
         }}
       />
-      <Bubble activeTool={activeTool} />
       <HistoryControls sidebarColumns={sidebarColumns} leftHandedMode={leftHandedMode} />
       <CircularButton
         onPointerDown={(e) => e.stopPropagation()}
@@ -158,6 +161,7 @@ export const CanvasArea = () => {
   const leftHandedMode = dominantHand === 'left';
   const parentRef = useRef<HTMLDivElement>(null);
   const isDark = getIsDarkMode(theme);
+  const currentVersion = activePageId ? (pages[activePageId]?.version || 0) : 0;
 
   if (!activePageId) {
     return (
@@ -172,7 +176,6 @@ export const CanvasArea = () => {
   }
 
   const sidebarColumns = isSidebarOpen ? (activeNotebookId ? activePath.length + 2 : 1) : 0;
-  const currentVersion = activePageId ? (pages[activePageId]?.version || 0) : 0;
   const lastModifier = activePageId ? pages[activePageId]?.lastModifier : undefined;
   const clientId = useSyncStore.getState().clientId;
 

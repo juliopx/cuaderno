@@ -451,6 +451,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
                 localData.pages[pageId].version += 1;
                 localData.pages[pageId].dirty = false;
                 localData.pages[pageId].lastModifier = state.clientId;
+
+                // Signal to the UI that WE authored this version (prevents unnecessary reload)
+                useFileSystemStore.getState().recordSelfPush(pageId, localData.pages[pageId].version);
               }
             }
           }
@@ -678,63 +681,109 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       if (resolution === 'local') {
         const { localData, remoteData } = conflicts;
 
-        // 1. Prepare winner data (Local changes, but with bumped versions)
+        // 1. Prepare winner data surgically
         const updatedNotebooks = localData.notebooks.map((n: any) => {
           const r = remoteData.notebooks.find((rn: any) => rn.id === n.id);
-          if (r && r.version >= n.version) {
-            return { ...n, version: r.version + 1, dirty: false, lastModifier: get().clientId };
+          const isDirty = n.dirty;
+
+          if (r && r.version > n.version) {
+            if (isDirty) {
+              // CONFLICT: We both changed. We win -> Force version hike
+              return { ...n, version: r.version + 1, dirty: false, lastModifier: get().clientId };
+            } else {
+              // SAFE PULL: We didn't change this. Accept remote.
+              return { ...r, dirty: false };
+            }
           }
           return { ...n, dirty: false, lastModifier: get().clientId };
         });
 
+        // Folders
+        const updatedFolders: Record<string, any> = {};
+        const folderIds = new Set([...Object.keys(localData.folders), ...Object.keys(remoteData.folders)]);
+        for (const id of folderIds) {
+          const l = localData.folders[id];
+          const r = remoteData.folders[id];
+          if (l && r && r.version > l.version) {
+            if (l.dirty) updatedFolders[id] = { ...l, version: r.version + 1, dirty: false, lastModifier: get().clientId };
+            else updatedFolders[id] = { ...r, dirty: false };
+          } else if (l) {
+            updatedFolders[id] = { ...l, dirty: false, lastModifier: get().clientId };
+          } else if (r) {
+            updatedFolders[id] = { ...r, dirty: false };
+          }
+        }
+
         const updatedPages: Record<string, any> = {};
-        for (const [id, page] of Object.entries(localData.pages)) {
-          const p = page as any;
+        const pagesToDownload: string[] = [];
+
+        const pageIds = new Set([...Object.keys(localData.pages), ...Object.keys(remoteData.pages)]);
+        for (const id of pageIds) {
+          const p = localData.pages[id];
           const r = remoteData.pages[id];
-          if (r && r.version >= p.version) {
-            updatedPages[id] = { ...p, version: r.version + 1, dirty: false, lastModifier: get().clientId };
-          } else {
+
+          if (p && r && r.version > p.version) {
+            if (p.dirty) {
+              // We win
+              updatedPages[id] = { ...p, version: r.version + 1, dirty: false, lastModifier: get().clientId };
+            } else {
+              // They win, we accept
+              updatedPages[id] = { ...r, dirty: false };
+              pagesToDownload.push(id);
+            }
+          } else if (p) {
             updatedPages[id] = { ...p, dirty: false, lastModifier: get().clientId };
+          } else if (r) {
+            // New page from remote
+            updatedPages[id] = { ...r, dirty: false };
+            pagesToDownload.push(id);
           }
         }
 
         const validMeta = {
           ...localData,
           notebooks: updatedNotebooks,
-          pages: updatedPages,
-          // Folders logic omitted for brevity, assuming similar structure or no conflicts typically
-          folders: localData.folders
+          folders: updatedFolders,
+          pages: updatedPages
         };
 
-        // 2. Upload Metadata
+        // 2. Download content for pages we accepted from remote
+        for (const pageId of pagesToDownload) {
+          let driveFile = await googleDrive.findFileByName(`page-${pageId}.tldr`, rootFolderId);
+          if (!driveFile) driveFile = await googleDrive.findFileByName(`${pageId}.json`, rootFolderId);
+          if (driveFile) {
+            // @ts-ignore
+            const contentResponse = await gapi.client.drive.files.get({ fileId: driveFile.id, alt: 'media' });
+            const content = typeof contentResponse.body === 'string' ? contentResponse.body : JSON.stringify(contentResponse.result);
+            await opfs.saveFile(`page-${pageId}.tldr`, content);
+            console.log(`[Sync] Conflict Resolution: Downloaded remote page ${pageId}`);
+          }
+        }
+
+        // 3. Upload Metadata
         const remoteMetaFile = await googleDrive.findFileByName('metadata.json', rootFolderId);
         if (remoteMetaFile) {
           await googleDrive.updateFile(remoteMetaFile.id, JSON.stringify(validMeta));
         }
 
-        // 3. Upload Content (using correct extension)
+        // 4. Upload Content for pages we kept locally (and were dirty)
         for (const pageId in updatedPages) {
-          // We only need to upload pages that were actually dirty/conflicting
-          // But for safety in "Keep Local" we can upload all dirty ones.
-          // Optimization: Check original dirty flag.
-          if (localData.pages[pageId].dirty) {
+          if (localData.pages[pageId]?.dirty) {
             const content = await opfs.loadFile(`page-${pageId}.tldr`);
             if (content) {
-              // Try .tldr first, then .json
               let existing = await googleDrive.findFileByName(`page-${pageId}.tldr`, rootFolderId);
               if (!existing) existing = await googleDrive.findFileByName(`${pageId}.json`, rootFolderId);
 
               if (existing) await googleDrive.updateFile(existing.id, content);
               else await googleDrive.createFile(`page-${pageId}.tldr`, content, 'application/json', rootFolderId);
 
-              console.log(`[Sync] Uploaded conflict resolution for page ${pageId}`);
+              console.log(`[Sync] Conflict Resolution: Uploaded local page ${pageId}`);
             }
           }
         }
 
-        // 4. Update Local Store
-        fsStore.mergeRemoteData(validMeta); // This sets versions and clears dirty implicitly if we pass validMeta
-        // Manually ensure dirty flags are clear (merge might overwrite)
+        // 5. Update Local Store
+        fsStore.mergeRemoteData(validMeta);
         fsStore.clearDirtyFlags();
 
       } else {
