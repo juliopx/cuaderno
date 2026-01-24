@@ -71,6 +71,7 @@
   letter-spacing: normal;
   transition: background-color 0.15s ease;
   gap: 0.5rem;
+  touch-action: none;
 }
 
 .item:hover {

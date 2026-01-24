@@ -159,16 +159,14 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     if (!state.isClientReady) return; // Silent return for auto-sync if not ready
 
     try {
-      if (manual) {
-        set({ status: 'saving-to-disk' });
-        // Force save active page content to ensure we upload latest changes
-        const fsStore = useFileSystemStore.getState();
-        if (fsStore.forceSaveActivePage) {
-          console.log('[Sync] Forcing save of active page content...');
-          await fsStore.forceSaveActivePage();
-        }
-        await fsStore.save();
+      set({ status: 'saving-to-disk' });
+      // Always force save active page content to ensure we upload latest changes
+      const fsStore = useFileSystemStore.getState();
+      if (fsStore.forceSaveActivePage) {
+        console.log('[Sync] Forcing save of active page content...');
+        await fsStore.forceSaveActivePage();
       }
+      await fsStore.save();
 
       set({ status: 'syncing' });
 
@@ -187,7 +185,6 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
       // 2. Fetch Remote Metadata
       const remoteMetaFile = await googleDrive.findFileByName('metadata.json', rootId || '');
-      const fsStore = useFileSystemStore.getState();
 
       const localData = JSON.parse(JSON.stringify({
         notebooks: fsStore.notebooks,

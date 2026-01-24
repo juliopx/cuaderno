@@ -741,14 +741,54 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 
   mergeRemoteData: (remoteData) => {
     set((state) => {
-      // Very simple merge: replace all, but respect tombstones if passed in logic
-      // Ensure we track deleted items from remote if they exist
-      const deletedItemIds = remoteData.deletedItemIds || state.deletedItemIds || [];
+      // 1. Merge tombstones: Keep both remote and any new local ones
+      const deletedItemIds = [...new Set([
+        ...(remoteData.deletedItemIds || []),
+        ...(state.deletedItemIds || [])
+      ])];
+
       const remoteActiveUpdatedAt = remoteData.activeStateUpdatedAt || 0;
       const shouldUpdateActiveState = remoteActiveUpdatedAt > state.activeStateUpdatedAt;
 
-      const newNotebooks = (remoteData.notebooks || []).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
-      const newPages = remoteData.pages;
+      // 2. Notebooks: Merge and respect new local dirty ones
+      const remoteNotebooks = remoteData.notebooks || [];
+      const newLocalNotebooks = state.notebooks.filter(ln =>
+        ln.dirty && !remoteNotebooks.find((rn: Notebook) => rn.id === ln.id)
+      );
+      const notebooksToMerge = remoteNotebooks.map((rn: Notebook) => {
+        const local = state.notebooks.find(ln => ln.id === rn.id);
+        // If local is dirty, keep local to avoid losing mid-sync changes
+        return (local && local.dirty) ? local : rn;
+      });
+      const newNotebooks = [...notebooksToMerge, ...newLocalNotebooks]
+        .filter((n: Notebook) => !deletedItemIds.includes(n.id))
+        .sort((a: Notebook, b: Notebook) => (a.order || 0) - (b.order || 0));
+
+      // 3. Folders: Merge similarly
+      const remoteFolders = remoteData.folders || {};
+      const folders = { ...remoteFolders };
+      Object.entries(state.folders).forEach(([id, lf]) => {
+        if (lf.dirty) {
+          folders[id] = lf;
+        }
+      });
+      // Filter out deleted
+      Object.keys(folders).forEach(id => {
+        if (deletedItemIds.includes(id)) delete folders[id];
+      });
+
+      // 4. Pages: Merge similarly
+      const remotePages = remoteData.pages || {};
+      const pages = { ...remotePages };
+      Object.entries(state.pages).forEach(([id, lp]) => {
+        if (lp.dirty) {
+          pages[id] = lp;
+        }
+      });
+      // Filter out deleted
+      Object.keys(pages).forEach(id => {
+        if (deletedItemIds.includes(id)) delete pages[id];
+      });
 
       let nextActiveNotebookId = shouldUpdateActiveState ? remoteData.activeNotebookId : state.activeNotebookId;
       let nextActivePageId = shouldUpdateActiveState ? remoteData.activePageId : state.activePageId;
@@ -760,15 +800,15 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
         nextActiveNotebookId = null;
         nextActivePageId = null;
         nextActivePath = [];
-      } else if (nextActivePageId && !newPages[nextActivePageId]) {
+      } else if (nextActivePageId && !pages[nextActivePageId]) {
         console.warn(`[FileSystem] Active page ${nextActivePageId} no longer exists. Deselecting.`);
         nextActivePageId = null;
       }
 
       return {
         notebooks: newNotebooks,
-        folders: remoteData.folders,
-        pages: newPages,
+        folders,
+        pages,
         deletedItemIds,
         activeNotebookId: nextActiveNotebookId,
         activePageId: nextActivePageId,
