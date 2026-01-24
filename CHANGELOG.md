@@ -1,3 +1,10 @@
+## [1.9.1] - 2026-01-24
+
+### Bug Fixes
+* -   **Fix**: Repositioned tldraw watermark to be visible (license compliance) instead of hiding it, placing it to the left of the recenter button. (#97)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.9.0...v1.9.1
+
 ## [1.9.0] - 2026-01-24
 
 ### Features
