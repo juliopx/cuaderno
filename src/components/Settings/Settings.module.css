@@ -414,3 +414,11 @@
 .tldrawLink:hover .tldrawLogo {
   filter: brightness(0) saturate(100%);
 }
+
+[data-theme='dark'] .tldrawLogo {
+  filter: brightness(0) saturate(100%) invert(1);
+}
+
+[data-theme='dark'] .tldrawLink:hover .tldrawLogo {
+  filter: brightness(0) saturate(100%) invert(1);
+}
