@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MousePointer2, Pencil, Eraser, Type, ImagePlus, Shapes } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
@@ -11,6 +11,7 @@ interface BubbleToolbarSectionProps {
   onUpload?: (files: File[]) => void;
   onAddUrl?: (url: string) => void;
   hasMoved: React.MutableRefObject<boolean>;
+  onCollapse: (e: React.MouseEvent) => void;
 }
 
 /**
@@ -23,9 +24,11 @@ export const BubbleToolbarSection = ({
   onUpload,
   onAddUrl,
   hasMoved,
+  onCollapse,
 }: BubbleToolbarSectionProps) => {
   const { t } = useTranslation();
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const lastClickTime = useRef(0);
 
   const handleUrlConfirm = (url: string) => {
     if (onAddUrl) {
@@ -46,13 +49,28 @@ export const BubbleToolbarSection = ({
   const handleToolClick = (tool: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     if (hasMoved.current) return;
+
+    // Select tool on every click
     onSelectTool(tool);
+
+    const now = Date.now();
+    if (now - lastClickTime.current < 200) {
+      onCollapse(e);
+    }
+    lastClickTime.current = now;
   };
 
   const handleImageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (hasMoved.current) return;
-    setIsMediaModalOpen(true);
+
+    const now = Date.now();
+    if (now - lastClickTime.current < 200) {
+      onCollapse(e);
+    } else {
+      setIsMediaModalOpen(true);
+    }
+    lastClickTime.current = now;
   };
 
   return (

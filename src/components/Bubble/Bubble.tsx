@@ -453,19 +453,24 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
 
   // Smart double click handler for collapsing
   const lastClickTime = useRef(0);
+
+  const handleCollapse = (e: React.MouseEvent) => {
+    setRelativeClickPoint({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+    const newX = e.clientX - 24;
+    const newY = e.clientY - 24;
+    setPosition({ x: newX, y: newY });
+    setIsCollapsed(true);
+  };
+
   const handleSmartClick = (e: React.MouseEvent) => {
     if (hasMoved.current) return;
     const now = Date.now();
     // Logic for double-click ONLY to collapse
     if (now - lastClickTime.current < 200) {
-      setRelativeClickPoint({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      });
-      const newX = e.clientX - 24;
-      const newY = e.clientY - 24;
-      setPosition({ x: newX, y: newY });
-      setIsCollapsed(true);
+      handleCollapse(e);
     }
     lastClickTime.current = now;
   };
@@ -722,6 +727,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
           onUpload={onUpload}
           onAddUrl={onAddUrl}
           hasMoved={hasMoved}
+          onCollapse={handleCollapse}
         />
 
         {(showTextSection || showShapeTypeSection || showStrokeSection || showFillSection) && (
