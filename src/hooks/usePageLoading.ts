@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Editor, DefaultColorStyle, DefaultSizeStyle, DefaultFontStyle, DefaultTextAlignStyle, DefaultDashStyle, DefaultFillStyle, GeoShapeGeoStyle } from 'tldraw';
 import { opfs } from '../lib/opfs';
 import { syncLog } from '../lib/debugLog';
+import { useFileSystemStore } from '../store/fileSystemStore';
 
 export const usePageLoading = (
   editor: Editor,
@@ -19,8 +20,9 @@ export const usePageLoading = (
   useEffect(() => {
     if (!pageId) return;
 
-    const loadPage = async () => {
+    const loadPage = async (reason: string) => {
       isLoadingRef.current = true; // Prevent saves during load
+      syncLog(`📥 [usePageLoading] Starting loadPage for ${pageId} (v${pageVersion}). Reason: ${reason}`);
 
       const json = await opfs.loadFile(`page-${pageId}.tldr`);
       if (json && json !== '{}' && json !== '') {
@@ -85,12 +87,25 @@ export const usePageLoading = (
     };
 
     const isNewPage = pageId !== lastLoadRef.current.pageId;
-    // Reload if: 1. It's a version change AND (modifier is different OR modifier is unknown)
-    const isRemoteChange = !isNewPage && pageVersion !== lastLoadRef.current.version && (!lastModifier || lastModifier !== clientId);
+
+    // Multi-tab check: Did OUR session author this version change?
+    const selfPushedVersion = useFileSystemStore.getState().lastSelfPushedVersions[pageId] || 0;
+    const isOurChange = pageVersion === selfPushedVersion;
+
+    // Reload if: 1. It's a version change AND 2. We didn't author it recently
+    const isRemoteChange = !isNewPage && pageVersion !== lastLoadRef.current.version && !isOurChange;
 
     if (isNewPage || isRemoteChange) {
-      loadPage();
+      if (isRemoteChange) {
+        syncLog(`📥 [usePageLoading] Remote change detected: v${lastLoadRef.current.version} -> v${pageVersion} (Author: ${lastModifier === clientId ? 'Shared Client/Other Tab' : 'External'})`);
+      }
+      loadPage(isNewPage ? 'New Page' : 'Remote Change');
       lastLoadRef.current = { pageId, version: pageVersion };
+    } else {
+      if (pageVersion !== lastLoadRef.current.version) {
+        syncLog(`📥 [usePageLoading] Skip reload: v${lastLoadRef.current.version} -> v${pageVersion} (Reason: Already in Editor)`);
+        lastLoadRef.current.version = pageVersion;
+      }
     }
 
   }, [editor, pageId, pageVersion, lastModifier, clientId, userPrefs, sidebarColumns, leftHandedMode, isLoadingRef]);

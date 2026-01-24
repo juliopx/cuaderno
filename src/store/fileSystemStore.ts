@@ -26,6 +26,7 @@ interface FileSystemState {
   penMode: boolean;
   language: 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar' | 'ca' | 'gl' | 'eu' | 'ru' | 'it' | 'nl' | 'sv' | 'pl' | 'tr';
   deletedItemIds: string[]; // Tombstones for sync
+  lastSelfPushedVersions: Record<string, number>; // { pageId: version }
 
   // Actions
   toggleSidebar: () => void;
@@ -64,6 +65,7 @@ interface FileSystemState {
   // New: Force save mechanism for sync
   forceSaveActivePage: (() => Promise<void>) | null;
   registerActivePageSaver: (saver: () => Promise<void>) => void;
+  recordSelfPush: (pageId: string, version: number) => void;
 }
 
 export const useFileSystemStore = create<FileSystemState>((set, get) => ({
@@ -71,6 +73,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   folders: {},
   pages: {},
   deletedItemIds: [],
+  lastSelfPushedVersions: {},
 
   activeNotebookId: null,
   activePath: [],
@@ -86,6 +89,14 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 
   forceSaveActivePage: null,
   registerActivePageSaver: (saver) => set({ forceSaveActivePage: saver }),
+  recordSelfPush: (pageId, version) => {
+    set(state => ({
+      lastSelfPushedVersions: {
+        ...state.lastSelfPushedVersions,
+        [pageId]: version
+      }
+    }));
+  },
 
   toggleSidebar: () => {
     const newState = !useFileSystemStore.getState().isSidebarOpen;
@@ -768,7 +779,8 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const remoteFolders = remoteData.folders || {};
       const folders = { ...remoteFolders };
       Object.entries(state.folders).forEach(([id, lf]) => {
-        if (lf.dirty) {
+        const rf = remoteFolders[id];
+        if (lf.dirty && (!rf || lf.version >= rf.version)) {
           folders[id] = lf;
         }
       });
@@ -781,8 +793,14 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const remotePages = remoteData.pages || {};
       const pages = { ...remotePages };
       Object.entries(state.pages).forEach(([id, lp]) => {
-        if (lp.dirty) {
-          pages[id] = lp;
+        const rp = remotePages[id];
+        // Only preserve local dirty if its version is >= remote version to avoid reverting pulls
+        if (lp.dirty && (!rp || lp.version >= rp.version)) {
+          if (rp && lp.version < rp.version) {
+            console.warn(`[FileSystem] Blocking dirty overwrite for ${id} because remote v${rp.version} is ahead of local v${lp.version}`);
+          } else {
+            pages[id] = lp;
+          }
         }
       });
       // Filter out deleted
