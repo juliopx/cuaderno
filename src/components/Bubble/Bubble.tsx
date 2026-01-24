@@ -457,7 +457,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     if (hasMoved.current) return;
     const now = Date.now();
     // Logic for double-click ONLY to collapse
-    if (now - lastClickTime.current < 300) {
+    if (now - lastClickTime.current < 200) {
       setRelativeClickPoint({
         x: e.clientX - position.x,
         y: e.clientY - position.y

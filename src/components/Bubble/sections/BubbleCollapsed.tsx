@@ -63,7 +63,7 @@ export const BubbleCollapsed = ({
 
     const now = Date.now();
 
-    if (now - lastClickTime.current < 300) {
+    if (now - lastClickTime.current < 200) {
       // Double Click -> Expand
       if (clickTimeout.current) {
         clearTimeout(clickTimeout.current);
@@ -81,7 +81,7 @@ export const BubbleCollapsed = ({
           }
         }
         clickTimeout.current = null;
-      }, 300);
+      }, 200);
     }
     lastClickTime.current = now;
   };
