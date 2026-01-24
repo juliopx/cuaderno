@@ -1,3 +1,19 @@
+## [1.7.1] - 2026-01-24
+
+### Features
+* Added robust background token expiration management and proactive refresh on app visibility change. (#82)
+* Improved sidepanel drag and drop for touch/pencil devices and implemented a robust sync merge strategy to prevent data loss. (#81)
+* Added a custom, non-native confirmation dialog for logout and disabling auto-sync, with full localization support for 18 languages and UI layout refinements. (#70)
+* Mejorada la estabilidad de la sincronización con Google Drive, automatización de procesos de carga inicial y correcciones críticas en el modo oscuro y fotos de perfil. (#69)
+
+### Bug Fixes
+* Improved settings bubble drag logic to prevent accidental movement when interacting with buttons. (#71)
+
+### Documentation
+* Updated changelog to reflect new features and bug fixes. (#78)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.7.0...v1.7.1
+
 ## [1.7.0] - 2026-01-24
 
 ### Features
