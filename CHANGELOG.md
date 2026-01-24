@@ -4,30 +4,14 @@
 * Added a custom, non-native confirmation dialog for logout and disabling auto-sync, with full localization support for 18 languages and UI layout refinements. (#70)
 * Mejorada la estabilidad de la sincronización con Google Drive, automatización de procesos de carga inicial y correcciones críticas en el modo oscuro y fotos de perfil. (#69)
 * Harmonized the transparency and background color of all floating dialogs (like Image Upload) and slightly increased global UI opacity for better readability. (#68)
-* - Added Shapes Tool (Square, Circle, Arrow, etc.) to toolbar.
-- Improved text styling: mixed formatting support, fixed double decorations, and clean format removal.
-- Enhanced Selection Mode: Text is no longer selectable unless in Edit Mode.
-- Fixed various localization and interaction issues. (#59)
-* Restored image upload and link features, enhanced toolbar visibility, and improved tool switching logic. (#55)
-* Added extra-small and huge sizes for drawing and text tools. (#54)
 
 ### Bug Fixes
 * Improved settings bubble drag logic to prevent accidental movement when interacting with buttons. (#71)
 * Fixed an issue where synchronization would stop working after long periods of inactivity, requiring a manual logout/login to restore. (#66)
-* Fix issue where name editor showed black text strokes in dark mode when theme was set to "Auto". (#52)
-* Fix: Corregido el cierre prematuro del menú contextual en dispositivos táctiles al usar la aplicación instalada como PWA. (#42)
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.6.1...v1.7.0
 
 ## [1.6.1] - 2026-01-21
-
-### Features
-* - Added Shapes Tool (Square, Circle, Arrow, etc.) to toolbar.
-- Improved text styling: mixed formatting support, fixed double decorations, and clean format removal.
-- Enhanced Selection Mode: Text is no longer selectable unless in Edit Mode.
-- Fixed various localization and interaction issues. (#59)
-* Restored image upload and link features, enhanced toolbar visibility, and improved tool switching logic. (#55)
-* Added extra-small and huge sizes for drawing and text tools. (#54)
 
 ### Bug Fixes
 * Fix issue where name editor showed black text strokes in dark mode when theme was set to "Auto". (#52)
@@ -38,37 +22,25 @@
 ## [1.6.0] - 2026-01-21
 
 ### Features
-* - Added Shapes Tool (Square, Circle, Arrow, etc.) to toolbar.
+- Added Shapes Tool (Square, Circle, Arrow, etc.) to toolbar.
 - Improved text styling: mixed formatting support, fixed double decorations, and clean format removal.
 - Enhanced Selection Mode: Text is no longer selectable unless in Edit Mode.
 - Fixed various localization and interaction issues. (#59)
-* Restored image upload and link features, enhanced toolbar visibility, and improved tool switching logic. (#55)
-* Added extra-small and huge sizes for drawing and text tools. (#54)
-
-### Bug Fixes
-* Fix issue where name editor showed black text strokes in dark mode when theme was set to "Auto". (#52)
-* Fix: Corregido el cierre prematuro del menú contextual en dispositivos táctiles al usar la aplicación instalada como PWA. (#42)
+- Restored image upload and link features, enhanced toolbar visibility, and improved tool switching logic. (#55)
+- Added extra-small and huge sizes for drawing and text tools. (#54)
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.5.2...v1.6.0
-
-## [1.5.2] - 2026-01-21
-
-### Bug Fixes
-* Fix: Corregido el cierre prematuro del menú contextual en dispositivos táctiles al usar la aplicación instalada como PWA. (#42)
-* Fixed context menu immediately closing after long press on touch devices in selection mode (#38)
-
-**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.5.1...v1.5.2
 
 ## [1.5.1] - 2026-01-19
 
 ### Features
-* Added support for local image uploads and improved hyperlink functionality in text shapes, including selection-aware link creation and interactive links in selection mode. (#35)
-* Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
-* Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
+- Added support for local image uploads and improved hyperlink functionality in text shapes, including selection-aware link creation and interactive links in selection mode. (#35)
+- Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
+- Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
 
 ### Bug Fixes
-* Fixed context menu immediately closing after long press on touch devices in selection mode (#38)
-* - Corregido el cierre prematuro del menú contextual en dispositivos táctiles tras una pulsación larga.
+- Fixed context menu immediately closing after long press on touch devices in selection mode (#38)
+- Corregido el cierre prematuro del menú contextual en dispositivos táctiles tras una pulsación larga.
 - Habilitado el rectángulo de selección en pantallas táctiles eliminando la interferencia de gestos del navegador. (#31)
 
 **Full Changelog**: https://github.com/https://github.com/juliopx/cuaderno/compare/v1.5.0...v1.5.1
@@ -76,12 +48,12 @@
 ## [1.5.0] - 2026-01-18
 
 ### Features
-* Added support for local image uploads and improved hyperlink functionality in text shapes, including selection-aware link creation and interactive links in selection mode. (#35)
-* Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
-* Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
+- Added support for local image uploads and improved hyperlink functionality in text shapes, including selection-aware link creation and interactive links in selection mode. (#35)
+- Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
+- Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
 
 ### Bug Fixes
-* - Corregido el cierre prematuro del menú contextual en dispositivos táctiles tras una pulsación larga.
+- Corregido el cierre prematuro del menú contextual en dispositivos táctiles tras una pulsación larga.
 - Habilitado el rectángulo de selección en pantallas táctiles eliminando la interferencia de gestos del navegador. (#31)
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.4.1...v1.5.0
@@ -89,11 +61,11 @@
 ## [1.4.1] - 2026-01-18
 
 ### Features
-* Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
-* Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
+- Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
+- Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
 
 ### Bug Fixes
-* - Corregido el cierre prematuro del menú contextual en dispositivos táctiles tras una pulsación larga.
+- Corregido el cierre prematuro del menú contextual en dispositivos táctiles tras una pulsación larga.
 - Habilitado el rectángulo de selección en pantallas táctiles eliminando la interferencia de gestos del navegador. (#31)
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.4.0...v1.4.1
@@ -101,15 +73,15 @@
 ## [1.4.0] - 2026-01-18
 
 ### Features
-* Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
-* Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
+- Added support for context menu (right-click and long-press) in TLDraw, editor language synchronization, and fixed 1:1 panning. (#26)
+- Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.3.1...v1.4.0
 
 ## [1.3.1] - 2026-01-18
 
 ### Features
-* **Fix hybrid name editor**: Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
+- **Fix hybrid name editor**: Achieved pixel-perfect synchronization between text and pen strokes in file names and breadcrumbs. Fixed "linear drift" on long names and resolved layout/clipping issues in the sidebar and navigation path. (#20)
 
 **Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.3.0...v1.3.1
 
