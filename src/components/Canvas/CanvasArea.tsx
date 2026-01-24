@@ -184,8 +184,13 @@ export const CanvasArea = () => {
       <style>{`
         .tl-watermark, 
         .tl-ui-watermark, 
-        .tl-watermark__container { 
+        .tl-watermark__container,
+        .tl-watermark_SEE-LICENSE,
+        [data-testid="tl-watermark-licensed"] { 
           display: none !important; 
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
         }
       `}</style>
       {!isSidebarOpen && (

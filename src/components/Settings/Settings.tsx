@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import styles from './Settings.module.css';
 import clsx from 'clsx';
 import googleDriveIcon from '../../assets/google-drive.svg';
+import tldrawLogo from '../../assets/tldraw-logo.svg';
 import { Dropdown } from '../UI/Dropdown';
 import { CircularButton } from '../UI/CircularButton';
 import { ConfirmationModal } from '../UI/ConfirmationModal';
@@ -250,7 +251,8 @@ export const Settings = () => {
               rel="noopener noreferrer"
               className={styles.tldrawLink}
             >
-              Powered by <span className={styles.tldrawIcon}>TLDRAW</span>
+              <img src={tldrawLogo} alt="tldraw" className={styles.tldrawLogo} />
+              Made with <span className={styles.tldrawIcon}>tldraw</span>
             </a>
           </div>
         </div>
