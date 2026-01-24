@@ -186,7 +186,7 @@ export const CanvasArea = () => {
         .tl-watermark_SEE-LICENSE,
         [data-testid="tl-watermark-licensed"] { 
           right: 80px !important;
-          bottom: 16px !important;
+          bottom: calc(16px + env(safe-area-inset-bottom)) !important;
         }
       `}</style>
       {!isSidebarOpen && (
