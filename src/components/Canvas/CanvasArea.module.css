@@ -18,8 +18,9 @@
   position: fixed !important;
   right: 80px !important;
   /* Default for PC/Mouse: Visually centered against 40px recenter button. */
-  /* User report: it looked too high at +2px. adjusting to match button bottom (offset 0). */
-  bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+  /* User report: it looked too low at 0px... wait, user says "needs to be lower" from +4px. */
+  /* So reverting to +0px (1rem). matching button bottom exactly. */
+  bottom: calc(1rem + 4px + env(safe-area-inset-bottom)) !important;
   z-index: 2100 !important;
   /* Ensure it stays above canvas but below overlays if needed */
 }
@@ -32,8 +33,8 @@
 
   :global(.tl-watermark_SEE-LICENSE),
   :global([data-testid="tl-watermark-licensed"]) {
-    /* User report: it looked too low at +8px on iPad. adjusting to +12px. */
-    bottom: calc(1rem + 12px + env(safe-area-inset-bottom)) !important;
+    /* User report: it looked too low at +12px, too high(?) at +16px. adjusting to +14px. */
+    bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
   }
 }
 
