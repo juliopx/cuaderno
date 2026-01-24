@@ -521,9 +521,29 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
       const target = e.target as HTMLElement;
       if (target.closest?.('[data-is-ui="true"]')) return;
 
-      console.log(`[CanvasArea] pointerdown type=${e.pointerType} src=${target.constructor.name}`);
       const { penMode } = useFileSystemStore.getState();
       const currentTool = editor.getCurrentToolId();
+
+      // Apple Pencil Eraser Detection (iPadOS 18+)
+      // buttons: 32 is eraser mode, buttons: 1 is normal mode
+      if (e.pointerType === 'pen') {
+        if (e.buttons === 32 || e.button === 5) {
+          if (currentTool !== 'eraser') {
+            syncLog(`✏️ [PENCIL] Eraser mode detected (buttons: ${e.buttons})`);
+            lastToolBeforeEraserRef.current = currentTool;
+            autoSwitchedEraserRef.current = true;
+            editor.setCurrentTool('eraser');
+          }
+        } else if (e.buttons === 1) {
+          if (autoSwitchedEraserRef.current && currentTool === 'eraser') {
+            syncLog(`✏️ [PENCIL] Normal mode restored (buttons: ${e.buttons})`);
+            const toolToRestore = lastToolBeforeEraserRef.current || 'draw';
+            editor.setCurrentTool(toolToRestore);
+            autoSwitchedEraserRef.current = false;
+            lastToolBeforeEraserRef.current = null;
+          }
+        }
+      }
 
       // If Pen Mode is on, and we are drawing/erasing, and input is NOT pen
       if (penMode && (currentTool === 'draw' || currentTool === 'eraser') && e.pointerType !== 'pen') {
@@ -761,6 +781,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, is
   const startPanningCameraRef = useRef({ x: 0, y: 0, z: 1 });
   // We'll store the previous tool to restore it after Space panning
   const previousToolRef = useRef('select');
+
+  // Apple Pencil Eraser detection
+  const lastToolBeforeEraserRef = useRef<string | null>(null);
+  const autoSwitchedEraserRef = useRef(false);
 
   // --- Event Handlers ---
   // --- Interaction Engine ---
