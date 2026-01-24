@@ -236,11 +236,13 @@ export const useSyncStore = create<SyncState>((set, get) => ({
                 const childPages = Object.values(localData.pages).filter((p: any) => p.parentId === parentId);
 
                 for (const p of childPages) {
-                  if (p.dirty || !p.isPlaceholder) return true; // User created or modified page
+                  const cp = p as any;
+                  if (cp.dirty || !cp.isPlaceholder) return true; // User created or modified page
                 }
                 for (const f of childFolders) {
-                  if (f.dirty || !f.isPlaceholder) return true; // User modified folder
-                  if (checkDescendants(f.id)) return true; // Recursive check
+                  const cf = f as any;
+                  if (cf.dirty || !cf.isPlaceholder) return true; // User modified folder
+                  if (checkDescendants(cf.id)) return true; // Recursive check
                 }
                 return false;
               };
@@ -359,8 +361,6 @@ export const useSyncStore = create<SyncState>((set, get) => ({
           const pagesToPull = safePulls.filter(i => i.type === 'page');
           for (const item of pagesToPull) {
             const pageId = item.id;
-            // Remote data for this page
-            const page = remoteData.pages[pageId];
 
             // Safety check: ensure it wasn't flagged as conflict (logic above shouldn't allow this, but double check)
             if (conflictsList.find(c => c.id === pageId)) continue;
