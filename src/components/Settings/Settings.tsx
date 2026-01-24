@@ -250,6 +250,7 @@ export const Settings = () => {
               target="_blank"
               rel="noopener noreferrer"
               className={styles.tldrawLink}
+              title="Build infinite canvas applications with the tldraw SDK. Learn more at https://tldraw.dev"
             >
               <img src={tldrawLogo} alt="tldraw" className={styles.tldrawLogo} />
               <span className={styles.tldrawIcon}>MADE WITH TLDRAW</span>
