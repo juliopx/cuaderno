@@ -75,10 +75,11 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    hasMoved.current = false;
     // Only left click for mouse; all pointer types for touch/pen
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-    // Don't drag if the event comes from the opacity slider
+    // Don't drag if the event comes from the opacity slider or other range inputs
     const target = e.target as HTMLElement;
     if (target.classList.contains('opacitySlider') ||
       target.closest('.opacityRow') ||
@@ -106,15 +107,17 @@ const useDraggableWithBounds = (initialPosition: { x: number, y: number }, width
     const dx = e.clientX - startPos.current.x;
     const dy = e.clientY - startPos.current.y;
 
-    // Threshold for "drag vs click"
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    // Threshold for "drag vs click": Increased to 10px to avoid accidental nudges
+    if (!hasMoved.current && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
       hasMoved.current = true;
     }
 
-    const newX = clamp(itemStartPos.current.x + dx, 0, window.innerWidth - width);
-    const newY = clamp(itemStartPos.current.y + dy, 0, window.innerHeight - height);
-
-    setPosition({ x: newX, y: newY });
+    // Only update position IF we have moved beyond the threshold
+    if (hasMoved.current) {
+      const newX = clamp(itemStartPos.current.x + dx, 0, window.innerWidth - width);
+      const newY = clamp(itemStartPos.current.y + dy, 0, window.innerHeight - height);
+      setPosition({ x: newX, y: newY });
+    }
   };
 
   const handlePointerUp = (e: PointerEvent) => {
