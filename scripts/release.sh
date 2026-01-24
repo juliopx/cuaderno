@@ -71,9 +71,9 @@ if command -v gh &> /dev/null; then
         SEARCH_QUERY="is:pr is:merged merged:>=$SINCE_DATE base:develop"
     else
         echo "📌 Last release: $LAST_TAG"
-        # Get the date of the last tag
-        TAG_DATE=$(git log -1 --format=%ai "$LAST_TAG" | cut -d' ' -f1)
-        SEARCH_QUERY="is:pr is:merged merged:>=$TAG_DATE base:develop"
+        # Get the ISO 8601 timestamp of the last tag
+        TAG_DATE=$(git log -1 --format=%aI "$LAST_TAG")
+        SEARCH_QUERY="is:pr is:merged merged:>$TAG_DATE base:develop"
     fi
     
     # Fetch merged PRs with their bodies
