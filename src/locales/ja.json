@@ -105,10 +105,15 @@
   "delete_confirm_folder": "フォルダー",
   "delete_confirm_notebook": "ノートブック",
   "delete": "削除",
-  "confirm_logout_delete_data": "ログアウトする前に、Googleドライブに保存されているすべてのデータを削除しますか？",
+  "confirm_logout_delete_data": "ログアウトする前に Google ドライブに保存されているすべてのデータを削除する",
   "privacy_policy": "プライバシーとクッキー",
   "terms_of_service": "利用規約",
   "welcome_description": "Cuadernoはプライバシー重視（ローカルファースト）のノートおよび描画アプリケーションです。データはデバイスに残りますが、自分のGoogleドライブアカウントとプライベートに同期することも選択できます。",
   "google_drive_privacy_notice": "Googleドライブに接続すると、Google独自のプライバシーおよびクッキーポリシーが適用されます。",
-  "learn_more": "詳細はこちら"
+  "learn_more": "詳細はこちら",
+  "label_font": "フォント",
+  "label_size": "サイズ",
+  "logout_confirmation_desc": "本当にログアウトしますか？",
+  "unsync_confirm_title": "同期を停止しますか？",
+  "unsync_confirm_desc": "本当に Google ドライブとの同期を停止しますか？"
 }

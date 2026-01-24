@@ -1,0 +1,99 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: hsl(var(--color-text-primary));
+}
+
+.description {
+  margin: 0;
+  font-size: 0.95rem;
+  color: hsl(var(--color-text-secondary));
+  line-height: 1.5;
+}
+
+.description+.content {
+  margin-top: 0.5rem;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.actions button {
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.primary {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+.primary:hover {
+  filter: brightness(1.1);
+}
+
+.danger {
+  background-color: hsl(var(--color-danger));
+  color: white;
+}
+
+.danger:hover {
+  filter: brightness(1.1);
+}
+
+.secondary {
+  background-color: transparent;
+  color: hsl(var(--color-text-secondary));
+  border: 1px solid hsl(var(--color-text-secondary) / 0.3) !important;
+}
+
+.secondary:hover {
+  background-color: hsl(var(--color-text-secondary) / 0.05);
+}
+
+[data-theme='dark'] .secondary:hover {
+  background-color: hsla(0, 0%, 100%, 0.05);
+}

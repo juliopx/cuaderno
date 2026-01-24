@@ -105,12 +105,15 @@
   "delete_confirm_folder": "pasta",
   "delete_confirm_notebook": "caderno",
   "delete": "Excluir",
-  "confirm_logout_delete_data": "Deseja excluir todos os dados salvos no Google Drive antes de sair?",
   "privacy_policy": "Privacidade e Cookies",
   "terms_of_service": "Termos de Serviço",
   "welcome_description": "Cuaderno é um aplicativo de notas e desenhos focado na privacidade (local-first). Seus dados permanecem no seu dispositivo, a menos que você escolha sincronizá-los privadamente com sua própria conta do Google Drive.",
   "google_drive_privacy_notice": "Ao conectar-se ao Google Drive, o Google aplica suas próprias políticas de privacidade e cookies.",
   "learn_more": "Saiba mais",
   "label_font": "Tipografia",
-  "label_size": "Tamanho"
+  "label_size": "Tamanho",
+  "confirm_logout_delete_data": "Excluir todos os dados salvos no Google Drive antes de sair",
+  "logout_confirmation_desc": "Tem certeza de que deseja sair?",
+  "unsync_confirm_title": "Parar a sincronização?",
+  "unsync_confirm_desc": "Tem certeza de que deseja parar a sincronização com o Google Drive?"
 }

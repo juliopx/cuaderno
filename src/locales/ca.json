@@ -105,12 +105,15 @@
   "delete_confirm_folder": "la carpeta",
   "delete_confirm_notebook": "el quadern",
   "delete": "Suprimir",
-  "confirm_logout_delete_data": "Voleu suprimir totes les dades guardades a Google Drive abans de tancar la sessió?",
+  "confirm_logout_delete_data": "Vull eliminar totes les dades guardades a Google Drive abans de tancar la sessió",
   "privacy_policy": "Privadesa i galetes",
   "terms_of_service": "Termes del servei",
   "welcome_description": "Cuaderno és una aplicació de notes i dibuix centrada en la privadesa (local-first). Les vostres dades es queden al vostre dispositiu llevat que trieu sincronitzar-les de forma privada amb el vostre compte de Google Drive.",
-  "google_drive_privacy_notice": "En connectar-vos a Google Drive, Google aplica les seves pròpies polítiques de privadesa i galetes.",
+  "google_drive_privacy_notice": "En connectar-vos a Google Drive, Google aplica les seves pròpies polítique de privadesa i galetes.",
   "learn_more": "Més informació",
   "label_font": "Tipografia",
-  "label_size": "Mida"
+  "label_size": "Mida",
+  "logout_confirmation_desc": "Estàs segur que vols tancar la sessió?",
+  "unsync_confirm_title": "Aturar sincronització?",
+  "unsync_confirm_desc": "Estàs segur que vols deixar de sincronitzar amb Google Drive?"
 }

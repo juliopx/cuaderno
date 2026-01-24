@@ -105,12 +105,15 @@
   "delete_confirm_folder": "folder",
   "delete_confirm_notebook": "notebook",
   "delete": "Delete",
-  "confirm_logout_delete_data": "Do you want to delete all saved data in Google Drive before logging out?",
+  "confirm_logout_delete_data": "Delete all saved data in Google Drive before logging out",
   "privacy_policy": "Privacy & Cookies",
   "terms_of_service": "Terms of Service",
   "welcome_description": "Cuaderno is a privacy-focused (local-first) notebook and drawing application. Your data stays on your device unless you choose to sync it privately with your own Google Drive account.",
   "google_drive_privacy_notice": "By connecting to Google Drive, Google applies its own privacy and cookie policies.",
   "learn_more": "Learn more",
   "label_font": "Typography",
-  "label_size": "Size"
+  "label_size": "Size",
+  "logout_confirmation_desc": "Are you sure you want to log out?",
+  "unsync_confirm_title": "Stop Syncing?",
+  "unsync_confirm_desc": "Are you sure you want to stop syncing with Google Drive?"
 }

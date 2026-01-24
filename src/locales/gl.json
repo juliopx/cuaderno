@@ -105,12 +105,15 @@
   "delete_confirm_folder": "cartafol",
   "delete_confirm_notebook": "caderno",
   "delete": "Eliminar",
-  "confirm_logout_delete_data": "Queres eliminar todos os datos gardados en Google Drive antes de pechar a sesión?",
+  "confirm_logout_delete_data": "Quero eliminar todos os datos gardados en Google Drive antes de pechar a sesión",
   "privacy_policy": "Privacidade e Cookies",
   "terms_of_service": "Termos de Servizo",
   "welcome_description": "Cuaderno é unha aplicación de notas e debuxo centrada na privacidade (local-first). Os teus datos quedan no teu dispositivo a menos que elixas sincronizalos de xeito privado coa túa propia conta de Google Drive.",
   "google_drive_privacy_notice": "Ao conectarte a Google Drive, Google aplica as súas propias políticas de privacidade e cookies.",
   "learn_more": "Máis información",
   "label_font": "Tipografía",
-  "label_size": "Tamaño"
+  "label_size": "Tamaño",
+  "logout_confirmation_desc": "Estás seguro de que queres pechar a sesión?",
+  "unsync_confirm_title": "Deter a sincronización?",
+  "unsync_confirm_desc": "Estás seguro de que queres deixar de sincronizar con Google Drive?"
 }

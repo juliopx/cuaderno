@@ -105,12 +105,15 @@
   "delete_confirm_folder": "cartella",
   "delete_confirm_notebook": "quaderno",
   "delete": "Elimina",
-  "confirm_logout_delete_data": "Vuoi eliminare tutti i dati salvati su Google Drive prima di disconnetterti?",
+  "confirm_logout_delete_data": "Elimina tutti i dati salvati su Google Drive prima di uscire",
   "privacy_policy": "Privacy e Cookie",
   "terms_of_service": "Termini di servizio",
   "welcome_description": "Cuaderno è un applicazione per note e disegni incentrata sulla privacy (local-first). I tuoi dati rimangono sul tuo dispositivo a meno che tu non scelga di sincronizzarli privatamente con il tuo account Google Drive.",
   "google_drive_privacy_notice": "Collegandoti a Google Drive, Google applica le proprie politiche sulla privacy e sui cookie.",
   "learn_more": "Scopri di più",
   "label_font": "Tipografia",
-  "label_size": "Dimensione"
+  "label_size": "Dimensione",
+  "logout_confirmation_desc": "Sei sicuro di voler uscire?",
+  "unsync_confirm_title": "Interrompere la sincronizzazione?",
+  "unsync_confirm_desc": "Sei sicuro di voler interrompere la sincronizzazione con Google Drive?"
 }

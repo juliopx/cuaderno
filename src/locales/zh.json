@@ -105,10 +105,15 @@
   "delete_confirm_folder": "文件夹",
   "delete_confirm_notebook": "笔记本",
   "delete": "删除",
-  "confirm_logout_delete_data": "您想在退出登录前删除 Google 云端硬盘中保存的所有数据吗？",
+  "confirm_logout_delete_data": "退出前删除 Google 云端硬盘中所有保存的数据",
   "privacy_policy": "隐私与 Cookie",
   "terms_of_service": "服务条款",
   "welcome_description": "Cuaderno 是一款专注于隐私（本地优先）的笔记本和绘图应用。除非您选择私下同步到自己的 Google 云端硬盘账户，否则您的数据将保留在您的设备上。",
   "google_drive_privacy_notice": "通过连接到 Google 云端硬盘，Google 将适用其自身的隐私和 Cookie 政策。",
-  "learn_more": "了解更多"
+  "learn_more": "了解更多",
+  "label_font": "字体",
+  "label_size": "大小",
+  "logout_confirmation_desc": "您确定要退出吗？",
+  "unsync_confirm_title": "停止同步？",
+  "unsync_confirm_desc": "您确定要停止与 Google 云端硬盘同步吗？"
 }

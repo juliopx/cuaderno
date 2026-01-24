@@ -105,10 +105,15 @@
   "delete_confirm_folder": "المجلد",
   "delete_confirm_notebook": "الدفتر",
   "delete": "حذف",
-  "confirm_logout_delete_data": "هل تريد حذف جميع البيانات المحفوظة في Google Drive قبل تسجيل الخروج؟",
+  "confirm_logout_delete_data": "حذف جميع البيانات المحفوظة في Google Drive قبل تسجيل الخروج",
   "privacy_policy": "الخصوصية وملفات تعريف الارتباط",
   "terms_of_service": "شروط الخدمة",
   "welcome_description": "Cuaderno هو تطبيق للدفاتر والرسم يركز على الخصوصية (محلي أولاً). تبقى بياناتك على جهازك ما لم تختر مزامنتها بشكل خاص مع حساب Google Drive الخاص بك.",
   "google_drive_privacy_notice": "من خلال الاتصال بـ Google Drive، تطبق Google سياسات الخصوصية وملفات تعريف الارتباط الخاصة بها.",
-  "learn_more": "تعرف على المزيد"
+  "learn_more": "تعرف على المزيد",
+  "label_font": "الخط",
+  "label_size": "الحجم",
+  "logout_confirmation_desc": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+  "unsync_confirm_title": "إيقاف المزامنة؟",
+  "unsync_confirm_desc": "هل أنت متأكد أنك تريد إيقاف المزامنة مع Google Drive؟"
 }

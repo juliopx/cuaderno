@@ -208,6 +208,21 @@
   color: hsl(var(--color-text-secondary));
 }
 
+.modalToggle {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.modalToggleLabel {
+  flex: 1;
+  font-size: 0.9rem;
+  color: hsl(var(--color-text-primary));
+  line-height: 1.4;
+}
+
 .toggle {
   width: 34px;
   height: 18px;
