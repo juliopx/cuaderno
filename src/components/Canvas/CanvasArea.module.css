@@ -11,6 +11,33 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Enforce fixed positioning for watermark to match recenter button context */
+/* Use global selector to target tldraw internal classes */
+:global(.tl-watermark_SEE-LICENSE),
+:global([data-testid="tl-watermark-licensed"]) {
+  position: fixed !important;
+  right: 80px !important;
+  /* Default for PC/Mouse: Visually centered against 40px recenter button. */
+  /* User report: it looked too low at 0px... wait, user says "needs to be lower" from +4px. */
+  /* So reverting to +0px (1rem). matching button bottom exactly. */
+  bottom: calc(1rem + 4px + env(safe-area-inset-bottom)) !important;
+  z-index: 2100 !important;
+  /* Ensure it stays above canvas but below overlays if needed */
+}
+
+/* Adjust for Touch/Coarse devices (iPad) where it looked too low */
+/* We target multiple scenarios to catch iPad with/without Pencil or Trackpad */
+@media (pointer: coarse),
+(hover: none),
+(max-width: 1366px) and (pointer: fine) {
+
+  :global(.tl-watermark_SEE-LICENSE),
+  :global([data-testid="tl-watermark-licensed"]) {
+    /* User report: it looked too low at +12px, too high(?) at +16px. adjusting to +14px. */
+    bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
 .canvasContainer {
   position: absolute;
   inset: 0;
@@ -66,7 +93,7 @@
 
 .recenterButton {
   position: fixed;
-  bottom: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
   right: var(--recenter-right, 1rem);
   left: var(--recenter-left, auto);
   z-index: 2100;
@@ -83,7 +110,7 @@
 
 .historyControls {
   position: fixed;
-  bottom: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
   z-index: 2100;
   display: flex;
   gap: 0.5rem;
