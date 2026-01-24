@@ -10,7 +10,7 @@ import { Toolbar } from '../Toolbar/Toolbar';
 import { Bubble } from '../Bubble/Bubble';
 import { useEffect, useRef, useState } from 'react';
 import { getIsDarkMode } from '../../lib/themeUtils';
-import { LocateFixed } from 'lucide-react';
+import { LocateFixed, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
 import { CircularButton } from '../UI/CircularButton';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import { useSyncStore } from '../../store/syncStore';
@@ -27,6 +27,7 @@ import { CenterMark } from './CenterMark';
 import { DebugOverlay } from './DebugOverlay';
 import { HistoryControls } from './HistoryControls';
 import { WelcomeScreen } from './WelcomeScreen';
+import { CanvasTitle } from './CanvasTitle';
 
 // Extracted Hooks
 import { usePageLoading } from '../../hooks/usePageLoading';
@@ -177,6 +178,20 @@ export const CanvasArea = () => {
 
   return (
     <div className={styles.wrapper} ref={parentRef} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
+      {!isSidebarOpen && (
+        <div
+          className={styles.topBar}
+          style={{
+            '--topbar-left': leftHandedMode ? 'auto' : '1rem',
+            '--topbar-right': leftHandedMode ? '1rem' : 'auto',
+          } as React.CSSProperties}
+        >
+          <button className={styles.iconButton} onClick={toggleSidebar}>
+            {leftHandedMode ? <PanelRightOpen size={20} /> : <PanelLeftOpen size={20} />}
+          </button>
+        </div>
+      )}
+      <CanvasTitle />
       <Tldraw
         hideUi
         inferDarkMode={isDark}
