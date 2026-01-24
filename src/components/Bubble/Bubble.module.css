@@ -1,6 +1,6 @@
 .bubble {
   position: fixed;
-  padding: 12px;
+  padding: 8px 12px;
   background-color: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -409,3 +409,49 @@
 
 /* Format Divider */
 /* Unused classes removed: formatDivider, alignGridCompact, alignMini Btn, dot */
+
+/* Toolbar Section (inside Bubble) */
+.toolbarSection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.toolButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: none;
+  color: hsl(var(--color-text-secondary));
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toolButton:hover {
+  background: hsl(var(--color-text-secondary) / 0.1);
+  color: hsl(var(--color-text-primary));
+}
+
+.toolButton.active {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.toolButton.active:hover {
+  background: var(--color-accent);
+  cursor: default;
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 20px;
+  background-color: hsl(var(--color-text-secondary) / 0.2);
+  margin: 0;
+}

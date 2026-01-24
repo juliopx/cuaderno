@@ -12,14 +12,21 @@ interface UserPreferencesState {
   textUnderline: boolean;
   textStrike: boolean;
 
-  // Shape Styles
-  strokeColor: string;
-  strokeSize: string;
-  strokeOpacity: string;
-  dashStyle: string;
-  fillStyle: string;
-  fillColor: string;
-  fillOpacity: string;
+  // Draw Tool Styles
+  drawColor: string;
+  drawSize: string;
+  drawOpacity: string;
+  drawDash: string;
+
+  // Shape Tool Styles (geo, arrow, line)
+  shapeColor: string;
+  shapeSize: string;
+  shapeOpacity: string;
+  shapeDash: string;
+  shapeFill: string;
+  shapeFillColor: string;
+  shapeFillOpacity: string;
+
   lastUsedGeo: string;
 
   // Actions
@@ -39,13 +46,19 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       textUnderline: false,
       textStrike: false,
 
-      strokeColor: 'black',
-      strokeSize: 'm',
-      strokeOpacity: '1',
-      dashStyle: 'solid',
-      fillStyle: 'none',
-      fillColor: 'black',
-      fillOpacity: '0.1',
+      drawColor: 'black',
+      drawSize: 'm',
+      drawOpacity: '1',
+      drawDash: 'solid',
+
+      shapeColor: 'black',
+      shapeSize: 'm',
+      shapeOpacity: '1',
+      shapeDash: 'solid',
+      shapeFill: 'none',
+      shapeFillColor: 'black',
+      shapeFillOpacity: '0.1',
+
       lastUsedGeo: 'rectangle',
 
       updatePreferences: (prefs) => set((state) => ({ ...state, ...prefs })),
