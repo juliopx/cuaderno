@@ -1,3 +1,10 @@
+## [1.8.0] - 2026-01-24
+
+### Features
+* Added automatic tool switching for Apple Pencil/Wacom erasers. Improved release process to prevent duplicate changelog entries and automated branch cleanup after merging. (#85)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.7.1...v1.8.0
+
 ## [1.7.1] - 2026-01-24
 
 ### Features
