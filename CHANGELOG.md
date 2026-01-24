@@ -1,3 +1,24 @@
+## [1.7.0] - 2026-01-24
+
+### Features
+* Added a custom, non-native confirmation dialog for logout and disabling auto-sync, with full localization support for 18 languages and UI layout refinements. (#70)
+* Mejorada la estabilidad de la sincronización con Google Drive, automatización de procesos de carga inicial y correcciones críticas en el modo oscuro y fotos de perfil. (#69)
+* Harmonized the transparency and background color of all floating dialogs (like Image Upload) and slightly increased global UI opacity for better readability. (#68)
+* - Added Shapes Tool (Square, Circle, Arrow, etc.) to toolbar.
+- Improved text styling: mixed formatting support, fixed double decorations, and clean format removal.
+- Enhanced Selection Mode: Text is no longer selectable unless in Edit Mode.
+- Fixed various localization and interaction issues. (#59)
+* Restored image upload and link features, enhanced toolbar visibility, and improved tool switching logic. (#55)
+* Added extra-small and huge sizes for drawing and text tools. (#54)
+
+### Bug Fixes
+* Improved settings bubble drag logic to prevent accidental movement when interacting with buttons. (#71)
+* Fixed an issue where synchronization would stop working after long periods of inactivity, requiring a manual logout/login to restore. (#66)
+* Fix issue where name editor showed black text strokes in dark mode when theme was set to "Auto". (#52)
+* Fix: Corregido el cierre prematuro del menú contextual en dispositivos táctiles al usar la aplicación instalada como PWA. (#42)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.6.1...v1.7.0
+
 ## [1.6.1] - 2026-01-21
 
 ### Features
