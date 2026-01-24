@@ -23,18 +23,28 @@ jobs:
         id: check
         run: |
           git fetch origin main develop
-          # Go to develop
-          git checkout develop
-          # Check if main has commits not in develop
-          BEHIND=$(git rev-list --count develop..origin/main)
-          echo "commits_behind=$BEHIND" >> $GITHUB_OUTPUT
           
-          if [ "$BEHIND" -gt 0 ]; then
-            echo "need_sync=true" >> $GITHUB_OUTPUT
-            echo "develop is $BEHIND commits behind main, sync needed"
-          else
+          # Check if main has commits not yet merged into develop
+          # Using merge-base to find common ancestor
+          MERGE_BASE=$(git merge-base origin/main origin/develop)
+          MAIN_HEAD=$(git rev-parse origin/main)
+          
+          # If merge-base equals main HEAD, all main commits are already in develop
+          if [ "$MERGE_BASE" = "$MAIN_HEAD" ]; then
             echo "need_sync=false" >> $GITHUB_OUTPUT
-            echo "develop is up to date with main"
+            echo "✅ develop already contains all commits from main (merge-base: $MERGE_BASE)"
+          else
+            # Count commits in main that are not reachable from develop
+            BEHIND=$(git rev-list --count origin/develop..origin/main)
+            echo "commits_behind=$BEHIND" >> $GITHUB_OUTPUT
+            
+            if [ "$BEHIND" -gt 0 ]; then
+              echo "need_sync=true" >> $GITHUB_OUTPUT
+              echo "⚠️ develop is missing $BEHIND commits from main, sync needed"
+            else
+              echo "need_sync=false" >> $GITHUB_OUTPUT
+              echo "✅ No new commits to sync"
+            fi
           fi
       
       - name: Create or Update sync PR
@@ -46,9 +56,18 @@ jobs:
           git config user.email "github-actions@github.com"
           
           # Start from develop and merge origin/main
-          git checkout develop
+          git checkout origin/develop
           git checkout -b $SYNC_BRANCH
-          git merge origin/main --no-edit
+          
+          # Use -X ours to prefer develop's version on conflicts (develop is always more recent)
+          git merge origin/main -X ours --no-edit
+          
+          # Check if there are actual differences after merge
+          DIFF_COUNT=$(git diff origin/develop --stat | wc -l)
+          if [ "$DIFF_COUNT" -eq 0 ]; then
+            echo "✅ No actual changes after merge, skipping PR creation"
+            exit 0
+          fi
           
           # Push intermediate branch
           git push -f origin $SYNC_BRANCH
@@ -58,14 +77,14 @@ jobs:
           
           if [ -n "$EXISTING_PR" ]; then
             echo "PR #$EXISTING_PR already exists, updating..."
-            gh pr edit $EXISTING_PR --body "Automated PR to sync release changes from main back to develop via $SYNC_BRANCH."
+            gh pr edit $EXISTING_PR --body "Automated PR to sync release changes from main back to develop."
           else
             echo "Creating new sync PR..."
             gh pr create \
               --base develop \
               --head $SYNC_BRANCH \
               --title "chore: sync main → develop after release" \
-              --body "Automated PR to sync release changes from main back to develop via $SYNC_BRANCH." \
+              --body "Automated PR to sync release changes from main back to develop." \
               --label "chore"
           fi
         env:
