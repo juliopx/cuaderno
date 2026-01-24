@@ -66,12 +66,8 @@ jobs:
             exit 1
           }
           
-          # Check if there are actual differences after merge
-          DIFF_COUNT=$(git diff origin/develop --stat | wc -l)
-          if [ "$DIFF_COUNT" -eq 0 ]; then
-            echo "✅ No actual changes after merge, skipping PR creation"
-            exit 0
-          fi
+          # Even if DIFF_COUNT is 0, we might need to sync the merge commit history
+          echo "Proceeding with PR creation to ensure history sync..."
           
           # Push intermediate branch
           git push -f origin $SYNC_BRANCH
