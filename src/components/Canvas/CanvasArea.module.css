@@ -204,16 +204,3 @@
   content: '→';
   order: 2;
 }
-
-/* Hide Tldraw Watermark */
-:global(.tl-watermark),
-:global(.tl-watermark__container),
-:global(.tl-watermark_link),
-:global(.tl-ui-watermark),
-:global(.tl-watermark_SEE-LICENSE),
-:global([data-testid="tl-watermark-licensed"]) {
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
