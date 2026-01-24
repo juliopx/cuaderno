@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import { Shapes, MousePointer2, Pencil, Eraser, Type, ImagePlus } from 'lucide-react';
 import styles from '../Bubble.module.css';
@@ -27,6 +27,7 @@ interface BubbleCollapsedProps {
   activeColorHex: string;
   richStats: RichStats;
   isDragging: boolean;
+  hasMoved: React.MutableRefObject<boolean>;
   position: { x: number; y: number };
   handlePointerDown: (e: React.PointerEvent) => void;
   handleExpand: () => void;
@@ -41,6 +42,7 @@ export const BubbleCollapsed = ({
   onSelectTool,
   lastActiveTool,
   isDragging,
+  hasMoved,
   position,
   handlePointerDown,
   handleExpand,
@@ -48,7 +50,17 @@ export const BubbleCollapsed = ({
   const lastClickTime = useRef(0);
   const clickTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleClick = () => {
+  useEffect(() => {
+    if (isDragging && hasMoved.current && clickTimeout.current) {
+      clearTimeout(clickTimeout.current);
+      clickTimeout.current = null;
+    }
+  }, [isDragging, hasMoved]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasMoved.current) return;
+
     const now = Date.now();
 
     if (now - lastClickTime.current < 300) {
@@ -61,10 +73,12 @@ export const BubbleCollapsed = ({
     } else {
       // Single Click -> Toggle Eraser (Delayed)
       clickTimeout.current = setTimeout(() => {
-        if (activeTool === 'eraser') {
-          onSelectTool(lastActiveTool || 'draw');
-        } else {
-          onSelectTool('eraser');
+        if (!hasMoved.current) {
+          if (activeTool === 'eraser') {
+            onSelectTool(lastActiveTool || 'draw');
+          } else {
+            onSelectTool('eraser');
+          }
         }
         clickTimeout.current = null;
       }, 300);

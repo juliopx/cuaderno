@@ -698,6 +698,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
           activeColorHex={activeColorHex}
           richStats={richStats}
           isDragging={isDragging}
+          hasMoved={hasMoved}
           position={position}
           handlePointerDown={handlePointerDown}
           handleExpand={handleExpand}
