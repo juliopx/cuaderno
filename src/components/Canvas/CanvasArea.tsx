@@ -182,15 +182,10 @@ export const CanvasArea = () => {
   return (
     <div className={styles.wrapper} ref={parentRef} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
       <style>{`
-        .tl-watermark, 
-        .tl-ui-watermark, 
-        .tl-watermark__container,
+        /* Reposition tldraw watermark to avoid overlapping with recenter button */
         .tl-watermark_SEE-LICENSE,
         [data-testid="tl-watermark-licensed"] { 
-          display: none !important; 
-          opacity: 0 !important;
-          visibility: hidden !important;
-          pointer-events: none !important;
+          right: 80px !important;
         }
       `}</style>
       {!isSidebarOpen && (
