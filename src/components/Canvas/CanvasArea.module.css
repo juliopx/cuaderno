@@ -25,7 +25,10 @@
 }
 
 /* Adjust for Touch/Coarse devices (iPad) where it looked too low */
-@media (pointer: coarse) {
+/* We target multiple scenarios to catch iPad with/without Pencil or Trackpad */
+@media (pointer: coarse),
+(hover: none),
+(max-width: 1366px) and (pointer: fine) {
 
   :global(.tl-watermark_SEE-LICENSE),
   :global([data-testid="tl-watermark-licensed"]) {
