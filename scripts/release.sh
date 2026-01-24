@@ -20,6 +20,23 @@ else
     git pull origin develop
 fi
 
+# 1b. Check that develop is synced with main (fail if not)
+echo "🔍 Checking if develop is up-to-date with main..."
+git fetch origin main
+BEHIND=$(git rev-list --count HEAD..origin/main)
+if [ "$BEHIND" -gt 0 ]; then
+    echo ""
+    echo "❌ ERROR: develop is $BEHIND commit(s) behind main."
+    echo ""
+    echo "This usually means the back-sync PR hasn't been merged yet."
+    echo "Please merge the back-sync PR first, or manually run:"
+    echo ""
+    echo "    git merge origin/main"
+    echo ""
+    exit 1
+fi
+echo "✅ develop is synced with main."
+
 # 2. Run checks
 echo "🚀 Running checks..."
 npm run check
