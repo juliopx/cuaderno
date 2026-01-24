@@ -181,6 +181,13 @@ export const CanvasArea = () => {
 
   return (
     <div className={styles.wrapper} ref={parentRef} style={{ '--sidebar-columns': sidebarColumns } as React.CSSProperties}>
+      <style>{`
+        .tl-watermark, 
+        .tl-ui-watermark, 
+        .tl-watermark__container { 
+          display: none !important; 
+        }
+      `}</style>
       {!isSidebarOpen && (
         <div
           className={styles.topBar}

@@ -206,6 +206,12 @@
 }
 
 /* Hide Tldraw Watermark */
-:global(.tl-watermark) {
+:global(.tl-watermark),
+:global(.tl-watermark__container),
+:global(.tl-watermark_link),
+:global(.tl-ui-watermark) {
   display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }

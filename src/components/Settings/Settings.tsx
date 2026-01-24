@@ -250,7 +250,7 @@ export const Settings = () => {
               rel="noopener noreferrer"
               className={styles.tldrawLink}
             >
-              Powered by <span className={styles.tldrawIcon}>tldraw</span>
+              Powered by <span className={styles.tldrawIcon}>TLDRAW</span>
             </a>
           </div>
         </div>
