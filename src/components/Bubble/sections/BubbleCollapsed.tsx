@@ -118,7 +118,9 @@ export const BubbleCollapsed = ({
       onClick={handleClick}
       data-is-ui="true"
     >
-      {renderIcon()}
+      <div key={activeTool} className={styles.iconContainer}>
+        {renderIcon()}
+      </div>
     </div>
   );
 };
