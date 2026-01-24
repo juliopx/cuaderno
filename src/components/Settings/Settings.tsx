@@ -28,7 +28,6 @@ export const Settings = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showUnsyncConfirm, setShowUnsyncConfirm] = useState(false);
   const [deleteDataOnLogout, setDeleteDataOnLogout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   // langMenuRef removed as it's not needed for the shared Dropdown which handles outside clicks internally
@@ -52,11 +51,7 @@ export const Settings = () => {
   };
 
   const handleToggleSync = () => {
-    if (isEnabled) {
-      setShowUnsyncConfirm(true);
-    } else {
-      setIsEnabled(true);
-    }
+    setIsEnabled(!isEnabled);
   };
 
   const themes = [
@@ -272,18 +267,6 @@ export const Settings = () => {
         </ConfirmationModal>
       )}
 
-      {showUnsyncConfirm && (
-        <ConfirmationModal
-          title={t('unsync_confirm_title')}
-          description={t('unsync_confirm_desc')}
-          onConfirm={() => {
-            setIsEnabled(false);
-            setShowUnsyncConfirm(false);
-          }}
-          onCancel={() => setShowUnsyncConfirm(false)}
-          variant="danger"
-        />
-      )}
     </div >
   );
 };
