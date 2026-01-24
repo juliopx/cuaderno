@@ -18,6 +18,7 @@ interface SyncState {
   rootFolderId: string | null;
   conflicts: any | null; // Stores { localData, remoteData }
   user: { name: string; photo: string } | null;
+  expiresAt: number | null;
 
   // Actions
   setClientId: (id: string) => void;
@@ -34,6 +35,7 @@ interface SyncState {
   setupConnection: (token: string, silent?: boolean) => Promise<void>;
   resolveConflict: (resolution: 'local' | 'remote') => Promise<void>;
   logout: (deleteData?: boolean) => Promise<void>;
+  checkTokenValidity: () => Promise<void>;
 }
 
 export const useSyncStore = create<SyncState>((set, get) => ({
@@ -47,6 +49,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   rootFolderId: localStorage.getItem('cuaderno-drive-root-id'),
   conflicts: null,
   user: JSON.parse(localStorage.getItem('cuaderno-user-info') || 'null'),
+  expiresAt: Number(localStorage.getItem('cuaderno-drive-expires-at')) || null,
 
   setClientId: (clientId: string) => set({ clientId }),
   setStatus: (status: SyncStatus) => set({ status }),
@@ -70,9 +73,16 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     set({ clientId });
 
     // Init Google Drive API
-    googleDrive.init(async (token: string) => {
+    googleDrive.init(async (response: any) => {
+      const token = response.access_token;
+      const expiresIn = response.expires_in; // seconds
+      const expiresAt = Date.now() + (expiresIn * 1000);
+
       const isRefreshing = !!localStorage.getItem('cuaderno-drive-token');
       localStorage.setItem('cuaderno-drive-token', token);
+      localStorage.setItem('cuaderno-drive-expires-at', String(expiresAt));
+      set({ expiresAt });
+
       await get().setupConnection(token, isRefreshing);
     }, (error: any) => {
       console.error('Google Auth Error:', error);
@@ -81,8 +91,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       if (get().isConfigured) {
         console.warn('Silent refresh failed or session expired.');
         localStorage.removeItem('cuaderno-drive-token');
+        localStorage.removeItem('cuaderno-drive-expires-at');
         localStorage.removeItem('cuaderno-user-info');
-        set({ isConfigured: false, user: null });
+        set({ isConfigured: false, user: null, expiresAt: null });
         toast.error('Session expired. Please log in again.');
       }
     }).then(async () => {
@@ -128,8 +139,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         googleDrive.authenticateSilent();
       } else {
         localStorage.removeItem('cuaderno-drive-token');
+        localStorage.removeItem('cuaderno-drive-expires-at');
         localStorage.removeItem('cuaderno-user-info');
-        set({ isConfigured: false, user: null });
+        set({ isConfigured: false, user: null, expiresAt: null });
       }
     }
   },
@@ -770,11 +782,24 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       }
     }
     await googleDrive.signOut();
-    set({ isConfigured: false, rootFolderId: null, isEnabled: false, user: null });
+    set({ isConfigured: false, rootFolderId: null, isEnabled: false, user: null, expiresAt: null });
     localStorage.removeItem('cuaderno-drive-root-id');
     localStorage.removeItem('cuaderno-drive-token');
+    localStorage.removeItem('cuaderno-drive-expires-at');
     localStorage.removeItem('cuaderno-user-info');
     localStorage.setItem('cuaderno-sync-enabled', 'false');
     localStorage.removeItem('cuaderno-sync-enabled');
+  },
+
+  checkTokenValidity: async () => {
+    const { expiresAt, isConfigured } = get();
+    if (!isConfigured || !expiresAt) return;
+
+    // Refresh if expired or expiring in less than 5 minutes
+    const buffer = 5 * 60 * 1000;
+    if (Date.now() + buffer > expiresAt) {
+      console.log('🔑 Token expired or close to expiration. Refreshing...');
+      googleDrive.authenticateSilent();
+    }
   }
 }));
