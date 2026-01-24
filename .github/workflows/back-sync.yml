@@ -14,17 +14,19 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
-      
+
       - name: Check if sync needed
         id: check
         run: |
-          git fetch origin develop
-          BEHIND=$(git rev-list --count origin/develop..main)
+          git fetch origin main develop
+          # Go to develop
+          git checkout develop
+          # Check if main has commits not in develop
+          BEHIND=$(git rev-list --count develop..origin/main)
           echo "commits_behind=$BEHIND" >> $GITHUB_OUTPUT
           
           if [ "$BEHIND" -gt 0 ]; then
@@ -40,8 +42,15 @@ jobs:
         run: |
           SYNC_BRANCH="sync/main-to-develop"
           
-          # Create and push intermediate branch
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          # Start from develop and merge origin/main
+          git checkout develop
           git checkout -b $SYNC_BRANCH
+          git merge origin/main --no-edit
+          
+          # Push intermediate branch
           git push -f origin $SYNC_BRANCH
           
           # Check if PR already exists from this sync branch
