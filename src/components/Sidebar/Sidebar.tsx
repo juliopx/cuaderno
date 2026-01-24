@@ -17,6 +17,7 @@ import {
   pointerWithin,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -223,7 +224,9 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 item={item}
                 isActive={item.id === activeId}
                 onSelect={onSelect}
-                onPointerDown={(e) => setPointerType(e.pointerType)}
+                onPointerDown={(e) => {
+                  setPointerType(e.pointerType);
+                }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -350,6 +353,12 @@ export const Sidebar = () => {
         distance: 8,
       },
     }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -371,6 +380,10 @@ export const Sidebar = () => {
         navigatePath(activePath.slice(0, index));
       }
     }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragItem(null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -625,9 +638,11 @@ export const Sidebar = () => {
       collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <div
         className={styles.sidebar}
+        data-is-ui="true"
         style={{
           '--sidebar-columns': columns.length,
           '--sidebar-left': leftHandedMode ? 'auto' : '0.75rem',
