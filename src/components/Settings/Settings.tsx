@@ -252,7 +252,7 @@ export const Settings = () => {
               className={styles.tldrawLink}
             >
               <img src={tldrawLogo} alt="tldraw" className={styles.tldrawLogo} />
-              Made with <span className={styles.tldrawIcon}>tldraw</span>
+              <span className={styles.tldrawIcon}>MADE WITH TLDRAW</span>
             </a>
           </div>
         </div>

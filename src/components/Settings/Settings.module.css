@@ -379,37 +379,38 @@
 .tldrawLink {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: hsl(var(--color-text-secondary));
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: hsl(var(--color-text-primary));
   text-decoration: none;
-  opacity: 0.6;
   transition: all 0.2s ease;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: hsl(var(--color-text-secondary) / 0.05);
+  border: 1px solid hsl(var(--color-text-secondary) / 0.15);
+  letter-spacing: 0.02em;
 }
 
 .tldrawLink:hover {
-  opacity: 1;
-  background: hsl(var(--color-text-secondary) / 0.05);
-  color: hsl(var(--color-text-primary));
+  background: hsl(var(--color-text-secondary) / 0.08);
+  border-color: hsl(var(--color-text-secondary) / 0.25);
 }
 
 .tldrawIcon {
-  font-weight: 900;
-  font-style: italic;
-  font-size: 0.8rem;
-  color: var(--color-accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
 }
 
 .tldrawLogo {
-  width: 14px;
-  height: 14px;
-  filter: brightness(0) saturate(100%) invert(66%) sepia(0%) saturate(2%) hue-rotate(324deg) brightness(89%) contrast(85%);
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) saturate(100%);
   transition: filter 0.2s ease;
 }
 
 .tldrawLink:hover .tldrawLogo {
-  filter: brightness(0) saturate(100%) invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%);
+  filter: brightness(0) saturate(100%);
 }
