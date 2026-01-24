@@ -48,7 +48,8 @@ jobs:
           # Start from develop and merge origin/main
           git checkout develop
           git checkout -b $SYNC_BRANCH
-          git merge origin/main --no-edit
+          # Use -X ours to prefer develop's version on conflicts (develop is always more recent)
+          git merge origin/main -X ours --no-edit
           
           # Push intermediate branch
           git push -f origin $SYNC_BRANCH
