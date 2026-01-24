@@ -105,12 +105,15 @@
   "delete_confirm_folder": "karpeta",
   "delete_confirm_notebook": "koadernoa",
   "delete": "Ezabatu",
-  "confirm_logout_delete_data": "Google Drive-n gordetako datu guztiak ezabatu nahi dituzu saioa itxi aurretik?",
+  "confirm_logout_delete_data": "Google Drive-n gordetako datu guztiak ezabatu nahi ditut saioa itxi aurretik",
   "privacy_policy": "Pribatutasuna eta Cookie-ak",
   "terms_of_service": "Zerbitzu-baldintzak",
   "welcome_description": "Cuaderno pribatutasunean zentratutako (local-first) koaderno eta marrazketa aplikazioa da. Zure datuak zure gailuan geratzen dira, zure Google Drive kontuarekin modu pribatuan sinkronizatzea aukeratzen ez baduzu.",
   "google_drive_privacy_notice": "Google Drive-ra konektatzean, Google-k bere pribatutasun eta cookie politikak aplikatzen ditu.",
   "learn_more": "Gehiago jakin",
   "label_font": "Tipografia",
-  "label_size": "Tamaina"
+  "label_size": "Tamaina",
+  "logout_confirmation_desc": "Ziur zaude saioa itxi nahi duzula?",
+  "unsync_confirm_title": "Sinkronizazioa gelditu?",
+  "unsync_confirm_desc": "Ziur zaude Google Driverekin sinkronizatzeari utzi nahi diozula?"
 }

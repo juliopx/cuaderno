@@ -8,6 +8,7 @@ import clsx from 'clsx';
 import googleDriveIcon from '../../assets/google-drive.svg';
 import { Dropdown } from '../UI/Dropdown';
 import { CircularButton } from '../UI/CircularButton';
+import { ConfirmationModal } from '../UI/ConfirmationModal';
 
 export const Settings = () => {
   const { theme, setTheme, dominantHand, setDominantHand, language, setLanguage } = useFileSystemStore();
@@ -26,6 +27,9 @@ export const Settings = () => {
   } = useSyncStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showUnsyncConfirm, setShowUnsyncConfirm] = useState(false);
+  const [deleteDataOnLogout, setDeleteDataOnLogout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   // langMenuRef removed as it's not needed for the shared Dropdown which handles outside clicks internally
 
@@ -42,9 +46,17 @@ export const Settings = () => {
   }, []);
 
   const handleLogout = async () => {
-    const deleteData = window.confirm(t('confirm_logout_delete_data'));
-    await logout(deleteData);
+    await logout(deleteDataOnLogout);
+    setShowLogoutConfirm(false);
     setIsOpen(false);
+  };
+
+  const handleToggleSync = () => {
+    if (isEnabled) {
+      setShowUnsyncConfirm(true);
+    } else {
+      setIsEnabled(true);
+    }
   };
 
   const themes = [
@@ -107,7 +119,7 @@ export const Settings = () => {
               <Dropdown
                 value={language}
                 options={languages.map(l => ({ value: l.code, label: l.label }))}
-                onChange={(val) => setLanguage(val as any)}
+                onChange={(val) => setLanguage(val as 'en' | 'es' | 'fr' | 'de' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar' | 'ca' | 'gl' | 'eu' | 'ru' | 'it' | 'nl' | 'sv' | 'pl' | 'tr')}
                 isOpen={isLanguageOpen}
                 onToggle={() => setIsLanguageOpen(!isLanguageOpen)}
               />
@@ -124,7 +136,7 @@ export const Settings = () => {
                   key={t.id}
                   className={clsx(styles.themeItem, theme === t.id && styles.themeItemActive)}
                   onClick={() => {
-                    setTheme(t.id as any);
+                    setTheme(t.id as 'auto' | 'light' | 'dark');
                     setIsOpen(false);
                   }}
                 >
@@ -184,7 +196,7 @@ export const Settings = () => {
                 {user && (
                   <button
                     className={styles.userInfoButton}
-                    onClick={handleLogout}
+                    onClick={() => setShowLogoutConfirm(true)}
                     title={t('log_out')}
                   >
                     <img src={user.photo} alt={user.name} className={styles.userPhoto} referrerPolicy="no-referrer" />
@@ -199,7 +211,7 @@ export const Settings = () => {
                   <div className={styles.toggleLabel}>{t('auto_sync')}</div>
                   <div
                     className={clsx(styles.toggle, isEnabled && styles.toggleActive)}
-                    onClick={() => setIsEnabled(!isEnabled)}
+                    onClick={handleToggleSync}
                   >
                     <div className={styles.toggleCircle} />
                   </div>
@@ -240,6 +252,38 @@ export const Settings = () => {
         </div>
       )
       }
+
+      {showLogoutConfirm && (
+        <ConfirmationModal
+          title={t('log_out')}
+          description={t('logout_confirmation_desc')}
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogoutConfirm(false)}
+          variant="danger"
+        >
+          <div className={styles.modalToggle} onClick={() => setDeleteDataOnLogout(!deleteDataOnLogout)}>
+            <div className={styles.modalToggleLabel}>{t('confirm_logout_delete_data')}</div>
+            <div
+              className={clsx(styles.toggle, deleteDataOnLogout && styles.toggleActive)}
+            >
+              <div className={styles.toggleCircle} />
+            </div>
+          </div>
+        </ConfirmationModal>
+      )}
+
+      {showUnsyncConfirm && (
+        <ConfirmationModal
+          title={t('unsync_confirm_title')}
+          description={t('unsync_confirm_desc')}
+          onConfirm={() => {
+            setIsEnabled(false);
+            setShowUnsyncConfirm(false);
+          }}
+          onCancel={() => setShowUnsyncConfirm(false)}
+          variant="danger"
+        />
+      )}
     </div >
   );
 };

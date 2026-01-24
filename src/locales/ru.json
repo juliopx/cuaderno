@@ -105,10 +105,15 @@
   "delete_confirm_folder": "папку",
   "delete_confirm_notebook": "блокнот",
   "delete": "Удалить",
-  "confirm_logout_delete_data": "Хотите удалить все данные на Google Диске перед выходом?",
+  "confirm_logout_delete_data": "Удалить все сохраненные данные в Google Drive перед выходом",
   "privacy_policy": "Конфиденциальность и Cookies",
   "terms_of_service": "Условия использования",
   "welcome_description": "Cuaderno — это приложение для заметок и рисования, ориентированное на конфиденциальность (local-first). Ваши данные остаются на устройстве, если вы не решите синхронизировать их со своим аккаунтом Google Диска.",
   "google_drive_privacy_notice": "При подключении к Google Диску применяются правила конфиденциальности и использования файлов cookie Google.",
-  "learn_more": "Узнать больше"
+  "learn_more": "Узнать больше",
+  "label_font": "Шрифт",
+  "label_size": "Размер",
+  "logout_confirmation_desc": "Вы уверены, что хотите выйти?",
+  "unsync_confirm_title": "Остановить синхронизацию?",
+  "unsync_confirm_desc": "Вы уверены, что хотите остановить синхронизацию с Google Drive?"
 }

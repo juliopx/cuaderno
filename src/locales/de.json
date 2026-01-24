@@ -105,12 +105,15 @@
   "delete_confirm_folder": "den Ordner",
   "delete_confirm_notebook": "das Notizbuch",
   "delete": "Löschen",
-  "confirm_logout_delete_data": "Möchten Sie alle in Google Drive gespeicherten Daten löschen, bevor Sie sich abmelden?",
   "privacy_policy": "Datenschutz & Cookies",
   "terms_of_service": "Nutzungsbedingungen",
   "welcome_description": "Cuaderno ist eine datenschutzorientierte (local-first) Notizbuch- und Zeichenanwendung. Ihre Daten bleiben auf Ihrem Gerät, sofern Sie sie nicht privat mit Ihrem eigenen Google Drive-Konto synchronisieren.",
   "google_drive_privacy_notice": "Durch das Verbinden mit Google Drive wendet Google seine eigenen Datenschutz- und Cookie-Richtlinien an.",
   "learn_more": "Mehr erfahren",
   "label_font": "Typografie",
-  "label_size": "Größe"
+  "label_size": "Größe",
+  "confirm_logout_delete_data": "Alle gespeicherten Daten in Google Drive vor dem Abmelden löschen",
+  "logout_confirmation_desc": "Sind Sie sicher, dass Sie sich abmelden möchten?",
+  "unsync_confirm_title": "Synchronisierung stoppen?",
+  "unsync_confirm_desc": "Sind Sie sicher, dass Sie die Synchronisierung mit Google Drive stoppen möchten?"
 }

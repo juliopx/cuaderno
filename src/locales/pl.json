@@ -105,10 +105,15 @@
   "delete_confirm_folder": "folder",
   "delete_confirm_notebook": "notatnik",
   "delete": "Usuń",
-  "confirm_logout_delete_data": "Czy chcesz usunąć wszystkie dane zapisane na Google Drive przed wylogowaniem?",
+  "confirm_logout_delete_data": "Usuń wszystkie zapisane dane w Google Drive przed wylogowaniem",
   "privacy_policy": "Prywatność i pliki cookie",
   "terms_of_service": "Warunki usługi",
   "welcome_description": "Cuaderno to aplikacja do notatek i rysowania kładąca nacisk na prywatność (local-first). Twoje dane pozostają na urządzeniu, chyba że zdecydujesz się na ich prywatną synchronizację z własnym kontem Google Drive.",
   "google_drive_privacy_notice": "Łącząc się z Google Drive, Google stosuje własne zasady prywatności i plików cookie.",
-  "learn_more": "Dowiedz się więcej"
+  "learn_more": "Dowiedz się więcej",
+  "label_font": "Typografia",
+  "label_size": "Rozmiar",
+  "logout_confirmation_desc": "Czy na pewno chcesz się wylogować?",
+  "unsync_confirm_title": "Zatrzymać synchronizację?",
+  "unsync_confirm_desc": "Czy na pewno chcesz zatrzymać synchronizację z Google Drive?"
 }

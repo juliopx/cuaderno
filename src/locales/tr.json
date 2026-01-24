@@ -105,10 +105,15 @@
   "delete_confirm_folder": "klasör",
   "delete_confirm_notebook": "not defteri",
   "delete": "Sil",
-  "confirm_logout_delete_data": "Çıkış yapmadan önce Google Drive'daki tüm verileri silmek istiyor musunuz?",
+  "confirm_logout_delete_data": "Oturumu kapatmadan önce Google Drive'daki tüm kayıtlı verileri sil",
   "privacy_policy": "Gizlilik ve Çerezler",
   "terms_of_service": "Hizmet Şartları",
   "welcome_description": "Cuaderno, gizlilik odaklı (yerel öncelikli) bir not defteri ve çizim uygulamasıdır. Siz Google Drive hesabınızla özel olarak senkronize etmeyi seçmediğiniz sürece verileriniz cihazınızda kalır.",
   "google_drive_privacy_notice": "Google Drive'a bağlanarak, Google kendi gizlilik ve çerez politikalarını uygular.",
-  "learn_more": "Daha fazla bilgi al"
+  "learn_more": "Daha fazla bilgi al",
+  "label_font": "Yazı Tipi",
+  "label_size": "Boyut",
+  "logout_confirmation_desc": "Oturumu kapatmak istediğinizden emin misiniz?",
+  "unsync_confirm_title": "Senkronizasyonu Durdur?",
+  "unsync_confirm_desc": "Google Drive ile senkronizasyonu durdurmak istediğinizden emin misiniz?"
 }

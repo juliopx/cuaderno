@@ -105,10 +105,15 @@
   "delete_confirm_folder": "map",
   "delete_confirm_notebook": "notitieblok",
   "delete": "Verwijderen",
-  "confirm_logout_delete_data": "Wilt u alle opgeslagen gegevens in Google Drive verwijderen voordat u uitlogt?",
+  "confirm_logout_delete_data": "Alle opgeslagen gegevens in Google Drive verwijderen voordat u uitlogt",
   "privacy_policy": "Privacy & Cookies",
   "terms_of_service": "Servicevoorwaarden",
   "welcome_description": "Cuaderno is een privacygerichte (local-first) notitie- en tekenapplicatie. Uw gegevens blijven op uw apparaat staan, tenzij u ervoor kiest om ze privé te synchroniseren met uw eigen Google Drive-account.",
   "google_drive_privacy_notice": "Door verbinding te maken met Google Drive, past Google zijn eigen privacy- en cookiebeleid toe.",
-  "learn_more": "Meer informatie"
+  "learn_more": "Meer informatie",
+  "label_font": "Typografie",
+  "label_size": "Grootte",
+  "logout_confirmation_desc": "Weet u zeker dat u wilt uitloggen?",
+  "unsync_confirm_title": "Stop met synchroniseren?",
+  "unsync_confirm_desc": "Weet u zeker dat u wilt stoppen met synchroniseren met Google Drive?"
 }

@@ -105,10 +105,15 @@
   "delete_confirm_folder": "mapp",
   "delete_confirm_notebook": "anteckningsbok",
   "delete": "Ta bort",
-  "confirm_logout_delete_data": "Vill du ta bort all sparad data på Google Drive innan du loggar ut?",
+  "confirm_logout_delete_data": "Ta bort all sparad data i Google Drive innan du loggar ut",
   "privacy_policy": "Integritet & Cookies",
   "terms_of_service": "Användarvillkor",
   "welcome_description": "Cuaderno är en integritetsfokuserad (local-first) antecknings- och ritapp. Din data stannar på din enhet om du inte väljer att synkronisera den privat med ditt eget Google Drive-konto.",
   "google_drive_privacy_notice": "Genom att ansluta till Google Drive tillämpar Google sina egna policyer för integritet och cookies.",
-  "learn_more": "Läs mer"
+  "learn_more": "Läs mer",
+  "label_font": "Typsnitt",
+  "label_size": "Storlek",
+  "logout_confirmation_desc": "Är du säker på att du vill logga ut?",
+  "unsync_confirm_title": "Stoppa synkronisering?",
+  "unsync_confirm_desc": "Är du säker på att du vill sluta synkronisera med Google Drive?"
 }
