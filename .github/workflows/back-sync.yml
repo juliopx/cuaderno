@@ -59,8 +59,12 @@ jobs:
           git checkout origin/develop
           git checkout -b $SYNC_BRANCH
           
-          # Use -X ours to prefer develop's version on conflicts (develop is always more recent)
-          git merge origin/main -X ours --no-edit
+          # Merge main into develop-based branch
+          # Use -X theirs to prefer main's version on conflicts (main is source of truth after release)
+          git merge origin/main -X theirs --no-edit || {
+            echo "❌ Merge failed, manual intervention required"
+            exit 1
+          }
           
           # Check if there are actual differences after merge
           DIFF_COUNT=$(git diff origin/develop --stat | wc -l)
@@ -86,6 +90,25 @@ jobs:
               --title "chore: sync main → develop after release" \
               --body "Automated PR to sync release changes from main back to develop." \
               --label "chore"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Auto-merge sync PR
+        if: steps.check.outputs.need_sync == 'true'
+        run: |
+          SYNC_BRANCH="sync/main-to-develop"
+          
+          # Find the PR number
+          PR_NUMBER=$(gh pr list --base develop --head $SYNC_BRANCH --json number --jq '.[0].number')
+          
+          if [ -n "$PR_NUMBER" ]; then
+            echo "🔃 Auto-merging PR #$PR_NUMBER..."
+            gh pr merge $PR_NUMBER --merge --auto || {
+              echo "⚠️ Could not enable auto-merge, PR may need manual review"
+            }
+          else
+            echo "❌ No PR found to auto-merge"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
