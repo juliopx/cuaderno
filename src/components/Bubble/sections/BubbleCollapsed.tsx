@@ -46,19 +46,28 @@ export const BubbleCollapsed = ({
   handleExpand,
 }: BubbleCollapsedProps) => {
   const lastClickTime = useRef(0);
+  const clickTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleClick = () => {
     const now = Date.now();
+
     if (now - lastClickTime.current < 300) {
       // Double Click -> Expand
+      if (clickTimeout.current) {
+        clearTimeout(clickTimeout.current);
+        clickTimeout.current = null;
+      }
       handleExpand();
     } else {
-      // Single Click -> Toggle Eraser
-      if (activeTool === 'eraser') {
-        onSelectTool(lastActiveTool || 'draw');
-      } else {
-        onSelectTool('eraser');
-      }
+      // Single Click -> Toggle Eraser (Delayed)
+      clickTimeout.current = setTimeout(() => {
+        if (activeTool === 'eraser') {
+          onSelectTool(lastActiveTool || 'draw');
+        } else {
+          onSelectTool('eraser');
+        }
+        clickTimeout.current = null;
+      }, 300);
     }
     lastClickTime.current = now;
   };
