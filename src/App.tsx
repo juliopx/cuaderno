@@ -336,22 +336,37 @@ function App() {
     };
   }, [isEnabled, sync]);
 
-  // 3. Proactive Token Refresh (every 50 minutes)
+  // 3. Proactive Token Refresh (every 10 minutes verification)
   useEffect(() => {
     if (!isEnabled) return;
 
     const interval = setInterval(() => {
-      const { isConfigured } = useSyncStore.getState();
+      const { isConfigured, checkTokenValidity } = useSyncStore.getState();
       if (isConfigured) {
-        console.log('🔑 Proactively refreshing Drive token...');
-        useSyncStore.getState().authenticate('none');
+        console.log('🔑 Periodic token validity check...');
+        checkTokenValidity();
       }
-    }, 1000 * 60 * 50); // 50 minutes
+    }, 1000 * 60 * 10); // Every 10 minutes
 
     return () => clearInterval(interval);
   }, [isEnabled]);
 
-  // 4. Exit Prevention & Sync on Stay
+  // 4. Handle returning from background (check token validity)
+  useEffect(() => {
+    if (!isEnabled) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('📱 App became visible. Checking token validity...');
+        useSyncStore.getState().checkTokenValidity();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isEnabled]);
+
+  // 5. Exit Prevention & Sync on Stay
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const syncState = useSyncStore.getState();

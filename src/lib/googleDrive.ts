@@ -6,7 +6,7 @@ let gapiInited = false;
 let gisInited = false;
 
 export const googleDrive = {
-  async init(onAuthenticated: (token: string) => void, onError?: (error: any) => void) {
+  async init(onAuthenticated: (response: any) => void, onError?: (error: any) => void) {
     return new Promise<void>(async (resolve) => {
       // Wait for scripts to load
       const waitForGlobal = (key: string) => {
@@ -77,7 +77,7 @@ export const googleDrive = {
             else throw response;
             return;
           }
-          onAuthenticated(response.access_token);
+          onAuthenticated(response);
         },
       });
       gisInited = true;
