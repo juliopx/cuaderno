@@ -35,22 +35,28 @@ jobs:
             echo "develop is up to date with main"
           fi
       
-      - name: Create sync PR
+      - name: Create or Update sync PR
         if: steps.check.outputs.need_sync == 'true'
         run: |
-          # Check if PR already exists
-          EXISTING_PR=$(gh pr list --base develop --head main --json number --jq '.[0].number')
+          SYNC_BRANCH="sync/main-to-develop"
+          
+          # Create and push intermediate branch
+          git checkout -b $SYNC_BRANCH
+          git push -f origin $SYNC_BRANCH
+          
+          # Check if PR already exists from this sync branch
+          EXISTING_PR=$(gh pr list --base develop --head $SYNC_BRANCH --json number --jq '.[0].number')
           
           if [ -n "$EXISTING_PR" ]; then
             echo "PR #$EXISTING_PR already exists, updating..."
-            gh pr edit $EXISTING_PR --body "Automated PR to sync release changes from main back to develop after release publication."
+            gh pr edit $EXISTING_PR --body "Automated PR to sync release changes from main back to develop via $SYNC_BRANCH."
           else
             echo "Creating new sync PR..."
             gh pr create \
               --base develop \
-              --head main \
+              --head $SYNC_BRANCH \
               --title "chore: sync main → develop after release" \
-              --body "Automated PR to sync release changes from main back to develop after release publication." \
+              --body "Automated PR to sync release changes from main back to develop via $SYNC_BRANCH." \
               --label "chore"
           fi
         env:
