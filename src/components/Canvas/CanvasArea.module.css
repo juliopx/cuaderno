@@ -17,13 +17,21 @@
 :global([data-testid="tl-watermark-licensed"]) {
   position: fixed !important;
   right: 80px !important;
-  /* Centering logic: Button is ~40px high, Watermark ~26px high. */
-  /* Button bottom is 1rem (16px). Midpoint ~36px. */
-  /* Watermark midpoint needs to be at 36px. 36 - 13 = 23px bottom. */
-  /* We use 1rem + 6px (~22px) as a safe approximation. */
-  bottom: calc(1rem + 6px + env(safe-area-inset-bottom)) !important;
+  /* Default for PC/Mouse: Visually centered against 40px recenter button. */
+  /* User report: it looked too high at +2px. adjusting to match button bottom (offset 0). */
+  bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
   z-index: 2100 !important;
   /* Ensure it stays above canvas but below overlays if needed */
+}
+
+/* Adjust for Touch/Coarse devices (iPad) where it looked too low */
+@media (pointer: coarse) {
+
+  :global(.tl-watermark_SEE-LICENSE),
+  :global([data-testid="tl-watermark-licensed"]) {
+    /* User report: it looked too low at +8px on iPad. adjusting to +12px. */
+    bottom: calc(1rem + 12px + env(safe-area-inset-bottom)) !important;
+  }
 }
 
 .canvasContainer {
