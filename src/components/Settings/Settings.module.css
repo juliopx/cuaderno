@@ -367,3 +367,58 @@
   text-decoration: underline;
   opacity: 0.8;
 }
+
+.tldrawSection {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tldrawLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: hsl(var(--color-text-primary));
+  text-decoration: none;
+  transition: all 0.2s ease;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: hsl(var(--color-text-secondary) / 0.05);
+  border: 1px solid hsl(var(--color-text-secondary) / 0.15);
+  letter-spacing: 0.02em;
+}
+
+.tldrawLink:hover {
+  background: hsl(var(--color-text-secondary) / 0.08);
+  border-color: hsl(var(--color-text-secondary) / 0.25);
+}
+
+.tldrawIcon {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+}
+
+.tldrawLogo {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) saturate(100%);
+  transition: filter 0.2s ease;
+}
+
+.tldrawLink:hover .tldrawLogo {
+  filter: brightness(0) saturate(100%);
+}
+
+[data-theme='dark'] .tldrawLogo {
+  filter: brightness(0) saturate(100%) invert(1);
+}
+
+[data-theme='dark'] .tldrawLink:hover .tldrawLogo {
+  filter: brightness(0) saturate(100%) invert(1);
+}

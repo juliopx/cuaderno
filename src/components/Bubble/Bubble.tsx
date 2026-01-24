@@ -34,13 +34,17 @@ import {
   BubbleShapeSection,
   BubbleStrokeSection,
   BubbleFillSection,
+  BubbleToolbarSection,
 } from './sections';
 
 interface BubbleProps {
   activeTool: string;
+  onSelectTool: (tool: string) => void;
+  onUpload?: (files: File[]) => void;
+  onAddUrl?: (url: string) => void;
 }
 
-export const Bubble = track(({ activeTool }: BubbleProps) => {
+export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: BubbleProps) => {
   const { t } = useTranslation();
   const editor = useEditor();
   const isDarkMode = useIsDarkMode();
@@ -93,22 +97,27 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     }
   };
 
-  const userPrefs = useUserPreferencesStore();
+  const {
+    textColor, textSize, textFont, textAlign, textBold, textItalic, textUnderline, textStrike,
+    drawColor, drawSize, drawOpacity, drawDash,
+    shapeColor, shapeSize, shapeOpacity, shapeDash, shapeFill, shapeFillColor, shapeFillOpacity,
+    lastActiveTool,
+    updatePreferences
+  } = useUserPreferencesStore();
+
+
 
   const editingId = editor.getEditingShapeId();
   const editingShape = editingId ? editor.getShape(editingId) : null;
   const isEditingRichText = editingShape?.type === 'rich-text';
 
   const selectedShapes = editor.getSelectedShapes();
-  const hasSelectedShapes = selectedShapes.length > 0;
   const isSelectTool = activeTool === 'select';
-  const isShapeTool = activeTool === 'draw' || activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes';
   const isTextTool = activeTool === 'text';
 
   const TEXT_TYPES = ['text', 'rich-text'];
   const SHAPE_TYPES = ['geo', 'arrow', 'line'];
   const DRAW_TYPES = ['draw'];
-  const IMAGE_TYPES = ['image', 'asset'];
 
   const allSelectedMatch = (types: string[]) =>
     selectedShapes.length > 0 && selectedShapes.every(s => types.includes(s.type));
@@ -116,7 +125,6 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
   const isAllText = allSelectedMatch(TEXT_TYPES);
   const isAllShape = allSelectedMatch(SHAPE_TYPES);
   const isAllDraw = allSelectedMatch(DRAW_TYPES);
-  const isAllImage = allSelectedMatch(IMAGE_TYPES);
 
   // Colors mapping (using Tldraw's actual theme engine for 100% match)
   const colorsMap: Record<string, string> = useMemo(() => ({
@@ -131,14 +139,14 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
   // Rich Text State (Persistent context, initialized from global store)
   const [richStats, setRichStats] = useState({
-    bold: userPrefs.textBold,
-    italic: userPrefs.textItalic,
-    underline: userPrefs.textUnderline,
-    strike: userPrefs.textStrike,
-    font: userPrefs.textFont,
-    size: userPrefs.textSize,
-    color: userPrefs.textColor,
-    align: userPrefs.textAlign
+    bold: textBold,
+    italic: textItalic,
+    underline: textUnderline,
+    strike: textStrike,
+    font: textFont,
+    size: textSize,
+    color: textColor,
+    align: textAlign
   });
 
   // Sync state with cursor position
@@ -234,7 +242,7 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
           })()
         };
 
-        userPrefs.updatePreferences({
+        updatePreferences({
           textBold: next.bold,
           textItalic: next.italic,
           textUnderline: next.underline,
@@ -255,27 +263,27 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     const applyPersistentStyles = () => {
       const active = document.activeElement as HTMLElement;
       if (active?.getAttribute('contenteditable') === 'true') {
-        if (userPrefs.textBold) document.execCommand('bold');
-        if (userPrefs.textItalic) document.execCommand('italic');
-        if (userPrefs.textUnderline) document.execCommand('underline');
-        if (userPrefs.textStrike) document.execCommand('strikethrough');
+        if (textBold) document.execCommand('bold');
+        if (textItalic) document.execCommand('italic');
+        if (textUnderline) document.execCommand('underline');
+        if (textStrike) document.execCommand('strikethrough');
 
-        const hex = colorsMap[userPrefs.textColor] || '#000000';
+        const hex = colorsMap[textColor] || '#000000';
         document.execCommand('styleWithCSS', false, 'true');
         document.execCommand('foreColor', false, hex);
 
-        document.execCommand('fontName', false, fontFamilies[userPrefs.textFont] || 'sans-serif');
-        document.execCommand('fontSize', false, fontSizes[userPrefs.textSize] || '4');
+        document.execCommand('fontName', false, fontFamilies[textFont] || 'sans-serif');
+        document.execCommand('fontSize', false, fontSizes[textSize] || '4');
 
         setRichStats({
-          bold: userPrefs.textBold,
-          italic: userPrefs.textItalic,
-          underline: userPrefs.textUnderline,
-          strike: userPrefs.textStrike,
-          font: userPrefs.textFont,
-          size: userPrefs.textSize,
-          color: userPrefs.textColor,
-          align: userPrefs.textAlign
+          bold: textBold,
+          italic: textItalic,
+          underline: textUnderline,
+          strike: textStrike,
+          font: textFont,
+          size: textSize,
+          color: textColor,
+          align: textAlign
         });
       } else {
         requestAnimationFrame(applyPersistentStyles);
@@ -294,9 +302,16 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
       document.removeEventListener('pointerup', updateStats);
       document.removeEventListener('keyup', updateStats);
     };
-  }, [editor, t, colorsMap, userPrefs]);
+  }, [editor, t, colorsMap, textBold, textItalic, textUnderline, textStrike, textColor, textFont, textSize, textAlign, updatePreferences]);
 
-  // Proactive sync when switching to text tool
+  // Track last active tool (excluding eraser)
+  useEffect(() => {
+    if (activeTool !== 'eraser' && activeTool !== lastActiveTool) {
+      updatePreferences({ lastActiveTool: activeTool });
+    }
+  }, [activeTool, lastActiveTool, updatePreferences]);
+
+  // Proactive sync when switching tools
   useEffect(() => {
     if (activeTool === 'text') {
       editor.setStyleForNextShapes(DefaultColorStyle, richStats.color);
@@ -304,8 +319,21 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
       editor.setStyleForNextShapes(DefaultFontStyle, richStats.font);
       const validAlign = richStats.align === 'justify' ? 'start' : richStats.align;
       editor.setStyleForNextShapes(DefaultTextAlignStyle, validAlign);
+    } else if (activeTool === 'draw') {
+      editor.setStyleForNextShapes(DefaultColorStyle, drawColor);
+      editor.setStyleForNextShapes(DefaultSizeStyle, drawSize);
+      editor.setStyleForNextShapes(DefaultDashStyle, drawDash as any);
+      editor.setStyleForNextShapes(StrokeOpacityStyle, drawOpacity);
+    } else if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) {
+      editor.setStyleForNextShapes(DefaultColorStyle, shapeColor);
+      editor.setStyleForNextShapes(DefaultSizeStyle, shapeSize);
+      editor.setStyleForNextShapes(DefaultDashStyle, shapeDash as any);
+      editor.setStyleForNextShapes(StrokeOpacityStyle, shapeOpacity);
+      editor.setStyleForNextShapes(DefaultFillStyle, shapeFill as any);
+      editor.setStyleForNextShapes(FillColorStyle, shapeFillColor);
+      editor.setStyleForNextShapes(FillOpacityStyle, shapeFillOpacity);
     }
-  }, [activeTool, editor, richStats.color, richStats.size, richStats.font, richStats.align]);
+  }, [activeTool, editor, richStats.color, richStats.size, richStats.font, richStats.align, drawColor, drawSize, drawDash, drawOpacity, shapeColor, shapeSize, shapeDash, shapeOpacity, shapeFill, shapeFillColor, shapeFillOpacity]);
 
   // Sync from selection
   useEffect(() => {
@@ -356,8 +384,8 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
       setRichStats(prev => {
         const next = { ...prev, [key]: !prev[key as keyof typeof prev] };
-        const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof userPrefs;
-        userPrefs.updatePreferences({ [storeKey]: next[key as keyof typeof next] });
+        const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}`;
+        updatePreferences({ [storeKey]: next[key as keyof typeof next] });
         return next;
       });
     } else {
@@ -396,47 +424,62 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
 
       setRichStats(prev => {
         const next = { ...prev, [key]: !prev[key as keyof typeof prev] };
-        const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof userPrefs;
-        userPrefs.updatePreferences({ [storeKey]: next[key as keyof typeof next] });
+        const storeKey = `text${key.charAt(0).toUpperCase() + key.slice(1)}`;
+        updatePreferences({ [storeKey]: next[key as keyof typeof next] });
         return next;
       });
     }
   };
 
-  // Dimensions
-  const width = isCollapsed ? 48 : 340;
-  const height = isCollapsed ? 48 : (activeTool === 'text' ? 240 : (activeTool === 'shapes' ? 300 : 170));
-
   const { dominantHand } = useFileSystemStore();
   const leftHandedMode = dominantHand === 'left';
   const initialX = leftHandedMode ? 100 : window.innerWidth / 2 - 170;
+
+  // Visibility flags
+  const isTextMode = isTextTool || isEditingRichText || (isSelectTool && isAllText);
+  const showTextSection = isTextMode;
+  const showShapeTypeSection = (activeTool === 'geo' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'shapes') || (isSelectTool && isAllShape);
+  const showStrokeSection = (activeTool === 'draw' || showShapeTypeSection) || (isSelectTool && (isAllShape || isAllDraw));
+  const showFillSection = showShapeTypeSection;
+
+  // Dimensions
+  const width = isCollapsed ? 48 : 340;
+  const hasContent = showTextSection || showShapeTypeSection || showStrokeSection || showFillSection;
+  const contentHeight = hasContent ? (activeTool === 'text' ? 240 : (activeTool === 'shapes' ? 300 : 170)) : 0;
+  // If no content: padding-top(8) + toolbar(48) + padding-bottom(8) = 64
+  // If content: padding-top(8) + toolbar(48) + gap(12) + divider(1) + gap(12) + content + padding-bottom(8) = 89 + content
+  const height = isCollapsed ? 48 : (hasContent ? contentHeight + 89 : 64);
   const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: initialX, y: 100 }, width, height);
 
-  // Smart double click handler
+  // Smart double click handler for collapsing
   const lastClickTime = useRef(0);
+
+  const handleCollapse = (e: React.MouseEvent) => {
+    setRelativeClickPoint({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+    const newX = e.clientX - 24;
+    const newY = e.clientY - 24;
+    setPosition({ x: newX, y: newY });
+    setIsCollapsed(true);
+  };
+
   const handleSmartClick = (e: React.MouseEvent) => {
     if (hasMoved.current) return;
     const now = Date.now();
-    if (now - lastClickTime.current < 300) {
-      setRelativeClickPoint({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      });
-      const newX = e.clientX - 24;
-      const newY = e.clientY - 24;
-      setPosition({ x: newX, y: newY });
-      setIsCollapsed(true);
+    // Logic for double-click ONLY to collapse
+    if (now - lastClickTime.current < 200) {
+      handleCollapse(e);
     }
     lastClickTime.current = now;
   };
 
-  const handleExpandCheck = () => {
-    if (!hasMoved.current) {
-      const newX = (position.x + 24) - relativeClickPoint.x;
-      const newY = (position.y + 24) - relativeClickPoint.y;
-      setPosition({ x: newX, y: newY });
-      setIsCollapsed(false);
-    }
+  const handleExpand = () => {
+    const newX = (position.x + 24) - (relativeClickPoint.x || 24);
+    const newY = (position.y + 24) - (relativeClickPoint.y || 24);
+    setPosition({ x: newX, y: newY });
+    setIsCollapsed(false);
   };
 
   const colors = Object.keys(colorsMap);
@@ -460,21 +503,21 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
           document.execCommand('foreColor', false, hex);
           setRichStats(prev => ({ ...prev, color: value }));
           editor.setStyleForNextShapes(DefaultColorStyle, value);
-          userPrefs.updatePreferences({ textColor: value });
+          updatePreferences({ textColor: value });
         }
 
         if (style.id === 'tldraw:font') {
           document.execCommand('fontName', false, fontFamilies[value] || 'sans-serif');
           setRichStats(prev => ({ ...prev, font: value }));
           editor.setStyleForNextShapes(DefaultFontStyle, value);
-          userPrefs.updatePreferences({ textFont: value });
+          updatePreferences({ textFont: value });
         }
 
         if (style.id === 'tldraw:size') {
           document.execCommand('fontSize', false, fontSizes[value] || '5');
           setRichStats(prev => ({ ...prev, size: value }));
           editor.setStyleForNextShapes(DefaultSizeStyle, value);
-          userPrefs.updatePreferences({ textSize: value });
+          updatePreferences({ textSize: value });
         }
 
         if (style.id === 'tldraw:textAlign') {
@@ -541,36 +584,50 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     setRichStats(prev => ({ ...prev, [finalPropKey]: value }));
 
     const prefUpdate: any = {};
+
+    // Determine which tool's preferences to update
+    const selected = editor.getSelectedShapes();
+    const firstSelected = selected[0];
+    const editingId = editor.getEditingShapeId();
+    const editingShape = editingId ? editor.getShape(editingId) : null;
+
+    const targetIsText = isTextMode || (editingShape?.type === 'rich-text') || (firstSelected?.type === 'rich-text');
+    const targetIsDraw = (activeTool === 'draw' && !targetIsText) || (firstSelected?.type === 'draw');
+    const targetIsShape = (['geo', 'shapes', 'arrow', 'line'].includes(activeTool) && !targetIsText) || (['geo', 'arrow', 'line'].includes(firstSelected?.type as any));
+
     if (style.id === DefaultColorStyle.id) {
-      prefUpdate.textColor = value;
-      prefUpdate.strokeColor = value;
+      if (targetIsText) prefUpdate.textColor = value;
+      if (targetIsDraw) prefUpdate.drawColor = value;
+      if (targetIsShape) prefUpdate.shapeColor = value;
     } else if (style.id === DefaultSizeStyle.id) {
-      prefUpdate.textSize = value;
-      prefUpdate.strokeSize = value;
+      if (targetIsText) prefUpdate.textSize = value;
+      if (targetIsDraw) prefUpdate.drawSize = value;
+      if (targetIsShape) prefUpdate.shapeSize = value;
     } else if (style.id === DefaultFontStyle.id) {
       prefUpdate.textFont = value;
     } else if (style.id === DefaultTextAlignStyle.id) {
       prefUpdate.textAlign = value;
     } else if (style.id === DefaultDashStyle.id) {
-      prefUpdate.dashStyle = value;
+      if (targetIsDraw) prefUpdate.drawDash = value;
+      if (targetIsShape) prefUpdate.shapeDash = value;
     } else if (style.id === DefaultFillStyle.id) {
-      prefUpdate.fillStyle = value;
+      prefUpdate.shapeFill = value;
     } else if (style.id === GeoShapeGeoStyle.id) {
       prefUpdate.lastUsedGeo = value;
     } else if (style.id === FillColorStyle.id) {
-      prefUpdate.fillColor = value;
+      prefUpdate.shapeFillColor = value;
     } else if (style.id === FillOpacityStyle.id) {
-      prefUpdate.fillOpacity = value;
+      prefUpdate.shapeFillOpacity = value;
     } else if (style.id === StrokeOpacityStyle.id) {
-      prefUpdate.strokeOpacity = value;
+      if (targetIsDraw) prefUpdate.drawOpacity = value;
+      if (targetIsShape) prefUpdate.shapeOpacity = value;
     }
-    userPrefs.updatePreferences(prefUpdate);
+    updatePreferences(prefUpdate);
   };
 
-  // Early returns for visibility
-  if (!isShapeTool && !isTextTool && !(isSelectTool && (isEditingRichText || hasSelectedShapes))) {
-    return null;
-  }
+  // Early returns for visibility (Bubble is now always visible unless collapsed logic handled below)
+  // No early return here anymore as it contains the toolbar
+
 
   // Reactive reads
   const getStyle = (style: any, fallback: string) => {
@@ -606,16 +663,8 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
     return fallback;
   };
 
-  // Visibility flags
-  const isTextMode = isTextTool || isEditingRichText || (isSelectTool && isAllText);
-  const showTextSection = isTextMode;
-  const showShapeTypeSection = (activeTool === 'geo' || activeTool === 'line' || activeTool === 'arrow' || activeTool === 'shapes') || (isSelectTool && isAllShape);
-  const showStrokeSection = (activeTool === 'draw' || showShapeTypeSection) || (isSelectTool && (isAllShape || isAllDraw));
-  const showFillSection = showShapeTypeSection;
+  // No early return here anymore as it contains the toolbar
 
-  if (isSelectTool && !isAllText && !isAllShape && !isAllDraw && !isAllImage && !isEditingRichText) {
-    return null;
-  }
 
   const currentSize = isTextMode ? richStats.size : ((getStyle(DefaultSizeStyle, 'm') as string) || richStats.size || 'm');
   const currentColor = isTextMode ? richStats.color : ((getStyle(DefaultColorStyle, 'black') as string) || richStats.color || 'black');
@@ -643,6 +692,8 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
       <UIPortal>
         <BubbleCollapsed
           activeTool={activeTool}
+          onSelectTool={onSelectTool}
+          lastActiveTool={lastActiveTool}
           isEditingRichText={isEditingRichText}
           isSelectTool={isSelectTool}
           isAllText={isAllText}
@@ -652,9 +703,10 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
           activeColorHex={activeColorHex}
           richStats={richStats}
           isDragging={isDragging}
+          hasMoved={hasMoved}
           position={position}
           handlePointerDown={handlePointerDown}
-          handleExpandCheck={handleExpandCheck}
+          handleExpand={handleExpand}
         />
       </UIPortal>
     );
@@ -669,6 +721,19 @@ export const Bubble = track(({ activeTool }: BubbleProps) => {
         onClick={handleSmartClick}
         data-is-ui="true"
       >
+        <BubbleToolbarSection
+          activeTool={activeTool}
+          onSelectTool={onSelectTool}
+          onUpload={onUpload}
+          onAddUrl={onAddUrl}
+          hasMoved={hasMoved}
+          onCollapse={handleCollapse}
+        />
+
+        {(showTextSection || showShapeTypeSection || showStrokeSection || showFillSection) && (
+          <div className={styles.divider} />
+        )}
+
         {showTextSection && (
           <BubbleTextSection
             richStats={richStats}
