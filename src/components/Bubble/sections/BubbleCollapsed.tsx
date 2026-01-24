@@ -1,8 +1,7 @@
+import { useRef } from 'react';
 import clsx from 'clsx';
-import { Shapes } from 'lucide-react';
+import { Shapes, MousePointer2, Pencil, Eraser, Type, ImagePlus } from 'lucide-react';
 import styles from '../Bubble.module.css';
-import { ScribbleIcon } from '../icons';
-import { sizeMap, fontFamilies } from '../utils';
 
 interface RichStats {
   bold: boolean;
@@ -17,6 +16,8 @@ interface RichStats {
 
 interface BubbleCollapsedProps {
   activeTool: string;
+  onSelectTool: (tool: string) => void;
+  lastActiveTool: string;
   isEditingRichText: boolean;
   isSelectTool: boolean;
   isAllText: boolean;
@@ -28,30 +29,55 @@ interface BubbleCollapsedProps {
   isDragging: boolean;
   position: { x: number; y: number };
   handlePointerDown: (e: React.PointerEvent) => void;
-  handleExpandCheck: () => void;
+  handleExpand: () => void;
 }
 
 /**
  * Collapsed view of the Bubble component.
- * Shows a visual indicator based on the active tool.
+ * Shows only the active tool icon.
  */
 export const BubbleCollapsed = ({
   activeTool,
-  isEditingRichText,
-  isSelectTool,
-  isAllText,
-  isAllShape,
-  currentFont,
-  currentSize,
-  activeColorHex,
-  richStats,
+  onSelectTool,
+  lastActiveTool,
   isDragging,
   position,
   handlePointerDown,
-  handleExpandCheck,
+  handleExpand,
 }: BubbleCollapsedProps) => {
-  const isTextMode = activeTool === 'text' || isEditingRichText || (isSelectTool && isAllText);
-  const isShapeMode = activeTool === 'geo' || activeTool === 'arrow' || activeTool === 'line' || activeTool === 'shapes' || (isSelectTool && isAllShape);
+  const lastClickTime = useRef(0);
+
+  const handleClick = () => {
+    const now = Date.now();
+    if (now - lastClickTime.current < 300) {
+      // Double Click -> Expand
+      handleExpand();
+    } else {
+      // Single Click -> Toggle Eraser
+      if (activeTool === 'eraser') {
+        onSelectTool(lastActiveTool || 'draw');
+      } else {
+        onSelectTool('eraser');
+      }
+    }
+    lastClickTime.current = now;
+  };
+
+  const renderIcon = () => {
+    switch (activeTool) {
+      case 'select': return <MousePointer2 size={24} />;
+      case 'draw': return <Pencil size={24} />;
+      case 'eraser': return <Eraser size={24} />;
+      case 'text': return <Type size={24} />;
+      case 'shapes':
+      case 'geo':
+      case 'arrow':
+      case 'line':
+        return <Shapes size={24} />;
+      case 'image': return <ImagePlus size={24} />;
+      default: return <Pencil size={24} />;
+    }
+  };
 
   return (
     <div
@@ -60,32 +86,16 @@ export const BubbleCollapsed = ({
         left: position.x,
         top: position.y,
         backgroundColor: 'var(--glass-bg)',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}
       onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e); }}
-      onClick={handleExpandCheck}
+      onClick={handleClick}
       data-is-ui="true"
     >
-      {isTextMode ? (
-        <div style={{
-          fontFamily: fontFamilies[currentFont] || fontFamilies.sans,
-          color: activeColorHex,
-          fontSize: '24px',
-          fontWeight: richStats.bold ? 'bold' : 'normal',
-          fontStyle: richStats.italic ? 'italic' : 'normal',
-          textDecoration: [
-            richStats.underline ? 'underline' : '',
-            richStats.strike ? 'line-through' : ''
-          ].filter(Boolean).join(' ') || 'none',
-          pointerEvents: 'none'
-        }}>
-          A
-        </div>
-      ) : isShapeMode ? (
-        <Shapes size={24} />
-      ) : (
-        <ScribbleIcon strokeWidth={sizeMap[currentSize] || 2.5} color={activeColorHex} />
-      )}
+      {renderIcon()}
     </div>
   );
 };

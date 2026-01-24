@@ -212,7 +212,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       }));
 
       if (remoteMetaFile) {
-        // @ts-ignore
+        // @ts-expect-error - GAPI types are incomplete for media downloads
         const remoteContentResponse = await gapi.client.drive.files.get({
           fileId: remoteMetaFile.id,
           alt: 'media'
@@ -378,7 +378,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             const driveFile = await googleDrive.findFileByName(`page-${pageId}.tldr`, rootId!) || await googleDrive.findFileByName(`${pageId}.json`, rootId!);
 
             if (driveFile) {
-              // @ts-ignore
+              // @ts-expect-error - GAPI types are incomplete for media downloads
               const contentResponse = await gapi.client.drive.files.get({ fileId: driveFile.id, alt: 'media' });
               const content = typeof contentResponse.body === 'string' ? contentResponse.body : JSON.stringify(contentResponse.result);
               await opfs.saveFile(`page-${pageId}.tldr`, content);

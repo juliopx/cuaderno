@@ -28,6 +28,7 @@ interface UserPreferencesState {
   shapeFillOpacity: string;
 
   lastUsedGeo: string;
+  lastActiveTool: string;
 
   // Actions
   updatePreferences: (prefs: Partial<UserPreferencesState>) => void;
@@ -60,6 +61,7 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       shapeFillOpacity: '0.1',
 
       lastUsedGeo: 'rectangle',
+      lastActiveTool: 'draw',
 
       updatePreferences: (prefs) => set((state) => ({ ...state, ...prefs })),
     }),

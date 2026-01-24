@@ -296,6 +296,13 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     };
   }, [editor, t, colorsMap, userPrefs]);
 
+  // Track last active tool (excluding eraser)
+  useEffect(() => {
+    if (activeTool !== 'eraser') {
+      userPrefs.updatePreferences({ lastActiveTool: activeTool });
+    }
+  }, [activeTool, userPrefs]);
+
   // Proactive sync when switching tools
   useEffect(() => {
     if (activeTool === 'text') {
@@ -436,11 +443,12 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
   const height = isCollapsed ? 48 : (hasContent ? contentHeight + 89 : 64);
   const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: initialX, y: 100 }, width, height);
 
-  // Smart double click handler
+  // Smart double click handler for collapsing
   const lastClickTime = useRef(0);
   const handleSmartClick = (e: React.MouseEvent) => {
     if (hasMoved.current) return;
     const now = Date.now();
+    // Logic for double-click ONLY to collapse
     if (now - lastClickTime.current < 300) {
       setRelativeClickPoint({
         x: e.clientX - position.x,
@@ -454,13 +462,11 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     lastClickTime.current = now;
   };
 
-  const handleExpandCheck = () => {
-    if (!hasMoved.current) {
-      const newX = (position.x + 24) - relativeClickPoint.x;
-      const newY = (position.y + 24) - relativeClickPoint.y;
-      setPosition({ x: newX, y: newY });
-      setIsCollapsed(false);
-    }
+  const handleExpand = () => {
+    const newX = (position.x + 24) - (relativeClickPoint.x || 24);
+    const newY = (position.y + 24) - (relativeClickPoint.y || 24);
+    setPosition({ x: newX, y: newY });
+    setIsCollapsed(false);
   };
 
   const colors = Object.keys(colorsMap);
@@ -673,6 +679,8 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
       <UIPortal>
         <BubbleCollapsed
           activeTool={activeTool}
+          onSelectTool={onSelectTool}
+          lastActiveTool={userPrefs.lastActiveTool}
           isEditingRichText={isEditingRichText}
           isSelectTool={isSelectTool}
           isAllText={isAllText}
@@ -684,7 +692,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
           isDragging={isDragging}
           position={position}
           handlePointerDown={handlePointerDown}
-          handleExpandCheck={handleExpandCheck}
+          handleExpand={handleExpand}
         />
       </UIPortal>
     );
