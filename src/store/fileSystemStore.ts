@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { opfs } from '../lib/opfs';
 import { useSyncStore } from './syncStore';
 import { diskLog, syncLog } from '../lib/debugLog';
+import i18n from '../i18n';
 
 const METADATA_FILE = 'metadata.json';
 
@@ -674,6 +675,58 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       } catch (e) {
         console.error("Failed to parse metadata", e);
       }
+    } else {
+      // First time launch (or data cleared) - Create Default Content
+      console.log('✨ [FileSystem] First launch detected. Creating default content.');
+
+      const welcomeNotebookId = uuidv4();
+      const welcomePageId = uuidv4();
+
+      const defaultNotebook: Notebook = {
+        id: welcomeNotebookId,
+        name: i18n.t('untitled_notebook'), // Localized: e.g. "Cuaderno sin título"
+        color: 'blue',
+        createdAt: Date.now(),
+        order: 10000,
+        version: 1,
+        dirty: false, // Start clean so it doesn't auto-sync unless modified
+        isPlaceholder: true,
+        lastModifier: clientId
+      };
+
+      const defaultPage: Page = {
+        id: welcomePageId,
+        notebookId: welcomeNotebookId,
+        parentId: welcomeNotebookId,
+        name: i18n.t('untitled_page'), // Localized: e.g. "Nueva página"
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        order: 10000,
+        version: 1,
+        dirty: false, // Start clean
+        isPlaceholder: true,
+        lastModifier: clientId
+      };
+
+      // Need to create the actual file content for the page too (empty or welcome text)
+      // For now, empty canvas is fine, or we could seed it.
+      // Let's ensure the file exists so it doesn't error on load.
+      await opfs.saveFile(`page-${welcomePageId}.tldr`, JSON.stringify({}));
+
+      set({
+        notebooks: [defaultNotebook],
+        folders: {},
+        pages: { [welcomePageId]: defaultPage },
+        deletedItemIds: [],
+        activeNotebookId: welcomeNotebookId,
+        activePageId: null, // Select only the notebook root, not the page
+        activePath: [], // activePath should be empty; activeNotebookId defines the root context
+        activeStateUpdatedAt: Date.now(),
+        activeStateModifier: clientId
+      });
+
+      // Save immediately to persist this state
+      get().save();
     }
   },
 
@@ -694,14 +747,32 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const remoteActiveUpdatedAt = remoteData.activeStateUpdatedAt || 0;
       const shouldUpdateActiveState = remoteActiveUpdatedAt > state.activeStateUpdatedAt;
 
+      const newNotebooks = (remoteData.notebooks || []).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+      const newPages = remoteData.pages;
+
+      let nextActiveNotebookId = shouldUpdateActiveState ? remoteData.activeNotebookId : state.activeNotebookId;
+      let nextActivePageId = shouldUpdateActiveState ? remoteData.activePageId : state.activePageId;
+      let nextActivePath = shouldUpdateActiveState ? (remoteData.activePath || []) : state.activePath;
+
+      // Validate Active State: If the active item was deleted in this merge, reset it.
+      if (nextActiveNotebookId && !newNotebooks.find((n: any) => n.id === nextActiveNotebookId)) {
+        console.warn(`[FileSystem] Active notebook ${nextActiveNotebookId} no longer exists. Resetting.`);
+        nextActiveNotebookId = null;
+        nextActivePageId = null;
+        nextActivePath = [];
+      } else if (nextActivePageId && !newPages[nextActivePageId]) {
+        console.warn(`[FileSystem] Active page ${nextActivePageId} no longer exists. Deselecting.`);
+        nextActivePageId = null;
+      }
+
       return {
-        notebooks: (remoteData.notebooks || []).sort((a: any, b: any) => (a.order || 0) - (b.order || 0)),
+        notebooks: newNotebooks,
         folders: remoteData.folders,
-        pages: remoteData.pages,
+        pages: newPages,
         deletedItemIds,
-        activeNotebookId: shouldUpdateActiveState ? remoteData.activeNotebookId : state.activeNotebookId,
-        activePageId: shouldUpdateActiveState ? remoteData.activePageId : state.activePageId,
-        activePath: shouldUpdateActiveState ? (remoteData.activePath || []) : state.activePath,
+        activeNotebookId: nextActiveNotebookId,
+        activePageId: nextActivePageId,
+        activePath: nextActivePath,
         activeStateUpdatedAt: Math.max(state.activeStateUpdatedAt, remoteActiveUpdatedAt),
         activeStateModifier: shouldUpdateActiveState ? (remoteData.activeStateModifier || '') : state.activeStateModifier
       };

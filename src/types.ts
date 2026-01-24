@@ -8,6 +8,7 @@ export interface Notebook {
   order: number;
   version: number;
   dirty?: boolean; // True if has local changes not yet synced
+  isPlaceholder?: boolean; // True if created as default onboarding content
   lastModifier: string;
   driveFileId?: string;
 }
@@ -23,6 +24,7 @@ export interface Folder {
   order: number;
   version: number;
   dirty?: boolean; // True if has local changes not yet synced
+  isPlaceholder?: boolean;
   lastModifier: string;
   driveFileId?: string;
 }
@@ -40,6 +42,7 @@ export interface Page {
   order: number;
   version: number;
   dirty?: boolean; // True if has local changes not yet synced
+  isPlaceholder?: boolean;
   lastModifier: string;
   driveFileId?: string;
 }

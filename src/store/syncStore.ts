@@ -13,6 +13,7 @@ interface SyncState {
   lastSync: number | null;
   isEnabled: boolean;
   isConfigured: boolean; // Has authorized Google Drive
+  isClientReady: boolean; // Is GAPI client loaded?
   error: string | null;
   rootFolderId: string | null;
   conflicts: any | null; // Stores { localData, remoteData }
@@ -41,6 +42,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   lastSync: null,
   isEnabled: localStorage.getItem('cuaderno-sync-enabled') === 'true',
   isConfigured: !!localStorage.getItem('cuaderno-drive-token'),
+  isClientReady: false,
   error: null,
   rootFolderId: localStorage.getItem('cuaderno-drive-root-id'),
   conflicts: null,
@@ -52,6 +54,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   setIsEnabled: (isEnabled: boolean) => {
     localStorage.setItem('cuaderno-sync-enabled', String(isEnabled));
     set({ isEnabled });
+    if (isEnabled) {
+      get().sync();
+    }
   },
   setIsConfigured: (isConfigured: boolean) => set({ isConfigured }),
   setError: (error: string | null) => set({ error }),
@@ -87,6 +92,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       if (storedToken) {
         await get().setupConnection(storedToken, true);
       }
+      set({ isClientReady: true });
     });
   },
 
@@ -108,9 +114,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       set({ user });
 
       if (!silent) toast.success('Connected to Google Drive');
-      // Trigger initial sync if enabled
-      if (get().isEnabled) {
-        get().sync();
+      // Trigger initial sync if enabled OR if this is a manual login (not silent restoration)
+      if (get().isEnabled || !silent) {
+        // Ensure client is ready before syncing
+        set({ isClientReady: true });
+        get().sync(!silent); // manual=true if it was a real login
       }
     } catch (e) {
       console.error('Failed to restore session or fetch user info', e);
@@ -131,8 +139,24 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   },
 
   sync: async (manual = false) => {
-    const state = get();
+    let state = get();
+
+    // Auto-wait for client readiness if manual
+    if (manual && state.isConfigured && !state.isClientReady) {
+      console.log('⏳ [Sync] Waiting for Drive Client initialization...');
+      const start = Date.now();
+      while (!get().isClientReady) {
+        if (Date.now() - start > 10000) {
+          toast.error('Sync failed: Drive Client timeout.');
+          return;
+        }
+        await new Promise(r => setTimeout(r, 500));
+      }
+      state = get(); // Update state ref
+    }
+
     if (!state.isConfigured || state.status !== 'idle') return;
+    if (!state.isClientReady) return; // Silent return for auto-sync if not ready
 
     try {
       if (manual) {
@@ -187,12 +211,63 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         const remoteData = typeof remoteContentResponse.body === 'string' ? JSON.parse(remoteContentResponse.body) : (remoteContentResponse.result || remoteContentResponse.body);
 
         // 3. Conflict Detection & Granular Categorization
+        // 3. Conflict Detection & Granular Categorization
         const safePulls: { type: 'notebook' | 'folder' | 'page', id: string, version: number }[] = [];
         const safePushes: { type: 'notebook' | 'folder' | 'page', id: string }[] = [];
         const conflictsList: { type: 'notebook' | 'folder' | 'page', id: string, localVersion: number, remoteVersion: number }[] = [];
+        const localDeletions: { type: 'notebook' | 'folder' | 'page', id: string }[] = [];
+
+        const hasRemoteData = (remoteData.notebooks?.length > 0) || (Object.keys(remoteData.pages || {}).length > 0);
 
         // Helper to categorize items
         const checkItem = (type: 'notebook' | 'folder' | 'page', local: any, remote: any) => {
+          if (local.isPlaceholder) {
+            // Special handling for Placeholders: Only delete if strictly untouched
+            let keepPlaceholder = false;
+
+            // 1. If the item itself is modified, keep it (it's now user content)
+            if (local.dirty) {
+              keepPlaceholder = true;
+            }
+            // 2. If it's a container (Notebook/Folder), check if it contains user content
+            else if (type === 'notebook' || type === 'folder') {
+              const checkDescendants = (parentId: string): boolean => {
+                const childFolders = Object.values(localData.folders).filter((f: any) => f.parentId === parentId);
+                const childPages = Object.values(localData.pages).filter((p: any) => p.parentId === parentId);
+
+                for (const p of childPages) {
+                  if (p.dirty || !p.isPlaceholder) return true; // User created or modified page
+                }
+                for (const f of childFolders) {
+                  if (f.dirty || !f.isPlaceholder) return true; // User modified folder
+                  if (checkDescendants(f.id)) return true; // Recursive check
+                }
+                return false;
+              };
+
+              if (checkDescendants(local.id)) {
+                keepPlaceholder = true;
+                // Valid use case: User added a page to "Welcome" notebook, but didn't rename the notebook.
+                // The notebook is clean, but we MUST push it so the page has a parent.
+                // We force it to be dirty for this sync cycle.
+                local.dirty = true;
+              }
+            }
+
+            if (!keepPlaceholder && hasRemoteData) {
+              // If remote has data, we assume this is an existing user.
+              // Since our placeholder is untouched and contains nothing of value, delete it.
+              console.log(`🗑️ [Sync] Deleting local placeholder ${type} ${local.id} as remote has data.`);
+              localDeletions.push({ type, id: local.id });
+              return;
+            }
+
+            // If we descend here, we are keeping it. 
+            // If it was "Clean" but kept (e.g. because it's a new user and hasRemoteData is false),
+            // it will fall through.
+            // If it was "Dirty" (modified), it falls through to standard dirty check below.
+          }
+
           if (remote) {
             // Remote exists
             const isRemoteAhead = remote.version > local.version;
@@ -320,6 +395,23 @@ export const useSyncStore = create<SyncState>((set, get) => ({
           });
         }
 
+        // 5a. Process Local Placeholders Deletions (Conflict Avoidance)
+        if (localDeletions.length > 0) {
+          console.log(`🗑️ [Sync] Executing ${localDeletions.length} local placeholder deletions...`);
+          localDeletions.forEach(d => {
+            // Remove from localData immediately so it doesn't get merged/pushed later
+            if (d.type === 'notebook') {
+              localData.notebooks = localData.notebooks.filter((n: any) => n.id !== d.id);
+            } else if (d.type === 'folder') {
+              delete localData.folders[d.id];
+            } else if (d.type === 'page') {
+              delete localData.pages[d.id];
+            }
+            // Note: We don't add to deletedItemIds because we don't want to tell the server we deleted it 
+            // (it never existed there). We just vanish it locally.
+          });
+        }
+
         // 6. AUTO-EXECUTION: Process Safe Pushes
         // We only push if we are NOT in a critical metadata conflict that prevents saving the manifest.
         // But since we are merging, we can attempt to push the files for our safe items.
@@ -344,6 +436,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
                 // Update our local in-memory knowledge of what we just pushed, 
                 // so the final metadata merge reflects strictly verified state?
                 // Actually, we must update the `localData` object version so the final metadata push includes the new version.
+
+                // Clear placeholder flag (Promotion)
+                delete localData.pages[pageId].isPlaceholder;
                 localData.pages[pageId].version += 1;
                 localData.pages[pageId].dirty = false;
                 localData.pages[pageId].lastModifier = state.clientId;
@@ -354,11 +449,21 @@ export const useSyncStore = create<SyncState>((set, get) => ({
           // Apply version bumps to safe Notebooks/Folders for the metadata push
           safePushes.filter(i => i.type === 'notebook' && !conflictsList.find(c => c.id === i.id)).forEach(i => {
             const n = localData.notebooks.find((x: any) => x.id === i.id);
-            if (n) { n.version += 1; n.dirty = false; n.lastModifier = state.clientId; }
+            if (n) {
+              delete n.isPlaceholder; // Clear placeholder flag
+              n.version += 1;
+              n.dirty = false;
+              n.lastModifier = state.clientId;
+            }
           });
           safePushes.filter(i => i.type === 'folder' && !conflictsList.find(c => c.id === i.id)).forEach(i => {
             const f = localData.folders[i.id];
-            if (f) { f.version += 1; f.dirty = false; f.lastModifier = state.clientId; }
+            if (f) {
+              delete f.isPlaceholder; // Clear placeholder flag
+              f.version += 1;
+              f.dirty = false;
+              f.lastModifier = state.clientId;
+            }
           });
         }
 
