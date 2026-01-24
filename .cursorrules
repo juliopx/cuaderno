@@ -1,0 +1,13 @@
+# GitHub CLI Usage Rules
+
+All agents interacting with this repository MUST use the GitHub CLI (`gh`) for any tasks related to:
+- Reviewing Issues (`gh issue list`, `gh issue view`)
+- Managing Pull Requests (`gh pr list`, `gh pr view`, `gh pr checkout`, `gh pr create`)
+- Branch management linked to issues (`gh issue develop`)
+
+## Reference Workflows
+Specific step-by-step guides for common tasks can be found in:
+- [.agent/workflows/development-flow.md](file:///Users/johju/Documents/dev/cuaderno/.agent/workflows/development-flow.md)
+- [.agent/workflows/pr-creation.md](file:///Users/johju/Documents/dev/cuaderno/.agent/workflows/pr-creation.md)
+
+Always check these workflows before performing GitHub-related operations.
