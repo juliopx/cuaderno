@@ -187,7 +187,7 @@ export const Settings = () => {
                     onClick={handleLogout}
                     title={t('log_out')}
                   >
-                    <img src={user.photo} alt={user.name} className={styles.userPhoto} />
+                    <img src={user.photo} alt={user.name} className={styles.userPhoto} referrerPolicy="no-referrer" />
                     <div className={styles.userName}>{user.name}</div>
                     <div className={styles.logoutIconWrapper}>
                       <LogOut size={18} />

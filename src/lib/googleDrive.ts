@@ -33,12 +33,38 @@ export const googleDrive = {
 
       // @ts-ignore
       gapi.load('client', async () => {
+        try {
+          // @ts-ignore
+          await gapi.client.init({});
+          // Explicitly load Drive API v3
+          // @ts-ignore
+          await gapi.client.load('drive', 'v3');
+        } catch (e) {
+          console.warn('[GoogleDrive] Primary load failed, trying fallback details', e);
+        }
+
+        // Verify if API actually loaded (cleardot/network issues can sometimes yield false positives)
         // @ts-ignore
-        await gapi.client.init({
-          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-        });
-        gapiInited = true;
-        checkInited();
+        if (!gapi.client.drive) {
+          console.log('[GoogleDrive] Drive API missing after load. Attempting discovery fallback...');
+          try {
+            // @ts-ignore
+            await gapi.client.init({
+              discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+            });
+          } catch (e2) {
+            console.error('[GoogleDrive] Fallback discovery failed', e2);
+          }
+        }
+
+        // Final check before marking as ready
+        // @ts-ignore
+        if (gapi.client.drive) {
+          gapiInited = true;
+          checkInited();
+        } else {
+          console.error('[GoogleDrive] CRITICAL: Failed to load Google Drive API.');
+        }
       });
 
       // @ts-ignore
@@ -185,6 +211,10 @@ export const googleDrive = {
   },
 
   async findFileByName(name: string, parentId?: string) {
+    // @ts-ignore
+    if (!gapi.client.drive) {
+      throw new Error("Google Drive API not loaded");
+    }
     let q = `name='${name}' and trashed=false`;
     if (parentId) {
       q += ` and '${parentId}' in parents`;

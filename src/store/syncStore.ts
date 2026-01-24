@@ -13,6 +13,7 @@ interface SyncState {
   lastSync: number | null;
   isEnabled: boolean;
   isConfigured: boolean; // Has authorized Google Drive
+  isClientReady: boolean; // Is GAPI client loaded?
   error: string | null;
   rootFolderId: string | null;
   conflicts: any | null; // Stores { localData, remoteData }
@@ -41,6 +42,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   lastSync: null,
   isEnabled: localStorage.getItem('cuaderno-sync-enabled') === 'true',
   isConfigured: !!localStorage.getItem('cuaderno-drive-token'),
+  isClientReady: false,
   error: null,
   rootFolderId: localStorage.getItem('cuaderno-drive-root-id'),
   conflicts: null,
@@ -52,6 +54,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   setIsEnabled: (isEnabled: boolean) => {
     localStorage.setItem('cuaderno-sync-enabled', String(isEnabled));
     set({ isEnabled });
+    if (isEnabled) {
+      get().sync();
+    }
   },
   setIsConfigured: (isConfigured: boolean) => set({ isConfigured }),
   setError: (error: string | null) => set({ error }),
@@ -87,6 +92,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       if (storedToken) {
         await get().setupConnection(storedToken, true);
       }
+      set({ isClientReady: true });
     });
   },
 
@@ -108,9 +114,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       set({ user });
 
       if (!silent) toast.success('Connected to Google Drive');
-      // Trigger initial sync if enabled
-      if (get().isEnabled) {
-        get().sync();
+      // Trigger initial sync if enabled OR if this is a manual login (not silent restoration)
+      if (get().isEnabled || !silent) {
+        // Ensure client is ready before syncing
+        set({ isClientReady: true });
+        get().sync(!silent); // manual=true if it was a real login
       }
     } catch (e) {
       console.error('Failed to restore session or fetch user info', e);
@@ -131,8 +139,24 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   },
 
   sync: async (manual = false) => {
-    const state = get();
+    let state = get();
+
+    // Auto-wait for client readiness if manual
+    if (manual && state.isConfigured && !state.isClientReady) {
+      console.log('⏳ [Sync] Waiting for Drive Client initialization...');
+      const start = Date.now();
+      while (!get().isClientReady) {
+        if (Date.now() - start > 10000) {
+          toast.error('Sync failed: Drive Client timeout.');
+          return;
+        }
+        await new Promise(r => setTimeout(r, 500));
+      }
+      state = get(); // Update state ref
+    }
+
     if (!state.isConfigured || state.status !== 'idle') return;
+    if (!state.isClientReady) return; // Silent return for auto-sync if not ready
 
     try {
       if (manual) {
@@ -186,270 +210,379 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         });
         const remoteData = typeof remoteContentResponse.body === 'string' ? JSON.parse(remoteContentResponse.body) : (remoteContentResponse.result || remoteContentResponse.body);
 
-        // 3. Conflict Detection
-        let hasConflict = false;
-        let needsPull = false;
-        let needsPush = false;
+        // 3. Conflict Detection & Granular Categorization
+        // 3. Conflict Detection & Granular Categorization
+        const safePulls: { type: 'notebook' | 'folder' | 'page', id: string, version: number }[] = [];
+        const safePushes: { type: 'notebook' | 'folder' | 'page', id: string }[] = [];
+        const conflictsList: { type: 'notebook' | 'folder' | 'page', id: string, localVersion: number, remoteVersion: number }[] = [];
+        const localDeletions: { type: 'notebook' | 'folder' | 'page', id: string }[] = [];
 
-        const checkConflicts = (locals: any[], remotes: any[]) => {
-          for (const localItem of locals) {
-            const remoteItem = remotes.find((n: any) => n.id === localItem.id);
-            if (remoteItem) {
-              // Remote is ahead if version is greater (ignoring author to be robust against local state loss)
-              const isRemoteAhead = remoteItem.version > localItem.version;
+        const hasRemoteData = (remoteData.notebooks?.length > 0) || (Object.keys(remoteData.pages || {}).length > 0);
 
-              // Local is changed if dirty flag is true (this is now the reliable source)
-              const isLocalChanged = localItem.dirty;
+        // Helper to categorize items
+        const checkItem = (type: 'notebook' | 'folder' | 'page', local: any, remote: any) => {
+          if (local.isPlaceholder) {
+            // Special handling for Placeholders: Only delete if strictly untouched
+            let keepPlaceholder = false;
 
-              if (isRemoteAhead && isLocalChanged) {
-                // True conflict: Remote moved ahead AND we have unsaved local changes
-                hasConflict = true;
-              } else if (isRemoteAhead) {
-                // Remote moved ahead, we are clean -> Pull
-                needsPull = true;
-              } else if (isLocalChanged) {
-                // We changed, remote is same version (or older/same but we have dirty) -> Push
-                needsPush = true;
-              }
-            } else {
-              // Remote item missing but we have it?
-              // If we created it (dirty), then Push.
-              // If we are clean but it's gone remote, technically we should delete local or re-upload.
-              // For now, if dirty, we push (create remote).
-              if (localItem.dirty) {
-                needsPush = true;
+            // 1. If the item itself is modified, keep it (it's now user content)
+            if (local.dirty) {
+              keepPlaceholder = true;
+            }
+            // 2. If it's a container (Notebook/Folder), check if it contains user content
+            else if (type === 'notebook' || type === 'folder') {
+              const checkDescendants = (parentId: string): boolean => {
+                const childFolders = Object.values(localData.folders).filter((f: any) => f.parentId === parentId);
+                const childPages = Object.values(localData.pages).filter((p: any) => p.parentId === parentId);
+
+                for (const p of childPages) {
+                  const cp = p as any;
+                  if (cp.dirty || !cp.isPlaceholder) return true; // User created or modified page
+                }
+                for (const f of childFolders) {
+                  const cf = f as any;
+                  if (cf.dirty || !cf.isPlaceholder) return true; // User modified folder
+                  if (checkDescendants(cf.id)) return true; // Recursive check
+                }
+                return false;
+              };
+
+              if (checkDescendants(local.id)) {
+                keepPlaceholder = true;
+                // Valid use case: User added a page to "Welcome" notebook, but didn't rename the notebook.
+                // The notebook is clean, but we MUST push it so the page has a parent.
+                // We force it to be dirty for this sync cycle.
+                local.dirty = true;
               }
             }
+
+            if (!keepPlaceholder && hasRemoteData) {
+              // If remote has data, we assume this is an existing user.
+              // Since our placeholder is untouched and contains nothing of value, delete it.
+              console.log(`🗑️ [Sync] Deleting local placeholder ${type} ${local.id} as remote has data.`);
+              localDeletions.push({ type, id: local.id });
+              return;
+            }
+
+            // If we descend here, we are keeping it. 
+            // If it was "Clean" but kept (e.g. because it's a new user and hasRemoteData is false),
+            // it will fall through.
+            // If it was "Dirty" (modified), it falls through to standard dirty check below.
           }
-          if (remotes.some((r: any) => !locals.find(l => l.id === r.id))) {
-            needsPull = true;
+
+          if (remote) {
+            // Remote exists
+            const isRemoteAhead = remote.version > local.version;
+            const isLocalChanged = local.dirty;
+            const isDifferentModifier = remote.lastModifier !== state.clientId;
+
+            if (isRemoteAhead && isLocalChanged && isDifferentModifier) {
+              // True Conflict: Both changed independently
+              console.log(`⚔️ [Sync] Conflict detected for ${type} ${local.id}: Local v${local.version} (dirty) vs Remote v${remote.version}`);
+              conflictsList.push({ type, id: local.id, localVersion: local.version, remoteVersion: remote.version });
+            } else if (isRemoteAhead) {
+              // Remote moved ahead, we are clean
+              console.log(`⬇️ [Sync] Safe Pull for ${type} ${local.id}: Local v${local.version} -> Remote v${remote.version}`);
+              safePulls.push({ type, id: local.id, version: remote.version });
+            } else if (isLocalChanged) {
+              // We changed, remote is same version (or older)
+              console.log(`⬆️ [Sync] Safe Push for ${type} ${local.id}: Local v${local.version} (dirty) -> Remote v${remote.version}`);
+              safePushes.push({ type, id: local.id });
+            }
+          } else {
+            // Remote missing.
+            // If we have it and it's dirty, it's a NEW creation -> Push
+            if (local.dirty) {
+              safePushes.push({ type, id: local.id });
+            }
+            // If we have it and it's clean, but remote doesn't... it might have been deleted on remote?
+            // That's handled by 'deletedItemIds' usually. If not in deleted list, maybe we just haven't synced it yet?
+            // Or we deleted it? No, if we have it, we have it.
+            // If it's not in remote and not dirty, we probably just haven't pushed it, OR it was deleted remotely.
+            // Assuming deletions are tombstoned, if it's not tombstoned and missing remote, we push (re-create/sync).
+            else {
+              // Optional: Auto-healing? For now, ignore unless dirty.
+            }
           }
         };
 
-        checkConflicts(localData.notebooks, remoteData.notebooks);
-        checkConflicts(Object.values(localData.folders), Object.values(remoteData.folders));
-        checkConflicts(Object.values(localData.pages), Object.values(remoteData.pages));
+        // Check Items
+        localData.notebooks.forEach((n: any) => checkItem('notebook', n, remoteData.notebooks.find((rn: any) => rn.id === n.id)));
+        Object.values(localData.folders).forEach((f: any) => checkItem('folder', f, remoteData.folders[f.id]));
+        Object.values(localData.pages).forEach((p: any) => checkItem('page', p, remoteData.pages[p.id]));
 
-        // 4. Active State Sync (Last modifier wins)
-        const localActiveUpdatedAt = localData.activeStateUpdatedAt || 0;
-        const remoteActiveUpdatedAt = remoteData.activeStateUpdatedAt || 0;
+        // Check for Remote-Only items (New items created elsewhere)
+        // Notebooks
+        remoteData.notebooks.forEach((rn: any) => {
+          if (!localData.notebooks.find((n: any) => n.id === rn.id)) {
+            // Only pull if NOT deleted locally
+            if (!localData.deletedItemIds.includes(rn.id)) {
+              safePulls.push({ type: 'notebook', id: rn.id, version: rn.version });
+            }
+          }
+        });
+        // Folders
+        Object.values(remoteData.folders).forEach((rf: any) => {
+          if (!localData.folders[(rf as any).id]) {
+            if (!localData.deletedItemIds.includes((rf as any).id)) {
+              safePulls.push({ type: 'folder', id: (rf as any).id, version: (rf as any).version });
+            }
+          }
+        });
+        // Pages
+        Object.values(remoteData.pages).forEach((rp: any) => {
+          if (!localData.pages[(rp as any).id]) {
+            if (!localData.deletedItemIds.includes((rp as any).id)) {
+              safePulls.push({ type: 'page', id: (rp as any).id, version: (rp as any).version });
+            }
+          }
+        });
 
-        if (remoteActiveUpdatedAt > localActiveUpdatedAt) {
-          needsPull = true;
-          console.log(`  📍 Remote active state is newer (${new Date(remoteActiveUpdatedAt).toLocaleTimeString()}). Pulling.`);
-        } else if (localActiveUpdatedAt > remoteActiveUpdatedAt) {
-          needsPush = true;
-          console.log(`  📍 Local active state is newer (${new Date(localActiveUpdatedAt).toLocaleTimeString()}). Pushing.`);
+        // 4. Tombstones (Deletions)
+        const remoteTombstones = remoteData.deletedItemIds || [];
+        if (remoteTombstones.length > 0) {
+          // Apply deletions immediately to local memory state before merging
+          // This counts as a "Pull" action effectively
+          console.log('[Sync] Processing remote deletions:', remoteTombstones);
+          // (Merging logic in mergeRemoteData handles this partly, but we should respect it during categorizing if we wanted to be strict)
+          // For now, let's allow the merge step to handle it.
         }
 
-        // Log sync summary
-        console.log('\n📊 [Sync] Summary:');
-        console.log(`  Local: ${localData.notebooks.length} notebooks, ${Object.keys(localData.folders).length} folders, ${Object.keys(localData.pages).length} pages`);
-        console.log(`  Remote: ${remoteData.notebooks.length} notebooks, ${Object.keys(remoteData.folders).length} folders, ${Object.keys(remoteData.pages).length} pages`);
+        console.log('\n📊 [Sync] Granular Analysis:');
+        console.log(`  ⬇️ To Pull: ${safePulls.length} items`, safePulls.length > 0 ? JSON.stringify(safePulls) : '');
+        console.log(`  ⬆️ To Push: ${safePushes.length} items`, safePushes.length > 0 ? JSON.stringify(safePushes) : '');
+        console.log(`  ⚔️ Conflicts: ${conflictsList.length} items`, conflictsList.length > 0 ? JSON.stringify(conflictsList) : '');
 
-        // Count dirty items
-        const dirtyPages = Object.values(localData.pages).filter((p: any) => p.dirty);
-        const dirtyFolders = Object.values(localData.folders).filter((f: any) => f.dirty);
-        const dirtyNotebooks = localData.notebooks.filter((n: any) => n.dirty);
+        // 5. AUTO-EXECUTION: Process Safe Pulls
+        if (safePulls.length > 0) {
+          console.log('[Sync] Processing safe downloads...');
 
-        if (dirtyPages.length > 0 || dirtyFolders.length > 0 || dirtyNotebooks.length > 0) {
-          console.log(`  🔶 Dirty (pending sync): ${dirtyNotebooks.length} notebooks, ${dirtyFolders.length} folders, ${dirtyPages.length} pages`);
-        }
+          // Download content for Pages in the pull list
+          const pagesToPull = safePulls.filter(i => i.type === 'page');
+          for (const item of pagesToPull) {
+            const pageId = item.id;
 
-        console.log(`  Decision: needsPull=${needsPull}, needsPush=${needsPush}, hasConflict=${hasConflict}\n`);
+            // Safety check: ensure it wasn't flagged as conflict (logic above shouldn't allow this, but double check)
+            if (conflictsList.find(c => c.id === pageId)) continue;
 
-        if (hasConflict) {
-          set({ status: 'conflict', conflicts: { localData, remoteData } });
-          toast.error('Sync conflict detected');
-          return;
-        }
+            console.log(`[Sync] Downloading page ${pageId}...`);
+            const driveFile = await googleDrive.findFileByName(`page-${pageId}.tldr`, rootId!) || await googleDrive.findFileByName(`${pageId}.json`, rootId!);
 
-        if (needsPull && !needsPush) {
-          console.log('[Sync] Needs pull. Downloading content...');
-          // Clean Pull: Download specific pages if needed BEFORE merging metadata
-          // This ensures OPFS has the new content when the UI reloads due to version change.
-
-          for (const pageId in remoteData.pages) {
-            const page = remoteData.pages[pageId];
-            const localVersion = fsStore.pages[pageId]?.version || 0;
-
-            console.log(`[Sync] Checking page ${pageId}: Remote v${page.version} vs Local v${localVersion}`);
-
-            if (page.version > localVersion) {
-              console.log(`[Sync] Downloading page ${pageId}...`);
-              // Try the new filename format first, then fallback to old
-              const driveFile = await googleDrive.findFileByName(`page-${pageId}.tldr`, rootId!) || await googleDrive.findFileByName(`${pageId}.json`, rootId!);
-
-              if (driveFile) {
-                // @ts-ignore
-                const contentResponse = await gapi.client.drive.files.get({ fileId: driveFile.id, alt: 'media' });
-                const content = typeof contentResponse.body === 'string' ? contentResponse.body : JSON.stringify(contentResponse.result);
-                // Save locally as 'page-{pageId}.tldr' regardless of source extension, to match CanvasArea expectations
-                await opfs.saveFile(`page-${pageId}.tldr`, content);
-                console.log(`[Sync] Page ${pageId} saved to disk as page-${pageId}.tldr.`);
-              }
+            if (driveFile) {
+              // @ts-ignore
+              const contentResponse = await gapi.client.drive.files.get({ fileId: driveFile.id, alt: 'media' });
+              const content = typeof contentResponse.body === 'string' ? contentResponse.body : JSON.stringify(contentResponse.result);
+              await opfs.saveFile(`page-${pageId}.tldr`, content);
+              console.log(`[Sync] Page ${pageId} saved to disk.`);
             }
           }
 
-          // Update metadata (Zustand store) AFTER files are on disk.
-          // This triggers CanvasArea to reload the snapshot with the new version.
-          // 4. Handle Tombstones (Deletions)
-          // If we have deleted items locally, we shouldn't re-add them from remote if remote still has them (unless remote version > local tombstone logic... but for simple sync, local delete wins if remote isn't newer)
-          // Actually, 'needsPull' implies remote is newer/additive.
-          // But if we deleted it, we want that deletion to propagate to remote on NEXT push.
-          // However, if we are PULLING, it means remote changed. If remote has a NEW item, we take it.
-          // If remote DOESN'T have an item we have, we might delete it?
-          // No, conflict logic handles existence.
+          // Apply Metadata Changes to localData immediately for Safe Pulls
+          safePulls.forEach(p => {
+            // If it's a conflict, DO NOT overwrite local yet. Only safe ones.
+            if (conflictsList.find(c => c.id === p.id)) return;
 
-          // Implementation: If remote has 'deletedItemIds', applies them locally.
-          const remoteTombstones = remoteData.deletedItemIds || [];
-          if (remoteTombstones.length > 0) {
-            console.log('[Sync] Processing remote deletions:', remoteTombstones);
-            // Merging logic needs to respect these.
-            // Let's filter the remoteData before merging if it contains stuff that is marked deleted in remote
+            if (p.type === 'notebook') {
+              const r = remoteData.notebooks.find((x: any) => x.id === p.id);
+              const existingIdx = localData.notebooks.findIndex((x: any) => x.id === p.id);
+              if (existingIdx >= 0) localData.notebooks[existingIdx] = r;
+              else localData.notebooks.push(r);
+            } else if (p.type === 'folder') {
+              localData.folders[p.id] = remoteData.folders[p.id];
+            } else if (p.type === 'page') {
+              localData.pages[p.id] = remoteData.pages[p.id];
+            }
+          });
+        }
 
-            remoteData.notebooks = remoteData.notebooks.filter((n: any) => !remoteTombstones.includes(n.id));
+        // 5a. Process Local Placeholders Deletions (Conflict Avoidance)
+        if (localDeletions.length > 0) {
+          console.log(`🗑️ [Sync] Executing ${localDeletions.length} local placeholder deletions...`);
+          localDeletions.forEach(d => {
+            // Remove from localData immediately so it doesn't get merged/pushed later
+            if (d.type === 'notebook') {
+              localData.notebooks = localData.notebooks.filter((n: any) => n.id !== d.id);
+            } else if (d.type === 'folder') {
+              delete localData.folders[d.id];
+            } else if (d.type === 'page') {
+              delete localData.pages[d.id];
+            }
+            // Note: We don't add to deletedItemIds because we don't want to tell the server we deleted it 
+            // (it never existed there). We just vanish it locally.
+          });
+        }
 
-            // For object-based folders/pages
-            Object.keys(remoteData.folders).forEach(k => {
-              if (remoteTombstones.includes(k)) delete remoteData.folders[k];
-            });
-            Object.keys(remoteData.pages).forEach(k => {
-              if (remoteTombstones.includes(k)) delete remoteData.pages[k];
-            });
-          }
+        // 6. AUTO-EXECUTION: Process Safe Pushes
+        // We only push if we are NOT in a critical metadata conflict that prevents saving the manifest.
+        // But since we are merging, we can attempt to push the files for our safe items.
+        if (safePushes.length > 0) {
+          console.log('[Sync] Processing safe uploads...');
+          const pagesToPush = safePushes.filter(i => i.type === 'page');
 
-          console.log('[Sync] Updating local metadata and base versions...');
-          fsStore.mergeRemoteData(remoteData);
+          for (const item of pagesToPush) {
+            const pageId = item.id;
+            // Safety check
+            if (conflictsList.find(c => c.id === pageId)) continue;
 
-          // If we had local tombstones that are now satisfied (item gone from remote), we could clean them up?
-          // For now keep them to ensure propagation.
-
-
-          toast.info('Changes downloaded from cloud');
-        } else if (needsPush && !needsPull) {
-          // Clean Push
-          console.log('📤 [Sync] Pushing local changes...');
-
-          // Upload page contents for dirty pages
-          const pagesToUpload = Object.values(localData.pages).filter((p: any) => p.dirty);
-          console.log(`  Uploading ${pagesToUpload.length} dirty page(s)...`);
-
-          for (const pageId in localData.pages) {
             const page = localData.pages[pageId];
-            if (page.dirty) {
+            if (page && page.dirty) {
               console.log(`  📄 Uploading page "${page.name}" (${pageId})...`);
               const content = await opfs.loadFile(`page-${pageId}.tldr`);
               if (content) {
-                // Check for new filename first, fall back to old
                 const existing = await googleDrive.findFileByName(`page-${pageId}.tldr`, rootId!) || await googleDrive.findFileByName(`${pageId}.json`, rootId!);
+                if (existing) await googleDrive.updateFile(existing.id, content);
+                else await googleDrive.createFile(`page-${pageId}.tldr`, content, 'application/json', rootId!);
 
-                if (existing) {
-                  console.log(`[Sync] Updating existing file: ${existing.name} (${existing.id})`);
-                  await googleDrive.updateFile(existing.id, content);
-                } else {
-                  console.log(`[Sync] Creating new file: page-${pageId}.tldr`);
-                  await googleDrive.createFile(`page-${pageId}.tldr`, content, 'application/json', rootId!);
-                }
+                // Update our local in-memory knowledge of what we just pushed, 
+                // so the final metadata merge reflects strictly verified state?
+                // Actually, we must update the `localData` object version so the final metadata push includes the new version.
 
-                // Increment version and clear dirty AFTER successful upload
+                // Clear placeholder flag (Promotion)
+                delete localData.pages[pageId].isPlaceholder;
                 localData.pages[pageId].version += 1;
                 localData.pages[pageId].dirty = false;
                 localData.pages[pageId].lastModifier = state.clientId;
-                console.log(`✅ [Sync] Page ${pageId} synced - version: ${localData.pages[pageId].version}`);
-              } else {
-                console.warn(`[Sync] No local content found for page ${pageId} despite dirty flag.`);
               }
             }
           }
 
-          // Also process dirty notebooks and folders (version increment + clear dirty)
-          // Notebooks
-          localData.notebooks.forEach((n: any) => {
-            if (n.dirty) {
+          // Apply version bumps to safe Notebooks/Folders for the metadata push
+          safePushes.filter(i => i.type === 'notebook' && !conflictsList.find(c => c.id === i.id)).forEach(i => {
+            const n = localData.notebooks.find((x: any) => x.id === i.id);
+            if (n) {
+              delete n.isPlaceholder; // Clear placeholder flag
               n.version += 1;
               n.dirty = false;
               n.lastModifier = state.clientId;
-              console.log(`✅ [Sync] Notebook "${n.name}" synced - version: ${n.version}`);
             }
           });
-
-          // Folders
-          Object.values(localData.folders).forEach((f: any) => {
-            if (f.dirty) {
+          safePushes.filter(i => i.type === 'folder' && !conflictsList.find(c => c.id === i.id)).forEach(i => {
+            const f = localData.folders[i.id];
+            if (f) {
+              delete f.isPlaceholder; // Clear placeholder flag
               f.version += 1;
               f.dirty = false;
               f.lastModifier = state.clientId;
-              console.log(`✅ [Sync] Folder "${f.name}" synced - version: ${f.version}`);
+            }
+          });
+        }
+
+        // 7. Finalize Merge & Metadata Update
+        if (conflictsList.length === 0) {
+          // No true conflicts. We can safely merge metadata and push the final result.
+          console.log('[Sync] Merging metadata and finalizing sync...');
+
+          // Apply remote changes to localData (This mimics "Pulling" the metadata)
+          // If we downloaded files, we need the metadata to match.
+          // For items that were Pushed, localData already has the bump.
+          // For items that were Pulled, we must copy over the remote info.
+
+          safePulls.forEach(p => {
+            if (p.type === 'notebook') {
+              const r = remoteData.notebooks.find((x: any) => x.id === p.id);
+              const existingIdx = localData.notebooks.findIndex((x: any) => x.id === p.id);
+              if (existingIdx >= 0) localData.notebooks[existingIdx] = r;
+              else localData.notebooks.push(r);
+            } else if (p.type === 'folder') {
+              localData.folders[p.id] = remoteData.folders[p.id];
+            } else if (p.type === 'page') {
+              localData.pages[p.id] = remoteData.pages[p.id];
             }
           });
 
-          // Prepare clean data for upload (remove dirty property entirely from server copy)
-          const cleanData = JSON.parse(JSON.stringify(localData));
+          // Handle tombstones
+          if (remoteTombstones.length > 0) {
+            localData.notebooks = localData.notebooks.filter((n: any) => !remoteTombstones.includes(n.id));
+            remoteTombstones.forEach((kid: string) => {
+              delete localData.folders[kid];
+              delete localData.pages[kid];
+            });
 
-          // Strip dirty property from all items in cleanData
+            // CRITICAL FIX: Merge remote tombstones into our local deletedItemIds list
+            // to ensure we don't overwrite the server's history with just our local history.
+            // This guarantees that deletions propagate correctly to other clients.
+            console.log('[Sync] Debug - Merging Tombstones. Local:', localData.deletedItemIds?.length, 'Remote:', remoteTombstones.length);
+            localData.deletedItemIds = [...new Set([...(localData.deletedItemIds || []), ...remoteTombstones])];
+            console.log('[Sync] Debug - Merged Result:', localData.deletedItemIds.length);
+          } else {
+            // Debug log if we skip the merge
+            console.log('[Sync] Debug - No Remote Tombstones. Local Deletions:', localData.deletedItemIds?.length, localData.deletedItemIds);
+          }
+
+          // Now localData implies the "Merged State".
+          // If we pushed anything, we need to upload this new metadata to remote.
+          // If we only pulled, we technically don't need to push metadata, but it doesn't hurt to sync active state.
+
+          // Clean dirty flags again just in case (for the upload)
+          const cleanData = JSON.parse(JSON.stringify(localData));
           cleanData.notebooks.forEach((n: any) => delete n.dirty);
           Object.values(cleanData.folders).forEach((f: any) => delete f.dirty);
           Object.values(cleanData.pages).forEach((p: any) => delete p.dirty);
 
-          // 🛡️ SAFETY CHECK: Re-verify remote state before committing
-          // This prevents "lost updates" if another client synced while we were processing.
-          if (remoteMetaFile) {
-            const freshContentResponse = await (window as any).gapi.client.drive.files.get({
-              fileId: remoteMetaFile.id,
-              alt: 'media'
-            });
-            const freshRemoteData = typeof freshContentResponse.body === 'string'
-              ? JSON.parse(freshContentResponse.body)
-              : freshContentResponse.result;
+          // Active State Sync logic (Last modifier wins) - Only if no conflicts
+          const localActiveUpdatedAt = fsStore.activeStateUpdatedAt || 0;
+          const remoteActiveUpdatedAt = remoteData.activeStateUpdatedAt || 0;
 
-            // Check if any notebook version advanced on server
-            const hasRemoteChanged = freshRemoteData.notebooks?.some((n: any) => {
-              const original = remoteData.notebooks?.find((on: any) => on.id === n.id);
-              if (!original) {
-                console.warn(`[Safety Check] New notebook found on server: ${n.name}`);
-                return true;
-              }
-              if (n.version > original.version) {
-                console.warn(`[Safety Check] Notebook version mismatch: Server=${n.version}, Snapshot=${original.version}`);
-                return true;
-              }
-              return false;
-            }) || (freshRemoteData.notebooks?.length !== remoteData.notebooks?.length);
-
-            // Also check pages
-            const hasPagesChanged = Object.values(freshRemoteData.pages || {}).some((p: any) => {
-              const original = remoteData.pages?.[p.id];
-              if (!original) {
-                // New page on server?
-                // If we didn't see it in snapshot, it's a change.
-                return true;
-              }
-              if (p.version > original.version) {
-                console.warn(`[Safety Check] Page version mismatch '${p.name}': Server=${p.version}, Snapshot=${original.version}`);
-                return true;
-              }
-              return false;
-            });
-
-            if (hasRemoteChanged || hasPagesChanged) {
-              console.error('❌ Safety Check Failed: Remote state advanced during sync.');
-              throw new Error('Remote changes detected during sync. Please try again to resolve conflicts.');
-            }
+          if (localActiveUpdatedAt > remoteActiveUpdatedAt) {
+            cleanData.activeNotebookId = fsStore.activeNotebookId;
+            cleanData.activePageId = fsStore.activePageId;
+            cleanData.activePath = fsStore.activePath;
+            cleanData.activeStateUpdatedAt = fsStore.activeStateUpdatedAt;
+            cleanData.activeStateModifier = state.clientId;
+          } else {
+            // We accept remote active state (already in remoteData, will be merged into local FS store)
           }
 
-          // Update metadata on Drive with new versions (and NO dirty flags)
-          await googleDrive.updateFile(remoteMetaFile.id, JSON.stringify(cleanData));
+          // PUSH Metadata if we made changes OR if we just want to update active state OR if deletions occurred
+          const hasNewDeletions = (localData.deletedItemIds || []).length > (remoteData.deletedItemIds || []).length;
 
-          // Update local store with new versions and cleared dirty flags
+          if (safePushes.length > 0 || localActiveUpdatedAt > remoteActiveUpdatedAt || hasNewDeletions) {
+            await googleDrive.updateFile(remoteMetaFile.id, JSON.stringify(cleanData));
+            console.log('[Sync] Metadata updated on server.');
+          }
+
+          // Commit to Local Store
+          fsStore.mergeRemoteData(localData);
+          set({ lastSync: Date.now(), status: 'idle' });
+          if (manual) toast.success('Sync complete');
+
+        } else {
+          // 🛑 Conflicts Exist!
+          console.warn(`[Sync] ${conflictsList.length} conflicts remain. Entering conflict mode.`);
+
+          // We have already processed safe files and updated `localData` in memory with safe merges.
+          // We need to construct a "Smart Remote" data object that includes our safe local pushes 
+          // so that if user chooses "Keep Remote" for the conflicted item, they don't lose the safe pushes.
+
+          const smartRemoteData = JSON.parse(JSON.stringify(remoteData));
+
+          // Inject safe pushes into smartRemoteData
+          safePushes.forEach(p => {
+            if (conflictsList.find(c => c.id === p.id)) return;
+            if (p.type === 'notebook') {
+              const n = localData.notebooks.find((x: any) => x.id === p.id);
+              if (n) {
+                const cleanN = { ...n, dirty: false };
+                smartRemoteData.notebooks.push(cleanN);
+              }
+            } else if (p.type === 'folder') {
+              const f = localData.folders[p.id];
+              if (f) smartRemoteData.folders[p.id] = { ...f, dirty: false };
+            } else if (p.type === 'page') {
+              const pg = localData.pages[p.id];
+              if (pg) smartRemoteData.pages[p.id] = { ...pg, dirty: false };
+            }
+          });
+
+
+          console.log('Sets conflict state with partial merge.', { conflictsList });
+
+          // Commit partial merge to FileSystem so user sees safe updates immediately
+          console.log('[Sync] Committing partial merge to local store...');
           fsStore.mergeRemoteData(localData);
 
-          console.log(`✅ [Sync] Push complete - ${pagesToUpload.length} page(s) synced\n`);
-
-        } else if (needsPush && needsPull) {
-          set({ status: 'conflict', conflicts: { localData, remoteData } });
-          toast.warning('Changes on both sides. Manual resolution required.');
-          return;
+          set({ status: 'conflict', conflicts: { localData, remoteData: smartRemoteData } });
+          toast.warning('Conflicts detected. Please resolve manually.');
         }
       } else {
         console.log('📤 [Sync] Initial upload to empty Drive folder...');
@@ -493,10 +626,9 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         fsStore.mergeRemoteData(updatedLocalData);
 
         console.log('✅ [Sync] Initial upload complete');
+        set({ lastSync: Date.now(), status: 'idle' });
+        if (manual) toast.success('Sync complete');
       }
-
-      set({ lastSync: Date.now(), status: 'idle' });
-      if (manual) toast.success('Sync complete');
     } catch (err: any) {
       console.error(err);
 
