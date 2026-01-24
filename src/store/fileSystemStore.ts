@@ -588,6 +588,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
         updatedAt: Date.now(),
         lastModifier: clientId
       };
+
       return { pages };
     });
     get().save();
