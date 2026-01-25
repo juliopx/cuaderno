@@ -1,9 +1,9 @@
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useFileSystemStore } from '../../store/fileSystemStore';
 import type { Notebook, Folder, Page } from '../../types';
 import styles from './Sidebar.module.css';
-import { FolderPlus, FilePlus, BookPlus, Folder as FolderIcon, File, Book, ChevronRight, Trash2, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { FolderPlus, FilePlus, BookPlus, Folder as FolderIcon, File, Book, ChevronRight, Trash2, PanelLeftClose, PanelRightClose, MoreVertical, Copy, Download, Upload, Edit2 } from 'lucide-react';
 import clsx from 'clsx';
 import { RenameOverlayV2 } from './RenameOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -12,6 +12,8 @@ import { HybridName } from '../UI/HybridName';
 import { resolveItemColor, getThemeColorHex } from '../../lib/colorUtils';
 import { useThemeColorHex } from '../../hooks/useThemeColor';
 import { getIsDarkMode } from '../../lib/themeUtils';
+import { Dropdown } from '../UI/Dropdown';
+import { exportItem } from '../../utils/exportUtils';
 import {
   DndContext,
   pointerWithin,
@@ -42,6 +44,9 @@ interface SortableItemProps {
   onDoubleClick: (e: React.MouseEvent | React.PointerEvent) => void;
   onPointerDown?: (e: React.PointerEvent) => void;
   onDelete?: (id: string) => void;
+  onRename?: (item: any, rect: DOMRect) => void;
+  onDuplicate?: (item: Notebook | Folder | Page) => void;
+  onDownload?: (item: Notebook | Folder | Page) => void;
   styles: any;
   isRtl: boolean;
   folders: Record<string, Folder>;
@@ -51,7 +56,10 @@ interface SortableItemProps {
   isDraggingDisabled?: boolean;
 }
 
-const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, onDelete, styles, isRtl, folders, pages, notebooks, isDarkMode, isDraggingDisabled }: SortableItemProps) => {
+const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, onDelete, onRename, onDuplicate, onDownload, styles, isRtl, folders, pages, notebooks, isDarkMode, isDraggingDisabled }: SortableItemProps) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { t } = useTranslation();
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [dropZone, setDropZone] = useState<'top' | 'bottom' | null>(null);
 
   const {
@@ -107,7 +115,10 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        (wrapperRef as any).current = node;
+      }}
       style={{
         ...style,
         // Use HEX values directly
@@ -151,19 +162,40 @@ const SortableItem = ({ item, isActive, onSelect, onDoubleClick, onPointerDown, 
         isRtl={isRtl}
       />
       <div className={styles.itemActions}>
-        {onDelete && (
-          <button
-            type="button"
-            className={styles.deleteBtn}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              onDelete(item.id);
+        <div className={styles.menuWrapper}>
+          <Dropdown
+            className={styles.menuDropdown}
+            value=""
+            options={[
+              { value: 'rename', label: t('rename') },
+              { value: 'duplicate', label: t('duplicate') },
+              { value: 'download', label: t('download') },
+              { value: 'delete', label: t('delete') },
+            ]}
+            onChange={(val) => {
+              if (val === 'rename') {
+                const rect = wrapperRef.current?.getBoundingClientRect();
+                if (rect) onRename?.(item, rect);
+              }
+              if (val === 'duplicate') onDuplicate?.(item);
+              if (val === 'download') onDownload?.(item);
+              if (val === 'delete') onDelete?.(item.id);
             }}
-          >
-            <Trash2 size={14} />
-          </button>
-        )}
+            isOpen={isMenuOpen}
+            onToggle={() => setIsMenuOpen(!isMenuOpen)}
+            optionIcons={{
+              rename: <Edit2 size={14} />,
+              duplicate: <Copy size={14} />,
+              download: <Download size={14} />,
+              delete: <Trash2 size={14} />,
+            }}
+            menuWidth={140}
+            icon={<MoreVertical size={14} />}
+            showChevron={false}
+            showLabel={false}
+            triggerClassName={styles.menuTrigger}
+          />
+        </div>
         {(isNotebook || isFolder) && <ChevronRight size={14} style={{ opacity: 0.5 }} />}
       </div>
     </div>
@@ -183,20 +215,28 @@ interface ColumnProps {
   onRename: (id: string, name: string, strokes?: string, color?: string) => void;
   onRenameStart: (item: any, rect: DOMRect, pointerType: string) => void;
   onDelete?: (id: string) => void;
+  onDuplicate?: (item: Notebook | Folder | Page) => void;
+  onDownload?: (item: Notebook | Folder | Page) => void;
+  onUpload?: (files: FileList) => void;
   type: 'notebook' | 'content';
   folders: Record<string, Folder>;
   pages: Record<string, Page>;
   notebooks: Notebook[];
   isDarkMode: boolean;
   isDraggingDisabled?: boolean;
+  setUploadAccept: (accept: string) => void;
+  setCurrentOnUpload: (handler: (files: FileList) => void) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 
-const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRenameStart, onDelete, type, folders, pages, notebooks, isDarkMode, isDraggingDisabled }: ColumnProps) => {
+const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRenameStart, onDelete, onDuplicate, onDownload, onUpload, type, folders, pages, notebooks, isDarkMode, isDraggingDisabled, setUploadAccept, setCurrentOnUpload, fileInputRef }: ColumnProps) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl';
 
   const [pointerType, setPointerType] = useState<string>('mouse');
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
 
   // Use Droppable for the column itself (for dropping into empty space)
   const { setNodeRef, isOver } = useDroppable({
@@ -204,13 +244,62 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
     data: { type: 'container', containerId: id }
   });
 
+  const headerMenuOptions = [
+    { value: 'download_all', label: t('download') }
+  ];
+
+  const handleHeaderMenuChange = (val: string) => {
+    if (val === 'download_all') {
+      // Placeholder or logic for downloading all column items
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
-      className={clsx(styles.column, isOver && styles.columnOver)}
-      style={{ backgroundColor: isOver ? 'var(--color-surface-hover)' : undefined }}
+      className={clsx(styles.column, isOver && styles.columnOver, isDraggingFile && styles.columnOver)}
+      style={{ backgroundColor: (isOver || isDraggingFile) ? 'var(--color-surface-hover)' : undefined }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.types.includes('Files')) {
+          setIsDraggingFile(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingFile(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingFile(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          onUpload?.(e.dataTransfer.files);
+        }
+      }}
     >
-      {title && <div className={styles.header}>{title}</div>}
+      {title && (
+        <div className={styles.header}>
+          <span>{title}</span>
+          <div className={styles.headerActions}>
+            <Dropdown
+              className={styles.menuDropdown}
+              value=""
+              options={headerMenuOptions}
+              onChange={handleHeaderMenuChange}
+              isOpen={isHeaderMenuOpen}
+              onToggle={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+              icon={<MoreVertical size={14} />}
+              showChevron={false}
+              showLabel={false}
+              triggerClassName={styles.menuTrigger}
+              menuWidth={140}
+            />
+          </div>
+        </div>
+      )}
 
       <div className={styles.list}>
         <SortableContext
@@ -233,6 +322,9 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                   onRenameStart(item, rect, pointerType);
                 }}
                 onDelete={onDelete}
+                onRename={(item: any, rect: DOMRect) => onRenameStart(item, rect, pointerType)}
+                onDuplicate={onDuplicate}
+                onDownload={onDownload}
                 styles={styles}
                 isRtl={isRtl}
                 folders={folders}
@@ -250,10 +342,23 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
 
       <div className={styles.toolbar}>
         {type === 'notebook' && (
-          <button className={styles.toolbarButton} onClick={onAddNotebook} title={t('new_notebook')}>
-            <BookPlus size={16} />
-            <span>{t('new_notebook')}</span>
-          </button>
+          <>
+            <button className={styles.toolbarButton} onClick={onAddNotebook} title={t('new_notebook')}>
+              <BookPlus size={16} />
+              <span>{t('new_notebook')}</span>
+            </button>
+            <button
+              className={clsx(styles.toolbarButton, styles.uploadButtonSmall)}
+              onClick={() => {
+                setUploadAccept('.cua');
+                if (onUpload) setCurrentOnUpload(onUpload);
+                setTimeout(() => fileInputRef.current?.click(), 0);
+              }}
+              title={t('upload')}
+            >
+              <Upload size={16} />
+            </button>
+          </>
         )}
         {type === 'content' && (
           <>
@@ -269,6 +374,17 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 <span>{t('new_page')}</span>
               </button>
             )}
+            <button
+              className={clsx(styles.toolbarButton, styles.uploadButtonSmall)}
+              onClick={() => {
+                setUploadAccept('.cua,.pag');
+                if (onUpload) setCurrentOnUpload(onUpload);
+                setTimeout(() => fileInputRef.current?.click(), 0);
+              }}
+              title={t('upload')}
+            >
+              <Upload size={16} />
+            </button>
           </>
         )}
       </div>
@@ -297,6 +413,8 @@ export const Sidebar = () => {
     notebooks, folders, pages, activePath, activeNotebookId, activePageId,
     createNotebook, createFolder, createPage,
     deleteNotebook, deleteFolder, deletePage,
+    duplicateNotebook, duplicateFolder, duplicatePage,
+    importNotebook, importFolder, importPage,
     setActiveNotebook, selectPage, isSidebarOpen, toggleSidebar, renameNode,
     reorderNotebooks, moveNode, dominantHand, navigatePath
   } = useFileSystemStore();
@@ -335,6 +453,9 @@ export const Sidebar = () => {
   const leftHandedMode = dominantHand === 'left';
 
   const [activeDragItem, setActiveDragItem] = useState<Notebook | Folder | Page | null>(null);
+  const [uploadAccept, setUploadAccept] = useState('.cua,.pag');
+  const [currentOnUpload, setCurrentOnUpload] = useState<((files: FileList) => void) | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete confirmation state
   const [pendingDelete, setPendingDelete] = useState<{
@@ -665,12 +786,94 @@ export const Sidebar = () => {
             onAddFolder={col.onAddFolder}
             onAddPage={col.onAddPage}
             onAddNotebook={col.onAddNotebook}
+            setUploadAccept={setUploadAccept}
+            setCurrentOnUpload={setCurrentOnUpload}
+            fileInputRef={fileInputRef}
             onRenameStart={(item, rect, pointerType) => {
               console.log(`[Sidebar] onRenameStart id=${item.id} type=${pointerType}`);
               setEditingItem({ item, rect, pointerType });
             }}
             onRename={renameNode}
             onDelete={col.onDelete}
+            onDuplicate={(item) => {
+              if (!('notebookId' in item)) duplicateNotebook(item.id);
+              else if (!('updatedAt' in item)) duplicateFolder(item.id);
+              else duplicatePage(item.id);
+            }}
+            onDownload={(item) => {
+              let type: 'notebook' | 'folder' | 'page' = 'notebook';
+              if ('notebookId' in item) {
+                if ('updatedAt' in item) type = 'page';
+                else type = 'folder';
+              }
+              exportItem(item, folders, pages, type);
+            }}
+            onUpload={async (files) => {
+              for (const file of Array.from(files)) {
+                // Extension check
+                const isCua = file.name.endsWith('.cua');
+                // const isPag = file.name.endsWith('.pag'); // Removed as unused
+
+                if (col.type === 'notebook' && !isCua) {
+                  // Notebooks column only accepts .cua
+                  continue;
+                }
+
+                try {
+                  const stream = file.stream()
+                    .pipeThrough(new DecompressionStream('gzip'))
+                    .pipeThrough(new TextDecoderStream());
+
+                  const reader = stream.getReader();
+                  let result = '';
+                  while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    result += value;
+                  }
+
+                  const data = JSON.parse(result);
+                  if (col.type === 'notebook') {
+                    if (data.type === 'notebook') {
+                      importNotebook(data);
+                    } else if (data.type === 'folder') {
+                      // Import folder as a new notebook
+                      importNotebook({
+                        notebook: {
+                          name: data.folder.name,
+                          nameStrokes: data.folder.nameStrokes,
+                          color: data.folder.color
+                        },
+                        folders: [data.folder, ...(data.folders || [])],
+                        pages: data.pages
+                      });
+                    }
+                  } else {
+                    // Col is content, parent is col.id
+                    const notebookId = activeNotebookId!;
+                    if (data.type === 'notebook') {
+                      // Import notebook as a folder in the current notebook
+                      importFolder({
+                        folder: {
+                          name: data.notebook?.name ?? '',
+                          id: data.notebook?.id,
+                          nameStrokes: data.notebook?.nameStrokes,
+                          color: data.notebook?.color
+                        },
+                        folders: data.folders,
+                        pages: data.pages
+                      }, col.id, notebookId);
+                    } else if (data.type === 'folder') {
+                      importFolder(data, col.id, notebookId);
+                    } else if (data.type === 'page') {
+                      importPage(data, col.id, notebookId);
+                    }
+                  }
+                } catch (err) {
+                  console.error('Failed to parse upload file', err);
+                }
+              }
+            }}
             type={col.type}
             isDraggingDisabled={isDraggingDisabled}
           />
@@ -756,6 +959,17 @@ export const Sidebar = () => {
         }}
 
         onCancel={() => setPendingDelete(null)}
+      />
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        accept={uploadAccept}
+        onChange={(e) => {
+          if (e.target.files && currentOnUpload) currentOnUpload(e.target.files);
+          e.target.value = '';
+        }}
       />
 
     </DndContext >

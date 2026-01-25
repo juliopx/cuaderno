@@ -40,7 +40,7 @@
 
 .icon {
   display: flex;
-  color: hsl(var(--color-text-secondary));
+  color: inherit;
 }
 
 .chevron {
@@ -126,4 +126,9 @@
   display: flex;
   align-items: center;
   color: hsl(var(--color-text-secondary));
+}
+
+.portalMenu {
+  min-width: unset !important;
+  width: var(--dropdown-width) !important;
 }
