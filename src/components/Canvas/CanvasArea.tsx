@@ -116,7 +116,9 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
 
   const handleSelectTool = useCallback((tool: string) => {
     setManualTool(tool);
-    userPrefs.updatePreferences({ lastActiveTool: tool }); // Persist selection
+    if (tool !== 'eraser') {
+      userPrefs.updatePreferences({ lastActiveTool: tool }); // Persist selection
+    }
 
     if (['draw', 'eraser'].includes(tool)) editor.selectNone();
     editor.setEditingShape(null);

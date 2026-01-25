@@ -1,3 +1,10 @@
+## [1.9.5] - 2026-01-25
+
+### Bug Fixes
+* Fix tool toggle functionality in collapsed bubble mode. (#109)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.9.4...v1.9.5
+
 ## [1.9.4] - 2026-01-25
 
 ### Bug Fixes
