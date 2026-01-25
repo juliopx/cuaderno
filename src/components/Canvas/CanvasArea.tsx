@@ -2,7 +2,8 @@ import {
   Tldraw,
   useEditor,
   track,
-  DefaultContextMenu
+  DefaultContextMenu,
+  GeoShapeGeoStyle
 } from 'tldraw'
 import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
@@ -35,7 +36,7 @@ import { useEraserOverride } from '../../hooks/useEraserOverride';
 import { useTouchPanning } from '../../hooks/useTouchPanning';
 import { useCanvasInteractions } from '../../hooks/useCanvasInteractions';
 import { useLongPressBlocker } from '../../hooks/useLongPressBlocker';
-import { useStyleMemory } from '../../hooks/useStyleMemory';
+
 import { useSidebarPanning } from '../../hooks/useSidebarPanning';
 import { useRecenter } from '../../hooks/useRecenter';
 
@@ -69,7 +70,12 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
   }, [editor, isDark]);
 
   // Use Extracted Hooks
-  const { lastGeoToolRef } = useStyleMemory(editor);
+  const lastGeoToolRef = useRef(userPrefs.lastUsedGeo || 'rectangle');
+
+  // Keep ref in sync with store (since hooks use it in callbacks)
+  useEffect(() => {
+    lastGeoToolRef.current = userPrefs.lastUsedGeo;
+  }, [userPrefs.lastUsedGeo]);
 
   usePageLoading(editor, pageId, pageVersion, lastModifier, clientId, userPrefs, sidebarColumns, leftHandedMode, isLoadingRef);
   usePagePersistence(editor, pageId, sidebarColumns, leftHandedMode, isLoadingRef);
@@ -116,7 +122,17 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
     editor.setEditingShape(null);
 
     if (tool === 'shapes') {
-      editor.setCurrentTool(lastGeoToolRef.current as any);
+      const lastGeo = lastGeoToolRef.current;
+      // If it's a standard geo shape (rectangle, oval, etc.), we select 'geo' tool and pre-seed the prop
+      const isStandardGeo = ['rectangle', 'oval', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star', 'rhombus', 'trapezoid', 'arrow-right', 'arrow-left', 'arrow-up', 'arrow-down', 'x', 'check'].includes(lastGeo);
+
+      if (isStandardGeo) {
+        editor.setCurrentTool('geo');
+        editor.setStyleForNextShapes(GeoShapeGeoStyle, lastGeo as any);
+      } else {
+        // Fallback for known custom tools or 'arrow'/'line'
+        editor.setCurrentTool(lastGeo === 'arrow' || lastGeo === 'line' ? lastGeo : 'geo');
+      }
     } else if (tool.startsWith('geo-')) {
       editor.setCurrentTool(tool);
     } else {
@@ -221,11 +237,15 @@ export const CanvasArea = () => {
             // Let's replicate the safe logic from handleSelectTool:
 
             if (savedTool === 'shapes') {
-              // We need to access the store state for lastUsedGeo too if we want to be perfect
-              // But handleSelectTool reads from a Ref which is local to CanvasInterface.
-              // HOWEVER, userPreferencesStore HAS lastUsedGeo!
-              const lastGeo = useUserPreferencesStore.getState().lastUsedGeo;
-              editor.setCurrentTool(lastGeo || 'rectangle');
+              const lastGeo = useUserPreferencesStore.getState().lastUsedGeo || 'rectangle';
+              const isStandardGeo = ['rectangle', 'oval', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star', 'rhombus', 'trapezoid', 'arrow-right', 'arrow-left', 'arrow-up', 'arrow-down', 'x', 'check'].includes(lastGeo);
+
+              if (isStandardGeo) {
+                editor.setCurrentTool('geo');
+                editor.setStyleForNextShapes(GeoShapeGeoStyle, lastGeo as any);
+              } else {
+                editor.setCurrentTool(lastGeo === 'arrow' || lastGeo === 'line' ? lastGeo : 'geo');
+              }
             } else {
               editor.setCurrentTool(savedTool);
             }
