@@ -49,7 +49,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
   const editor = useEditor();
   const isDarkMode = useIsDarkMode();
   const theme = getDefaultColorTheme({ isDarkMode });
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // const [isCollapsed, setIsCollapsed] = useState(false); // Removed in favor of store
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [relativeClickPoint, setRelativeClickPoint] = useState({ x: 0, y: 0 });
   const savedRange = useRef<Range | null>(null);
@@ -102,6 +102,8 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     drawColor, drawSize, drawOpacity, drawDash,
     shapeColor, shapeSize, shapeOpacity, shapeDash, shapeFill, shapeFillColor, shapeFillOpacity,
     lastActiveTool,
+    bubbleCollapsed,
+    bubblePosition,
     updatePreferences
   } = useUserPreferencesStore();
 
@@ -433,7 +435,6 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
 
   const { dominantHand } = useFileSystemStore();
   const leftHandedMode = dominantHand === 'left';
-  const initialX = leftHandedMode ? 100 : window.innerWidth / 2 - 170;
 
   // Visibility flags
   const isTextMode = isTextTool || isEditingRichText || (isSelectTool && isAllText);
@@ -443,13 +444,46 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
   const showFillSection = showShapeTypeSection;
 
   // Dimensions
-  const width = isCollapsed ? 48 : 340;
+  const width = bubbleCollapsed ? 48 : 340;
   const hasContent = showTextSection || showShapeTypeSection || showStrokeSection || showFillSection;
   const contentHeight = hasContent ? (activeTool === 'text' ? 240 : (activeTool === 'shapes' ? 300 : 170)) : 0;
   // If no content: padding-top(8) + toolbar(48) + padding-bottom(8) = 64
   // If content: padding-top(8) + toolbar(48) + gap(12) + divider(1) + gap(12) + content + padding-bottom(8) = 89 + content
-  const height = isCollapsed ? 48 : (hasContent ? contentHeight + 89 : 64);
-  const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds({ x: initialX, y: 100 }, width, height);
+  const height = bubbleCollapsed ? 48 : (hasContent ? contentHeight + 89 : 64);
+
+  const defaultX = leftHandedMode ? 100 : window.innerWidth / 2 - (width / 2);
+  const defaultY = window.innerHeight - height - 32;
+
+  const initialX = bubblePosition ? bubblePosition.x : defaultX;
+  const initialY = bubblePosition ? bubblePosition.y : defaultY;
+
+  const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds(
+    { x: initialX, y: initialY },
+    width,
+    height,
+    (pos) => updatePreferences({ bubblePosition: pos })
+  );
+
+  // Sync position with store updates (handles hydration and external changes)
+  useEffect(() => {
+    if (bubblePosition && !isDragging) {
+      const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
+
+      const clampedX = clamp(bubblePosition.x, 0, window.innerWidth - width);
+      const clampedY = clamp(bubblePosition.y, 0, window.innerHeight - height);
+
+      const dx = Math.abs(clampedX - position.x);
+      const dy = Math.abs(clampedY - position.y);
+
+      // Update if significant difference OR if claming changed the store value
+      if (dx > 1 || dy > 1) {
+        setPosition({ x: clampedX, y: clampedY });
+
+        // Optional: Update store if it was out of bounds? 
+        // Better to just keep local state valid.
+      }
+    }
+  }, [bubblePosition, position, setPosition, isDragging, width, height]);
 
   // Smart double click handler for collapsing
   const lastClickTime = useRef(0);
@@ -462,7 +496,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     const newX = e.clientX - 24;
     const newY = e.clientY - 24;
     setPosition({ x: newX, y: newY });
-    setIsCollapsed(true);
+    updatePreferences({ bubbleCollapsed: true, bubblePosition: { x: newX, y: newY } });
   };
 
   const handleSmartClick = (e: React.MouseEvent) => {
@@ -479,7 +513,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     const newX = (position.x + 24) - (relativeClickPoint.x || 24);
     const newY = (position.y + 24) - (relativeClickPoint.y || 24);
     setPosition({ x: newX, y: newY });
-    setIsCollapsed(false);
+    updatePreferences({ bubbleCollapsed: false, bubblePosition: { x: newX, y: newY } });
   };
 
   const colors = Object.keys(colorsMap);
@@ -687,7 +721,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     return currentGeo;
   })();
 
-  if (isCollapsed) {
+  if (bubbleCollapsed) {
     return (
       <UIPortal>
         <BubbleCollapsed

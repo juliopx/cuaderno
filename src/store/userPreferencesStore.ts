@@ -27,6 +27,10 @@ interface UserPreferencesState {
   shapeFillColor: string;
   shapeFillOpacity: string;
 
+  // UI State (Persisted locally only)
+  bubbleCollapsed: boolean;
+  bubblePosition: { x: number; y: number } | null;
+
   lastUsedGeo: string;
   lastActiveTool: string;
 
@@ -48,7 +52,7 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       textStrike: false,
 
       drawColor: 'black',
-      drawSize: 'm',
+      drawSize: 's', // Changed from 'm' to 's' (Very Small/Small)
       drawOpacity: '1',
       drawDash: 'solid',
 
@@ -60,8 +64,12 @@ export const useUserPreferencesStore = create<UserPreferencesState>()(
       shapeFillColor: 'black',
       shapeFillOpacity: '0.1',
 
+      // UI Defaults
+      bubbleCollapsed: false,
+      bubblePosition: null, // Will use default in component if null
+
       lastUsedGeo: 'rectangle',
-      lastActiveTool: 'draw',
+      lastActiveTool: 'draw', // Default to draw (Pencil)
 
       updatePreferences: (prefs) => set((state) => ({ ...state, ...prefs })),
     }),
