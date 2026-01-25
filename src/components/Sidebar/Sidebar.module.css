@@ -233,6 +233,16 @@
   color: hsl(var(--color-text-primary));
 }
 
+.uploadButtonSmall {
+  flex: none !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  justify-content: center;
+  align-items: center;
+}
+
 .nameContainer {
   flex: 1;
   min-width: 0;

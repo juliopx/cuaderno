@@ -446,7 +446,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
     const newNotebook: Notebook = {
       ...notebook,
       id: newNotebookId,
-      name: `${notebook.name} (${i18n.t('copy')})`,
+      name: notebook.name,
       createdAt: Date.now(),
       order: maxOrder + 10000,
       version: 1,
@@ -493,7 +493,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
     const newFolder: Folder = {
       ...folder,
       id: newFolderId,
-      name: parentId ? folder.name : `${folder.name} (${i18n.t('copy')})`,
+      name: folder.name,
       parentId: targetParentId,
       notebookId: targetNotebookId,
       createdAt: Date.now(),
@@ -542,7 +542,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
     const newPage: Page = {
       ...page,
       id: newPageId,
-      name: parentId ? page.name : `${page.name} (${i18n.t('copy')})`,
+      name: page.name,
       parentId: targetParentId,
       notebookId: targetNotebookId,
       createdAt: Date.now(),

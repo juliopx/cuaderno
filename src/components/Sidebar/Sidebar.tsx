@@ -224,12 +224,14 @@ interface ColumnProps {
   notebooks: Notebook[];
   isDarkMode: boolean;
   isDraggingDisabled?: boolean;
+  setUploadAccept: (accept: string) => void;
+  setCurrentOnUpload: (handler: (files: FileList) => void) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 
-const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRenameStart, onDelete, onDuplicate, onDownload, onUpload, type, folders, pages, notebooks, isDarkMode, isDraggingDisabled }: ColumnProps) => {
+const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, onAddNotebook, onRenameStart, onDelete, onDuplicate, onDownload, onUpload, type, folders, pages, notebooks, isDarkMode, isDraggingDisabled, setUploadAccept, setCurrentOnUpload, fileInputRef }: ColumnProps) => {
   const { t, i18n } = useTranslation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const isRtl = i18n.dir() === 'rtl';
 
   const [pointerType, setPointerType] = useState<string>('mouse');
@@ -345,7 +347,15 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
               <BookPlus size={16} />
               <span>{t('new_notebook')}</span>
             </button>
-            <button className={styles.toolbarButton} onClick={() => fileInputRef.current?.click()} title={t('upload')}>
+            <button
+              className={clsx(styles.toolbarButton, styles.uploadButtonSmall)}
+              onClick={() => {
+                setUploadAccept('.cua');
+                if (onUpload) setCurrentOnUpload(onUpload);
+                setTimeout(() => fileInputRef.current?.click(), 0);
+              }}
+              title={t('upload')}
+            >
               <Upload size={16} />
             </button>
           </>
@@ -364,21 +374,19 @@ const Column = ({ id, title, items, activeId, onSelect, onAddFolder, onAddPage, 
                 <span>{t('new_page')}</span>
               </button>
             )}
-            <button className={styles.toolbarButton} onClick={() => fileInputRef.current?.click()} title={t('upload')}>
+            <button
+              className={clsx(styles.toolbarButton, styles.uploadButtonSmall)}
+              onClick={() => {
+                setUploadAccept('.cua,.pag');
+                if (onUpload) setCurrentOnUpload(onUpload);
+                setTimeout(() => fileInputRef.current?.click(), 0);
+              }}
+              title={t('upload')}
+            >
               <Upload size={16} />
             </button>
           </>
         )}
-        <input
-          type="file"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          accept="application/json"
-          onChange={(e) => {
-            if (e.target.files) onUpload?.(e.target.files);
-            e.target.value = '';
-          }}
-        />
       </div>
     </div>
   );
@@ -445,6 +453,9 @@ export const Sidebar = () => {
   const leftHandedMode = dominantHand === 'left';
 
   const [activeDragItem, setActiveDragItem] = useState<Notebook | Folder | Page | null>(null);
+  const [uploadAccept, setUploadAccept] = useState('.cua,.pag');
+  const [currentOnUpload, setCurrentOnUpload] = useState<((files: FileList) => void) | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete confirmation state
   const [pendingDelete, setPendingDelete] = useState<{
@@ -775,6 +786,9 @@ export const Sidebar = () => {
             onAddFolder={col.onAddFolder}
             onAddPage={col.onAddPage}
             onAddNotebook={col.onAddNotebook}
+            setUploadAccept={setUploadAccept}
+            setCurrentOnUpload={setCurrentOnUpload}
+            fileInputRef={fileInputRef}
             onRenameStart={(item, rect, pointerType) => {
               console.log(`[Sidebar] onRenameStart id=${item.id} type=${pointerType}`);
               setEditingItem({ item, rect, pointerType });
@@ -794,26 +808,70 @@ export const Sidebar = () => {
               }
               exportItem(item, folders, pages, type);
             }}
-            onUpload={(files) => {
+            onUpload={async (files) => {
               for (const file of Array.from(files)) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                  try {
-                    const data = JSON.parse(e.target?.result as string);
-                    if (col.type === 'notebook') {
-                      if (data.type === 'notebook') importNotebook(data);
-                      else if (data.type === 'folder') importNotebook({ notebook: { name: data.folder.name }, folders: [data.folder, ...(data.folders || [])], pages: data.pages });
-                    } else {
-                      // Col is content, parent is col.id
-                      const notebookId = activeNotebookId!;
-                      if (data.type === 'folder') importFolder(data, col.id, notebookId);
-                      else if (data.type === 'page') importPage(data, col.id, notebookId);
-                    }
-                  } catch (err) {
-                    console.error('Failed to parse upload file', err);
+                // Extension check
+                const isCua = file.name.endsWith('.cua');
+                // const isPag = file.name.endsWith('.pag'); // Removed as unused
+
+                if (col.type === 'notebook' && !isCua) {
+                  // Notebooks column only accepts .cua
+                  continue;
+                }
+
+                try {
+                  const stream = file.stream()
+                    .pipeThrough(new DecompressionStream('gzip'))
+                    .pipeThrough(new TextDecoderStream());
+
+                  const reader = stream.getReader();
+                  let result = '';
+                  while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    result += value;
                   }
-                };
-                reader.readAsText(file);
+
+                  const data = JSON.parse(result);
+                  if (col.type === 'notebook') {
+                    if (data.type === 'notebook') {
+                      importNotebook(data);
+                    } else if (data.type === 'folder') {
+                      // Import folder as a new notebook
+                      importNotebook({
+                        notebook: {
+                          name: data.folder.name,
+                          nameStrokes: data.folder.nameStrokes,
+                          color: data.folder.color
+                        },
+                        folders: [data.folder, ...(data.folders || [])],
+                        pages: data.pages
+                      });
+                    }
+                  } else {
+                    // Col is content, parent is col.id
+                    const notebookId = activeNotebookId!;
+                    if (data.type === 'notebook') {
+                      // Import notebook as a folder in the current notebook
+                      importFolder({
+                        folder: {
+                          name: data.notebook?.name ?? '',
+                          id: data.notebook?.id,
+                          nameStrokes: data.notebook?.nameStrokes,
+                          color: data.notebook?.color
+                        },
+                        folders: data.folders,
+                        pages: data.pages
+                      }, col.id, notebookId);
+                    } else if (data.type === 'folder') {
+                      importFolder(data, col.id, notebookId);
+                    } else if (data.type === 'page') {
+                      importPage(data, col.id, notebookId);
+                    }
+                  }
+                } catch (err) {
+                  console.error('Failed to parse upload file', err);
+                }
               }
             }}
             type={col.type}
@@ -901,6 +959,17 @@ export const Sidebar = () => {
         }}
 
         onCancel={() => setPendingDelete(null)}
+      />
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        accept={uploadAccept}
+        onChange={(e) => {
+          if (e.target.files && currentOnUpload) currentOnUpload(e.target.files);
+          e.target.value = '';
+        }}
       />
 
     </DndContext >

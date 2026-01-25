@@ -60,8 +60,15 @@ export const exportItem = async (
     exportData.content = content ? JSON.parse(content) : {};
   }
 
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+  const jsonString = JSON.stringify(exportData);
+  const jsonBlob = new Blob([jsonString], { type: 'application/json' });
+
+  // Compress using Gzip
+  const compressionStream = new CompressionStream('gzip');
+  const compressedStream = jsonBlob.stream().pipeThrough(compressionStream);
+  const compressedBlob = await new Response(compressedStream).blob();
+
+  const url = URL.createObjectURL(compressedBlob);
   const extension = type === 'page' ? 'pag' : 'cua';
   const a = document.createElement('a');
   a.href = url;
