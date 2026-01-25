@@ -115,5 +115,11 @@
   "label_size": "Dimensione",
   "logout_confirmation_desc": "Sei sicuro di voler uscire?",
   "unsync_confirm_title": "Interrompere la sincronizzazione?",
-  "unsync_confirm_desc": "Sei sicuro di voler interrompere la sincronizzazione con Google Drive?"
+  "unsync_confirm_desc": "Sei sicuro di voler interrompere la sincronizzazione con Google Drive?",
+  "sessionExpired": {
+    "title": "Sessione Scaduta",
+    "description": "La tua sessione di Google Drive è scaduta. Accedi di nuovo per riprendere la sincronizzazione ed evitare la perdita di dati.",
+    "login": "Accedi con Google",
+    "dismiss": "Non ora (Sincronizzazione in pausa)"
+  }
 }

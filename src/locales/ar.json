@@ -115,5 +115,11 @@
   "label_size": "الحجم",
   "logout_confirmation_desc": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
   "unsync_confirm_title": "إيقاف المزامنة؟",
-  "unsync_confirm_desc": "هل أنت متأكد أنك تريد إيقاف المزامنة مع Google Drive؟"
+  "unsync_confirm_desc": "هل أنت متأكد أنك تريد إيقاف المزامنة مع Google Drive؟",
+  "sessionExpired": {
+    "title": "انتهت الجلسة",
+    "description": "انتهت جلسة Google Drive الخاصة بك. يرجى تسجيل الدخول مرة أخرى لاستئناف المزامنة وتجنب فقدان البيانات.",
+    "login": "تسجيل الدخول باستخدام Google",
+    "dismiss": "ليس الآن (المزامنة متوقفة مؤقتاً)"
+  }
 }

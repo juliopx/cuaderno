@@ -115,5 +115,11 @@
   "label_size": "Size",
   "logout_confirmation_desc": "Are you sure you want to log out?",
   "unsync_confirm_title": "Stop Syncing?",
-  "unsync_confirm_desc": "Are you sure you want to stop syncing with Google Drive?"
+  "unsync_confirm_desc": "Are you sure you want to stop syncing with Google Drive?",
+  "sessionExpired": {
+    "title": "Session Expired",
+    "description": "Your Google Drive session has expired. Please log in again to resume synchronization and avoid data loss.",
+    "login": "Log In with Google",
+    "dismiss": "Not now (Sync Paused)"
+  }
 }

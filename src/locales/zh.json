@@ -115,5 +115,11 @@
   "label_size": "大小",
   "logout_confirmation_desc": "您确定要退出吗？",
   "unsync_confirm_title": "停止同步？",
-  "unsync_confirm_desc": "您确定要停止与 Google 云端硬盘同步吗？"
+  "unsync_confirm_desc": "您确定要停止与 Google 云端硬盘同步吗？",
+  "sessionExpired": {
+    "title": "会话已过期",
+    "description": "您的 Google Drive 会话已过期。请重新登录以恢复同步并避免数据丢失。",
+    "login": "使用 Google 登录",
+    "dismiss": "暂不 (同步已暂停)"
+  }
 }

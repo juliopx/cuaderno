@@ -115,5 +115,11 @@
   "label_size": "Storlek",
   "logout_confirmation_desc": "Är du säker på att du vill logga ut?",
   "unsync_confirm_title": "Stoppa synkronisering?",
-  "unsync_confirm_desc": "Är du säker på att du vill sluta synkronisera med Google Drive?"
+  "unsync_confirm_desc": "Är du säker på att du vill sluta synkronisera med Google Drive?",
+  "sessionExpired": {
+    "title": "Sessionen har löpt ut",
+    "description": "Din Google Drive-session har löpt ut. Logga in igen för att återuppta synkroniseringen och undvika dataförlust.",
+    "login": "Logga in med Google",
+    "dismiss": "Inte nu (Synkronisering pausad)"
+  }
 }

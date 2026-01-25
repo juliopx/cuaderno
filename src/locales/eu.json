@@ -115,5 +115,11 @@
   "label_size": "Tamaina",
   "logout_confirmation_desc": "Ziur zaude saioa itxi nahi duzula?",
   "unsync_confirm_title": "Sinkronizazioa gelditu?",
-  "unsync_confirm_desc": "Ziur zaude Google Driverekin sinkronizatzeari utzi nahi diozula?"
+  "unsync_confirm_desc": "Ziur zaude Google Driverekin sinkronizatzeari utzi nahi diozula?",
+  "sessionExpired": {
+    "title": "Saioa Iraungita",
+    "description": "Zure Google Drive saioa iraungi da. Mesedez, hasi saioa berriro sinkronizazioa berrekiteko eta datuak galtzea ekiditeko.",
+    "login": "Hasi saioa Google-rekin",
+    "dismiss": "Orain ez (Sinkronizazioa Pausatuta)"
+  }
 }

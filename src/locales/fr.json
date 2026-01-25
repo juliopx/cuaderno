@@ -115,5 +115,11 @@
   "label_size": "Taille",
   "logout_confirmation_desc": "Êtes-vous sûr de vouloir vous déconnecter ?",
   "unsync_confirm_title": "Arrêter la synchronisation ?",
-  "unsync_confirm_desc": "Êtes-vous sûr de vouloir arrêter la synchronisation avec Google Drive ?"
+  "unsync_confirm_desc": "Êtes-vous sûr de vouloir arrêter la synchronisation avec Google Drive ?",
+  "sessionExpired": {
+    "title": "Session expirée",
+    "description": "Votre session Google Drive a expiré. Veuillez vous reconnecter pour reprendre la synchronisation et éviter toute perte de données.",
+    "login": "Se connecter avec Google",
+    "dismiss": "Pas maintenant (Sync en pause)"
+  }
 }
