@@ -50,6 +50,14 @@ interface FileSystemState {
   deleteFolder: (id: string) => void;
   deletePage: (id: string) => void;
 
+  duplicateNotebook: (id: string) => void;
+  duplicateFolder: (id: string, parentId?: string | null, notebookId?: string) => void;
+  duplicatePage: (id: string, parentId?: string | null, notebookId?: string) => void;
+
+  importNotebook: (data: any) => void;
+  importFolder: (data: any, parentId?: string | null, notebookId?: string) => void;
+  importPage: (data: any, parentId?: string | null, notebookId?: string) => void;
+
 
   // Persistence
   load: () => Promise<void>;
@@ -425,6 +433,295 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       setTimeout(() => get().save(), 0);
       return { pages, activePageId, deletedItemIds };
     });
+  },
+
+  duplicateNotebook: (id) => {
+    const state = get();
+    const notebook = state.notebooks.find(n => n.id === id);
+    if (!notebook) return;
+
+    const clientId = useSyncStore.getState().clientId;
+    const maxOrder = state.notebooks.length > 0 ? Math.max(...state.notebooks.map(n => n.order || 0)) : 0;
+    const newNotebookId = uuidv4();
+    const newNotebook: Notebook = {
+      ...notebook,
+      id: newNotebookId,
+      name: `${notebook.name} (${i18n.t('copy')})`,
+      createdAt: Date.now(),
+      order: maxOrder + 10000,
+      version: 1,
+      dirty: true,
+      lastModifier: clientId,
+    };
+
+    set(state => ({
+      notebooks: [...state.notebooks, newNotebook].sort((a, b) => (a.order || 0) - (b.order || 0))
+    }));
+
+    // Duplicate all top-level items in this notebook
+    Object.values(state.folders).forEach(f => {
+      if (f.notebookId === id && f.parentId === id) {
+        get().duplicateFolder(f.id, newNotebookId, newNotebookId);
+      }
+    });
+    Object.values(state.pages).forEach(p => {
+      if (p.notebookId === id && p.parentId === id) {
+        get().duplicatePage(p.id, newNotebookId, newNotebookId);
+      }
+    });
+
+    setTimeout(() => get().save(), 0);
+  },
+
+  duplicateFolder: (id, parentId, notebookId) => {
+    const state = get();
+    const folder = state.folders[id];
+    if (!folder) return;
+
+    const clientId = useSyncStore.getState().clientId;
+    const targetParentId = parentId || folder.parentId;
+    const targetNotebookId = notebookId || folder.notebookId;
+
+    // Calculate order
+    const siblings = [
+      ...Object.values(state.folders).filter(f => f.parentId === targetParentId),
+      ...Object.values(state.pages).filter(p => p.parentId === targetParentId)
+    ];
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(s => s.order || 0)) : 0;
+
+    const newFolderId = uuidv4();
+    const newFolder: Folder = {
+      ...folder,
+      id: newFolderId,
+      name: parentId ? folder.name : `${folder.name} (${i18n.t('copy')})`,
+      parentId: targetParentId,
+      notebookId: targetNotebookId,
+      createdAt: Date.now(),
+      order: maxOrder + 10000,
+      version: 1,
+      dirty: true,
+      lastModifier: clientId,
+    };
+
+    set(state => ({
+      folders: { ...state.folders, [newFolderId]: newFolder }
+    }));
+
+    // Duplicate children
+    Object.values(state.folders).forEach(f => {
+      if (f.parentId === id) {
+        get().duplicateFolder(f.id, newFolderId, targetNotebookId);
+      }
+    });
+    Object.values(state.pages).forEach(p => {
+      if (p.parentId === id) {
+        get().duplicatePage(p.id, newFolderId, targetNotebookId);
+      }
+    });
+
+    setTimeout(() => get().save(), 0);
+  },
+
+  duplicatePage: (id, parentId, notebookId) => {
+    const state = get();
+    const page = state.pages[id];
+    if (!page) return;
+
+    const clientId = useSyncStore.getState().clientId;
+    const targetParentId = parentId || page.parentId;
+    const targetNotebookId = notebookId || page.notebookId;
+
+    // Calculate order
+    const siblings = [
+      ...Object.values(state.folders).filter(f => f.parentId === targetParentId),
+      ...Object.values(state.pages).filter(p => p.parentId === targetParentId)
+    ];
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(s => s.order || 0)) : 0;
+
+    const newPageId = uuidv4();
+    const newPage: Page = {
+      ...page,
+      id: newPageId,
+      name: parentId ? page.name : `${page.name} (${i18n.t('copy')})`,
+      parentId: targetParentId,
+      notebookId: targetNotebookId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      order: maxOrder + 10000,
+      version: 1,
+      dirty: true,
+      lastModifier: clientId,
+    };
+
+    set(state => ({
+      pages: { ...state.pages, [newPageId]: newPage }
+    }));
+
+    // Copy content in OPFS
+    opfs.loadFile(`page-${id}.tldr`).then(content => {
+      if (content) {
+        opfs.saveFile(`page-${newPageId}.tldr`, content);
+      }
+    });
+
+    setTimeout(() => get().save(), 0);
+  },
+
+  importNotebook: (data) => {
+    const clientId = useSyncStore.getState().clientId;
+    const maxOrder = get().notebooks.length > 0 ? Math.max(...get().notebooks.map(n => n.order || 0)) : 0;
+    const newNotebookId = uuidv4();
+
+    // We expect data to have { notebook, folders: [], pages: [] } or just notebook
+    const notebookData = data.notebook || data;
+    const newNotebook: Notebook = {
+      ...notebookData,
+      id: newNotebookId,
+      createdAt: Date.now(),
+      order: maxOrder + 10000,
+      version: 1,
+      dirty: true,
+      lastModifier: clientId,
+    };
+
+    set(state => ({
+      notebooks: [...state.notebooks, newNotebook].sort((a, b) => (a.order || 0) - (b.order || 0))
+    }));
+
+    // Import children if available
+    if (data.folders) {
+      // Need a mapping from old IDs to new IDs to maintain hierarchy
+      const idMap: Record<string, string> = { [notebookData.id]: newNotebookId };
+
+      // Sort folders by parentId depth or just handle them iteratively
+      // Safest is to handle top-level first
+      const foldersToImport = [...data.folders];
+      while (foldersToImport.length > 0) {
+        const initialLen = foldersToImport.length;
+        for (let i = 0; i < foldersToImport.length; i++) {
+          const f = foldersToImport[i];
+          if (idMap[f.parentId]) {
+            const newId = uuidv4();
+            idMap[f.id] = newId;
+            get().importFolder({ ...f, id: newId, parentId: idMap[f.parentId], notebookId: newNotebookId }, idMap[f.parentId], newNotebookId);
+            foldersToImport.splice(i, 1);
+            i--;
+          }
+        }
+        if (foldersToImport.length === initialLen) break; // Avoid infinite loop if orphaned
+      }
+
+      if (data.pages) {
+        data.pages.forEach((p: any) => {
+          if (idMap[p.parentId]) {
+            get().importPage({ ...p, parentId: idMap[p.parentId], notebookId: newNotebookId }, idMap[p.parentId], newNotebookId);
+          }
+        });
+      }
+    }
+
+    setTimeout(() => get().save(), 0);
+  },
+
+  importFolder: (data, parentId, notebookId) => {
+    const state = get();
+    const clientId = useSyncStore.getState().clientId;
+    const targetParentId = parentId || data.parentId;
+    const targetNotebookId = notebookId || data.notebookId;
+
+    const siblings = [
+      ...Object.values(state.folders).filter(f => f.parentId === targetParentId),
+      ...Object.values(state.pages).filter(p => p.parentId === targetParentId)
+    ];
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(s => s.order || 0)) : 0;
+
+    const newFolderId = uuidv4();
+    const folderData = data.folder || data;
+    const newFolder: Folder = {
+      ...folderData,
+      id: newFolderId,
+      parentId: targetParentId,
+      notebookId: targetNotebookId,
+      createdAt: Date.now(),
+      order: maxOrder + 10000,
+      version: 1,
+      dirty: true,
+      lastModifier: clientId,
+    };
+
+    set(state => ({
+      folders: { ...state.folders, [newFolderId]: newFolder }
+    }));
+
+    // Import children if available
+    if (data.folders || data.pages) {
+      const idMap: Record<string, string> = { [folderData.id]: newFolderId };
+      const foldersToImport = [...(data.folders || [])];
+      while (foldersToImport.length > 0) {
+        const initialLen = foldersToImport.length;
+        for (let i = 0; i < foldersToImport.length; i++) {
+          const f = foldersToImport[i];
+          if (idMap[f.parentId]) {
+            const newId = uuidv4();
+            idMap[f.id] = newId;
+            get().importFolder({ ...f, id: newId, parentId: idMap[f.parentId], notebookId: targetNotebookId }, idMap[f.parentId], targetNotebookId);
+            foldersToImport.splice(i, 1);
+            i--;
+          }
+        }
+        if (foldersToImport.length === initialLen) break;
+      }
+      if (data.pages) {
+        data.pages.forEach((p: any) => {
+          if (idMap[p.parentId]) {
+            get().importPage({ ...p, parentId: idMap[p.parentId], notebookId: targetNotebookId }, idMap[p.parentId], targetNotebookId);
+          }
+        });
+      }
+    }
+
+    setTimeout(() => get().save(), 0);
+  },
+
+  importPage: (data, parentId, notebookId) => {
+    const state = get();
+    const clientId = useSyncStore.getState().clientId;
+    const targetParentId = parentId || data.parentId;
+    const targetNotebookId = notebookId || data.notebookId;
+
+    const siblings = [
+      ...Object.values(state.folders).filter(f => f.parentId === targetParentId),
+      ...Object.values(state.pages).filter(p => p.parentId === targetParentId)
+    ];
+    const maxOrder = siblings.length > 0 ? Math.max(...siblings.map(s => s.order || 0)) : 0;
+
+    const newPageId = uuidv4();
+    const pageData = data.page || data;
+    const newPage: Page = {
+      ...pageData,
+      id: newPageId,
+      parentId: targetParentId,
+      notebookId: targetNotebookId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      order: maxOrder + 10000,
+      version: 1,
+      dirty: true,
+      lastModifier: clientId,
+    };
+
+    set(state => ({
+      pages: { ...state.pages, [newPageId]: newPage }
+    }));
+
+    // Save content if provided
+    if (data.content) {
+      opfs.saveFile(`page-${newPageId}.tldr`, typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
+    } else {
+      opfs.saveFile(`page-${newPageId}.tldr`, '{}');
+    }
+
+    setTimeout(() => get().save(), 0);
   },
 
   reorderNotebooks: (activeId, overId) => {
