@@ -152,6 +152,22 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
     align: textAlign
   });
 
+  useEffect(() => {
+    const editingId = editor.getEditingShapeId();
+    if (!editingId) {
+      setRichStats({
+        bold: textBold,
+        italic: textItalic,
+        underline: textUnderline,
+        strike: textStrike,
+        font: textFont,
+        size: textSize,
+        color: textColor,
+        align: textAlign
+      });
+    }
+  }, [editor, textBold, textItalic, textUnderline, textStrike, textFont, textSize, textColor, textAlign]);
+
   // Sync state with cursor position
   useEffect(() => {
     const editingId = editor.getEditingShapeId();
@@ -729,18 +745,53 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
   // No early return here anymore as it contains the toolbar
 
 
-  const currentSize = isTextMode ? richStats.size : ((getStyle(DefaultSizeStyle, 'm') as string) || richStats.size || 'm');
-  const currentColor = isTextMode ? richStats.color : ((getStyle(DefaultColorStyle, 'black') as string) || richStats.color || 'black');
+
+  const currentSize = (() => {
+    if (isTextMode) return richStats.size;
+    if (activeTool === 'draw') return drawSize;
+    if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) return shapeSize;
+    return (getStyle(DefaultSizeStyle, 'm') as string) || 'm';
+  })();
+
+  const currentColor = (() => {
+    if (isTextMode) return richStats.color;
+    if (activeTool === 'draw') return drawColor;
+    if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) return shapeColor;
+    return (getStyle(DefaultColorStyle, 'black') as string) || 'black';
+  })();
+
   const currentFont = isTextMode ? richStats.font : ((getStyle(DefaultFontStyle, 'draw') as string) || richStats.font || 'draw');
 
   const currentGeo = (getStyle(GeoShapeGeoStyle, 'rectangle') as string);
-  const currentDash = (getStyle(DefaultDashStyle, 'solid') as string);
-  const currentFill = (getStyle(DefaultFillStyle, 'none') as string);
+
+  const currentDash = (() => {
+    if (activeTool === 'draw') return drawDash;
+    if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) return shapeDash;
+    return (getStyle(DefaultDashStyle, 'solid') as string);
+  })();
+
+  const currentFill = (() => {
+    if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) return shapeFill;
+    return (getStyle(DefaultFillStyle, 'none') as string);
+  })();
+
   const currentTldrawTool = editor.getCurrentToolId();
 
-  const currentFillColor = (getStyle(FillColorStyle, 'black') as string);
-  const currentFillOpacity = parseFloat(getStyle(FillOpacityStyle, '1') as string);
-  const currentStrokeOpacity = parseFloat(getStyle(StrokeOpacityStyle, '1') as string);
+  const currentFillColor = (() => {
+    if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) return shapeFillColor;
+    return (getStyle(FillColorStyle, 'black') as string);
+  })();
+
+  const currentFillOpacity = (() => {
+    if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) return parseFloat(shapeFillOpacity);
+    return parseFloat(getStyle(FillOpacityStyle, '1') as string);
+  })();
+
+  const currentStrokeOpacity = (() => {
+    if (activeTool === 'draw') return parseFloat(drawOpacity);
+    if (['geo', 'arrow', 'line', 'shapes'].includes(activeTool)) return parseFloat(shapeOpacity);
+    return parseFloat(getStyle(StrokeOpacityStyle, '1') as string);
+  })();
 
   const activeColorHex = colorsMap[currentColor] || theme.black.solid;
 

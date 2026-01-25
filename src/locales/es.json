@@ -115,5 +115,11 @@
   "label_size": "Tamaño",
   "logout_confirmation_desc": "¿Estás seguro de que quieres cerrar sesión?",
   "unsync_confirm_title": "¿Detener sincronización?",
-  "unsync_confirm_desc": "¿Estás seguro de que quieres dejar de sincronizar con Google Drive?"
+  "unsync_confirm_desc": "¿Estás seguro de que quieres dejar de sincronizar con Google Drive?",
+  "sessionExpired": {
+    "title": "Sesión Caducada",
+    "description": "Tu sesión de Google Drive ha caducado. Por favor, inicia sesión de nuevo para reanudar la sincronización y evitar pérdida de datos.",
+    "login": "Iniciar sesión con Google",
+    "dismiss": "Ahora no (Sincronización Pausada)"
+  }
 }

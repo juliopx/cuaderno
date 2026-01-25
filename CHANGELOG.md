@@ -1,3 +1,11 @@
+## [1.9.4] - 2026-01-25
+
+### Bug Fixes
+* Fixed an issue where session expiration could leave the app in an unresponsive state; added a "Session Expired" dialog to easily re-login. (#106)
+* Fixed tool configuration persistence and 'jump' on page load. (#105)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.9.3...v1.9.4
+
 ## [1.9.3] - 2026-01-25
 
 ### Features

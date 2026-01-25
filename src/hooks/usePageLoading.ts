@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Editor, DefaultColorStyle, DefaultSizeStyle, DefaultFontStyle, DefaultTextAlignStyle, DefaultDashStyle, DefaultFillStyle, GeoShapeGeoStyle } from 'tldraw';
+import { Editor, GeoShapeGeoStyle } from 'tldraw';
 import { opfs } from '../lib/opfs';
 import { syncLog } from '../lib/debugLog';
 import { useFileSystemStore } from '../store/fileSystemStore';
@@ -53,12 +53,10 @@ export const usePageLoading = (
           }
 
           // 💡 PRIMING with User Preferences
-          editor.setStyleForNextShapes(DefaultColorStyle, userPrefs.textColor);
-          editor.setStyleForNextShapes(DefaultSizeStyle, userPrefs.textSize);
-          editor.setStyleForNextShapes(DefaultFontStyle, userPrefs.textFont);
-          editor.setStyleForNextShapes(DefaultTextAlignStyle, userPrefs.textAlign === 'justify' ? 'start' : userPrefs.textAlign as any);
-          editor.setStyleForNextShapes(DefaultDashStyle, userPrefs.dashStyle as any);
-          editor.setStyleForNextShapes(DefaultFillStyle, userPrefs.fillStyle as any);
+          // 💡 PRIMING with User Preferences
+          // We defer specific style setting to the Bubble component or Tool initialization
+          // which knows the active tool. Setting generic defaults here (like textColor)
+          // overrides the correct tool settings (like drawColor) if initialized blindly.
           editor.setStyleForNextShapes(GeoShapeGeoStyle, userPrefs.lastUsedGeo as any);
         } catch (e) {
           console.error("Failed to load snapshot", e);

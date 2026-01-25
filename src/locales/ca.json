@@ -115,5 +115,11 @@
   "label_size": "Mida",
   "logout_confirmation_desc": "Estàs segur que vols tancar la sessió?",
   "unsync_confirm_title": "Aturar sincronització?",
-  "unsync_confirm_desc": "Estàs segur que vols deixar de sincronitzar amb Google Drive?"
+  "unsync_confirm_desc": "Estàs segur que vols deixar de sincronitzar amb Google Drive?",
+  "sessionExpired": {
+    "title": "Sessió Caducada",
+    "description": "La teva sessió de Google Drive ha caducat. Si us plau, inicia sessió de nou per reprendre la sincronització i evitar la pèrdua de dades.",
+    "login": "Inicia sessió amb Google",
+    "dismiss": "Ara no (Sincronització Pausada)"
+  }
 }

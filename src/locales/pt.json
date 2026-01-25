@@ -115,5 +115,11 @@
   "confirm_logout_delete_data": "Excluir todos os dados salvos no Google Drive antes de sair",
   "logout_confirmation_desc": "Tem certeza de que deseja sair?",
   "unsync_confirm_title": "Parar a sincronização?",
-  "unsync_confirm_desc": "Tem certeza de que deseja parar a sincronização com o Google Drive?"
+  "unsync_confirm_desc": "Tem certeza de que deseja parar a sincronização com o Google Drive?",
+  "sessionExpired": {
+    "title": "Sessão Expirada",
+    "description": "Sua sessão do Google Drive expirou. Faça login novamente para retomar a sincronização e evitar perda de dados.",
+    "login": "Entrar com Google",
+    "dismiss": "Agora não (Sincronização Pausada)"
+  }
 }

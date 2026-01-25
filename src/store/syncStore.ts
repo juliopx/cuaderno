@@ -19,9 +19,11 @@ interface SyncState {
   conflicts: any | null; // Stores { localData, remoteData }
   user: { name: string; photo: string } | null;
   expiresAt: number | null;
+  isLoginDialogOpen: boolean;
 
   // Actions
   setClientId: (id: string) => void;
+  setLoginDialogOpen: (open: boolean) => void;
   setStatus: (status: SyncStatus) => void;
   setLastSync: (time: number) => void;
   setIsEnabled: (enabled: boolean) => void;
@@ -50,8 +52,10 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   conflicts: null,
   user: JSON.parse(localStorage.getItem('cuaderno-user-info') || 'null'),
   expiresAt: Number(localStorage.getItem('cuaderno-drive-expires-at')) || null,
+  isLoginDialogOpen: false,
 
   setClientId: (clientId: string) => set({ clientId }),
+  setLoginDialogOpen: (isLoginDialogOpen: boolean) => set({ isLoginDialogOpen }),
   setStatus: (status: SyncStatus) => set({ status }),
   setLastSync: (lastSync: number) => set({ lastSync }),
   setIsEnabled: (isEnabled: boolean) => {
@@ -84,6 +88,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       set({ expiresAt });
 
       await get().setupConnection(token, isRefreshing);
+      // If we succeed, ensure dialog is closed
+      set({ isLoginDialogOpen: false });
     }, (error: any) => {
       console.error('Google Auth Error:', error);
       toast.error('Google Auth Error: ' + (error.error || 'Unknown error'));
@@ -136,7 +142,18 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       console.error('Failed to restore session or fetch user info', e);
       // If token expired, try silent refresh
       if ((e as any).status === 401 || (e as any).result?.error?.code === 401) {
-        console.warn('🔑 Token expired. Attempting silent refresh...');
+        console.warn('🔑 Token expired. Clearing session and attempting silent refresh...');
+
+        // 1. Clear invalid session immediately so UI reflects "disconnected" (or pending)
+        localStorage.removeItem('cuaderno-drive-token');
+        localStorage.removeItem('cuaderno-drive-expires-at');
+        // We keep user info briefly or clear it? Better to clear to be safe.
+        // localStorage.removeItem('cuaderno-user-info'); 
+
+        // 2. Open Dialog so user knows what happened if silent refresh fails
+        set({ isConfigured: false, isLoginDialogOpen: true });
+
+        // 3. Attempt Silent Refresh
         googleDrive.authenticateSilent();
       } else {
         localStorage.removeItem('cuaderno-drive-token');

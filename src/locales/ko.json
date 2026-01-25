@@ -115,5 +115,11 @@
   "label_size": "크기",
   "logout_confirmation_desc": "정말 로그아웃하시겠습니까?",
   "unsync_confirm_title": "동기화를 중지하시겠습니까?",
-  "unsync_confirm_desc": "정말 Google 드라이브와의 동기화를 중지하시겠습니까?"
+  "unsync_confirm_desc": "정말 Google 드라이브와의 동기화를 중지하시겠습니까?",
+  "sessionExpired": {
+    "title": "세션 만료됨",
+    "description": "Google Drive 세션이 만료되었습니다. 동기화를 재개하고 데이터 손실을 방지하려면 다시 로그인하십시오.",
+    "login": "Google로 로그인",
+    "dismiss": "나중에 (동기화 일시 중지)"
+  }
 }
