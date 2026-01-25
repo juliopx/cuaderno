@@ -4,6 +4,7 @@ import { useFileSystemStore } from './store/fileSystemStore';
 import { useSyncStore } from './store/syncStore';
 import { Toaster, toast } from 'sonner';
 import { ConflictModal } from './components/ConflictModal';
+import { SessionExpiredDialog } from './components/SessionExpiredDialog';
 import { opfs } from './lib/opfs';
 
 function App() {
@@ -273,17 +274,24 @@ function App() {
     };
 
     // Expose stores for debugging
-    (window as any).fileSystemStore = useFileSystemStore;
     (window as any).syncStore = useSyncStore;
+
+    (window as any).simulate401 = () => {
+      console.log('🧪 Simulating 401 Unauthorized Error...');
+      useSyncStore.getState().setLoginDialogOpen(true);
+      // We simulates the state change that would happen
+      useSyncStore.setState({ isConfigured: false, user: null, expiresAt: null });
+    };
 
     console.log('💡 Debug utilities available:');
     console.log('  - cleardb() - Delete all local data');
     console.log('  - showLocalChanges() - View pending local changes');
     console.log('  - showRemoteState() - View remote data without downloading');
     console.log('  - showConflicts() - View active conflicts');
+    console.log('  - simulate401() - Simulate session expiration dialog');
     console.log('  - fileSystemStore.getState() - View file system state');
     console.log('  - syncStore.getState() - View sync state');
-  }, []);
+  }, [loadFs, initSync]);
 
   useEffect(() => {
     if (!isEnabled) return;
@@ -400,6 +408,7 @@ function App() {
   return (
     <>
       <Toaster position="bottom-right" richColors />
+      <SessionExpiredDialog />
       <ConflictModal />
       <div id="ui-portal-root" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 1500 }}></div>
       <Layout />

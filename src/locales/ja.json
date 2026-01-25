@@ -115,5 +115,11 @@
   "label_size": "サイズ",
   "logout_confirmation_desc": "本当にログアウトしますか？",
   "unsync_confirm_title": "同期を停止しますか？",
-  "unsync_confirm_desc": "本当に Google ドライブとの同期を停止しますか？"
+  "unsync_confirm_desc": "本当に Google ドライブとの同期を停止しますか？",
+  "sessionExpired": {
+    "title": "セッションが期限切れです",
+    "description": "Googleドライブのセッションが期限切れになりました。同期を再開し、データの損失を防ぐために再度ログインしてください。",
+    "login": "Googleでログイン",
+    "dismiss": "後で（同期一時停止）"
+  }
 }

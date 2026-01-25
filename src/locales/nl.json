@@ -115,5 +115,11 @@
   "label_size": "Grootte",
   "logout_confirmation_desc": "Weet u zeker dat u wilt uitloggen?",
   "unsync_confirm_title": "Stop met synchroniseren?",
-  "unsync_confirm_desc": "Weet u zeker dat u wilt stoppen met synchroniseren met Google Drive?"
+  "unsync_confirm_desc": "Weet u zeker dat u wilt stoppen met synchroniseren met Google Drive?",
+  "sessionExpired": {
+    "title": "Sessie Verlopen",
+    "description": "Uw Google Drive-sessie is verlopen. Log opnieuw in om de synchronisatie te hervatten en gegevensverlies te voorkomen.",
+    "login": "Inloggen met Google",
+    "dismiss": "Niet nu (Sync gepauzeerd)"
+  }
 }

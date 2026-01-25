@@ -115,5 +115,11 @@
   "label_size": "Rozmiar",
   "logout_confirmation_desc": "Czy na pewno chcesz się wylogować?",
   "unsync_confirm_title": "Zatrzymać synchronizację?",
-  "unsync_confirm_desc": "Czy na pewno chcesz zatrzymać synchronizację z Google Drive?"
+  "unsync_confirm_desc": "Czy na pewno chcesz zatrzymać synchronizację z Google Drive?",
+  "sessionExpired": {
+    "title": "Sesja wygasła",
+    "description": "Twoja sesja Google Drive wygasła. Zaloguj się ponownie, aby wznowić synchronizację i uniknąć utraty danych.",
+    "login": "Zaloguj się przez Google",
+    "dismiss": "Nie teraz (Synchronizacja wstrzymana)"
+  }
 }

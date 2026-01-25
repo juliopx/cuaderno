@@ -115,5 +115,11 @@
   "label_size": "Boyut",
   "logout_confirmation_desc": "Oturumu kapatmak istediğinizden emin misiniz?",
   "unsync_confirm_title": "Senkronizasyonu Durdur?",
-  "unsync_confirm_desc": "Google Drive ile senkronizasyonu durdurmak istediğinizden emin misiniz?"
+  "unsync_confirm_desc": "Google Drive ile senkronizasyonu durdurmak istediğinizden emin misiniz?",
+  "sessionExpired": {
+    "title": "Oturum Süresi Doldu",
+    "description": "Google Drive oturumunuzun süresi doldu. Senkronizasyona devam etmek ve veri kaybını önlemek için lütfen tekrar giriş yapın.",
+    "login": "Google ile Giriş Yap",
+    "dismiss": "Şimdi değil (Senkronizasyon Duraklatıldı)"
+  }
 }

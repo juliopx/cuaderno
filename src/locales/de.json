@@ -115,5 +115,11 @@
   "confirm_logout_delete_data": "Alle gespeicherten Daten in Google Drive vor dem Abmelden löschen",
   "logout_confirmation_desc": "Sind Sie sicher, dass Sie sich abmelden möchten?",
   "unsync_confirm_title": "Synchronisierung stoppen?",
-  "unsync_confirm_desc": "Sind Sie sicher, dass Sie die Synchronisierung mit Google Drive stoppen möchten?"
+  "unsync_confirm_desc": "Sind Sie sicher, dass Sie die Synchronisierung mit Google Drive stoppen möchten?",
+  "sessionExpired": {
+    "title": "Sitzung abgelaufen",
+    "description": "Ihre Google Drive-Sitzung ist abgelaufen. Bitte melden Sie sich erneut an, um die Synchronisierung fortzusetzen und Datenverlust zu vermeiden.",
+    "login": "Mit Google anmelden",
+    "dismiss": "Nicht jetzt (Sync pausiert)"
+  }
 }
