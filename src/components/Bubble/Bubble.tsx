@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   track,
   useEditor,
@@ -18,6 +18,7 @@ import { useFileSystemStore } from '../../store/fileSystemStore';
 import clsx from 'clsx';
 import { UIPortal } from '../UIPortal';
 import { useTranslation } from 'react-i18next';
+
 import { LinkInputModal } from '../UI/LinkInputModal';
 import {
   FillColorStyle,
@@ -445,14 +446,40 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
 
   // Dimensions
   const width = bubbleCollapsed ? 48 : 340;
-  const hasContent = showTextSection || showShapeTypeSection || showStrokeSection || showFillSection;
-  const contentHeight = hasContent ? (activeTool === 'text' ? 240 : (activeTool === 'shapes' ? 300 : 170)) : 0;
-  // If no content: padding-top(8) + toolbar(48) + padding-bottom(8) = 64
-  // If content: padding-top(8) + toolbar(48) + gap(12) + divider(1) + gap(12) + content + padding-bottom(8) = 89 + content
-  const height = bubbleCollapsed ? 48 : (hasContent ? contentHeight + 89 : 64);
+
+  // Use a callback ref to ensure we observe as soon as the element mounts
+  const [dynamicHeight, setDynamicHeight] = useState(bubbleCollapsed ? 48 : 100);
+  const observerRef = useRef<ResizeObserver | null>(null);
+
+  const measureRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
+    if (node) {
+      // Initial measure
+      setDynamicHeight(node.offsetHeight);
+
+      observerRef.current = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.borderBoxSize) {
+            const borderBoxSize = Array.isArray(entry.borderBoxSize) ? entry.borderBoxSize[0] : entry.borderBoxSize;
+            setDynamicHeight(borderBoxSize.blockSize);
+          } else {
+            setDynamicHeight(entry.contentRect.height);
+          }
+        }
+      });
+      observerRef.current.observe(node);
+    }
+  }, []); // Stable callback
+
+  // Use dynamic height for boundaries, with a safe fallback
+  const boundaryHeight = dynamicHeight || (bubbleCollapsed ? 48 : 200);
 
   const defaultX = leftHandedMode ? 100 : window.innerWidth / 2 - (width / 2);
-  const defaultY = window.innerHeight - height - 32;
+  const defaultY = window.innerHeight - boundaryHeight - 32;
 
   const initialX = bubblePosition ? bubblePosition.x : defaultX;
   const initialY = bubblePosition ? bubblePosition.y : defaultY;
@@ -460,7 +487,7 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
   const { position, setPosition, handlePointerDown, hasMoved, isDragging } = useDraggableWithBounds(
     { x: initialX, y: initialY },
     width,
-    height,
+    boundaryHeight,
     (pos) => updatePreferences({ bubblePosition: pos })
   );
 
@@ -470,7 +497,9 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
       const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
       const clampedX = clamp(bubblePosition.x, 0, window.innerWidth - width);
-      const clampedY = clamp(bubblePosition.y, 0, window.innerHeight - height);
+      // Use boundaryHeight instead of dynamicHeight directly to be safe, or recalculate if needed.
+      // Since boundaryHeight tracks dynamicHeight, it's correct.
+      const clampedY = clamp(bubblePosition.y, 0, window.innerHeight - boundaryHeight);
 
       const dx = Math.abs(clampedX - position.x);
       const dy = Math.abs(clampedY - position.y);
@@ -479,11 +508,11 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
       if (dx > 1 || dy > 1) {
         setPosition({ x: clampedX, y: clampedY });
 
-        // Optional: Update store if it was out of bounds? 
+        // Optional: Update store if it was out of bounds?
         // Better to just keep local state valid.
       }
     }
-  }, [bubblePosition, position, setPosition, isDragging, width, height]);
+  }, [bubblePosition, position, setPosition, isDragging, width, boundaryHeight]);
 
   // Smart double click handler for collapsing
   const lastClickTime = useRef(0);
@@ -747,10 +776,19 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
   }
 
   return (
+
     <UIPortal>
       <div
+        ref={measureRef}
         className={clsx(styles.bubble, isDragging && styles.dragging)}
-        style={{ left: position.x, top: position.y, pointerEvents: 'auto' }}
+        style={{
+          left: position.x,
+          top: position.y,
+          pointerEvents: 'auto',
+          position: 'fixed',
+          zIndex: 1000,
+          width
+        }}
         onPointerDown={handlePointerDown}
         onClick={handleSmartClick}
         data-is-ui="true"
@@ -833,6 +871,6 @@ export const Bubble = track(({ activeTool, onSelectTool, onUpload, onAddUrl }: B
           />
         )}
       </div>
-    </UIPortal>
+    </UIPortal >
   );
 });
