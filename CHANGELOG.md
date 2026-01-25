@@ -1,3 +1,31 @@
+## [1.9.3] - 2026-01-25
+
+### Features
+* Persist Bubble position, collapse state, and active tool configuration. Fixed issues with drag boundaries and dynamic height overflow. (#103)
+* - **Major**: Unified all drawing tools into the floating bubble interface, removing the fixed toolbar
+- **Feature**: Added double-click interactions for quick tool access and eraser toggle
+- **Feature**: Added smooth icon transition animations in collapsed bubble
+- **Enhancement**: Moved tldraw attribution to Settings menu with official branding
+- **Fix**: Resolved infinite loops in Bubble component and multi-tab sync
+- **Fix**: Improved tldraw theme synchronization
+- **Performance**: Optimized store selectors to prevent unnecessary re-renders (#95)
+* Added automatic tool switching for Apple Pencil/Wacom erasers. Improved release process to prevent duplicate changelog entries and automated branch cleanup after merging. (#85)
+
+### Bug Fixes
+* Fixed Google Drive sync reliability issues including 404 auto-recovery, race conditions, and error notifications. (#101)
+* Fixed watermark and recenter button positioning on iPad/Touch devices to respect Safe Area. (#99)
+* -   **Fix**: Repositioned tldraw watermark to be visible (license compliance) instead of hiding it, placing it to the left of the recenter button. (#97)
+* Fixed missing header path and sidebar expand button in canvas view. (#93)
+
+### Documentation
+* Enforce GitHub CLI usage for agents and track `.agent` workflows in Git. (#88)
+
+### Internal
+* Refactored CanvasArea and Bubble components into modular sub-components for improved maintainability. (#89)
+* chore: sync main → develop after release (#87)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.7.1...v1.9.3
+
 ## [1.9.2] - 2026-01-24
 
 ### Features
