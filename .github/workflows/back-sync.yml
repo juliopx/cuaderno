@@ -25,34 +25,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Rebase develop onto main
+      - name: Sync main to develop
         run: |
           git fetch origin main develop
           
           # Checkout develop
           git checkout origin/develop -b develop
           
-          # Attempt rebase onto main
-          # This rewrites develop history to be linear on top of main
-          echo "🔄 Attempting to rebase develop onto main..."
-          if git rebase origin/main; then
-            echo "✅ Rebase successful"
-            
-            # Force push develop to apply the new linear history
-            # NOTE: This requires 'Allow force pushes' on develop branch in GitHub settings
-            echo "🚀 Force pushing to develop..."
-            git push origin develop --force || {
-              echo "❌ Force push failed! Check branch protection rules for 'develop'."
-              echo "To fix: Go to Settings -> Branches -> 'develop' -> Allow force pushes"
-              exit 1
-            }
-          else
-            echo "❌ Rebase failed due to conflicts"
-            git rebase --abort
-            
-            echo "⚠️ Falling back to Merge PR strategy (Merge Bubble will occur)"
-            # Fallback logic could go here, but for now we error out to prompt manual fix
-            # or we could revert to the merge strategy. 
-            # Given user preference for "rebase", we fail to alert the issue.
-            exit 1
-          fi
+          # Merge main into develop
+          # This creates a merge bubble/loop, preserving history context
+          echo "🔄 Merging main into develop..."
+          git merge origin/main -m "chore(sync): merge main into develop [skip ci]"
+          
+          echo "🚀 Pushing to develop..."
+          git push origin develop
