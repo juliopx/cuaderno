@@ -4,10 +4,13 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapi
 let tokenClient: any = null;
 let gapiInited = false;
 let gisInited = false;
+let initPromise: Promise<void> | null = null;
 
 export const googleDrive = {
   async init(onAuthenticated: (response: any) => void, onError?: (error: any) => void) {
-    return new Promise<void>(async (resolve) => {
+    if (initPromise) return initPromise;
+
+    initPromise = new Promise<void>(async (resolve) => {
       // Wait for scripts to load
       const waitForGlobal = (key: string) => {
         return new Promise<void>((resolve) => {
@@ -83,6 +86,8 @@ export const googleDrive = {
       gisInited = true;
       checkInited();
     });
+
+    return initPromise;
   },
 
   async authenticate(prompt: 'consent' | 'select_account' | 'none' = 'select_account') {

@@ -11,5 +11,8 @@ export default defineConfig({
   base: '/cuaderno/',
   server: {
     host: true,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'unsafe-none',
+    },
   },
 })
