@@ -47,11 +47,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Start from develop and merge origin/main
-          git checkout develop
-          git merge origin/main --no-edit
           
-          # Try to push directly first (skip PR if possible)
+          # Start from develop
+          git checkout develop
+          
+          # Rebase instead of merge to avoid merge commits
+          if ! git rebase origin/main; then
+            echo "❌ Rebase failed due to conflicts. Manual intervention required."
+            git rebase --abort
+            exit 1
+          fi
+          
+          # Try to push directly first (will only work if branch protection is off)
           if git push origin develop; then
             echo "✅ Successfully synced main to develop via direct push"
             exit 0
@@ -59,7 +66,20 @@ jobs:
 
           echo "⚠️ Direct push failed (likely branch protection), falling back to PR..."
           
-          # Fallback: Create PR
+          # Fallback: Create or update PR
           git checkout -b $SYNC_BRANCH
           git push -f origin $SYNC_BRANCH
-          gh pr create --base develop --head $SYNC_BRANCH --title "chore: sync main to develop" --body "Syncing changes from main back to develop." || echo "PR already exists"
+          
+          # Check if PR exists (including closed ones)
+          PR_JSON=$(gh pr list --base develop --head $SYNC_BRANCH --state all --json number,state --jq '.[0]')
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number // empty')
+          PR_STATE=$(echo "$PR_JSON" | jq -r '.state // empty')
+          
+          if [ -z "$PR_NUMBER" ]; then
+            gh pr create --base develop --head $SYNC_BRANCH --title "chore: sync main to develop" --body "Syncing changes from main back to develop (linear history via rebase)."
+          elif [ "$PR_STATE" = "CLOSED" ]; then
+            gh pr reopen "$PR_NUMBER"
+            echo "Reopened closed PR #$PR_NUMBER"
+          else
+            echo "PR #$PR_NUMBER already exists and is open, updated the branch."
+          fi
