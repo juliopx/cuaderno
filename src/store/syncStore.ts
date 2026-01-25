@@ -86,6 +86,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       await get().setupConnection(token, isRefreshing);
     }, (error: any) => {
       console.error('Google Auth Error:', error);
+      toast.error('Google Auth Error: ' + (error.error || 'Unknown error'));
       // If silent refresh fails (or any other auth error while we thought we were connected)
       // we must clear the session to break the loop.
       if (get().isConfigured) {
@@ -142,6 +143,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         localStorage.removeItem('cuaderno-drive-expires-at');
         localStorage.removeItem('cuaderno-user-info');
         set({ isConfigured: false, user: null, expiresAt: null });
+        if (!silent) toast.error('Failed to connect to Google Drive.');
       }
     }
   },
@@ -170,6 +172,14 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     if (!state.isConfigured || state.status !== 'idle') return;
     if (!state.isClientReady) return; // Silent return for auto-sync if not ready
 
+    // @ts-expect-error - GAPI types are incomplete
+    if (!gapi.client.drive) {
+      console.error('[Sync] Drive API not loaded despite client being ready.');
+      set({ status: 'error', error: 'Drive API not loaded' });
+      toast.error('Sync failed: Drive API not loaded. Please refresh.');
+      return;
+    }
+
     try {
       set({ status: 'saving-to-disk' });
       // Always force save active page content to ensure we upload latest changes
@@ -184,6 +194,19 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
       // 1. Ensure Root Folder
       let rootId = state.rootFolderId;
+
+      // Validate existing rootId
+      if (rootId) {
+        try {
+          await googleDrive.getFileMetadata(rootId);
+        } catch (e) {
+          console.warn('[Sync] Stale Root Folder ID detected (404/Trashed). Resetting...', e);
+          rootId = null;
+          set({ rootFolderId: null });
+          localStorage.removeItem('cuaderno-drive-root-id');
+        }
+      }
+
       if (!rootId) {
         const existing = await googleDrive.findFileByName('Cuaderno');
         if (existing) {
@@ -666,7 +689,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       }
 
       set({ status: 'error', error: err.message || 'Unknown error' });
-      if (manual) toast.error('Sync failed: ' + (err.message || 'Network error'));
+      toast.error('Sync failed: ' + (err.message || 'Network error'));
     }
   },
 
