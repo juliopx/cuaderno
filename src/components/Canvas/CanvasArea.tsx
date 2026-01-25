@@ -7,7 +7,7 @@ import {
 import 'tldraw/tldraw.css'
 import styles from './CanvasArea.module.css';
 import { Bubble } from '../Bubble/Bubble';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { getIsDarkMode } from '../../lib/themeUtils';
 import { LocateFixed, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
 import { CircularButton } from '../UI/CircularButton';
@@ -108,8 +108,10 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
     if (isEmulatedTextTool && isLockingUI) setIsLockingUI(false);
   }, [isEmulatedTextTool, isLockingUI]);
 
-  const handleSelectTool = (tool: string) => {
+  const handleSelectTool = useCallback((tool: string) => {
     setManualTool(tool);
+    userPrefs.updatePreferences({ lastActiveTool: tool }); // Persist selection
+
     if (['draw', 'eraser'].includes(tool)) editor.selectNone();
     editor.setEditingShape(null);
 
@@ -120,7 +122,8 @@ const CanvasInterface = track(({ pageId, pageVersion, lastModifier, clientId, pa
     } else {
       editor.setCurrentTool(tool);
     }
-  };
+  }, [editor, lastGeoToolRef, userPrefs]);
+
 
   return (
     <div className={styles.canvasContainer}>
@@ -203,6 +206,31 @@ export const CanvasArea = () => {
         licenseKey={import.meta.env.VITE_TLDRAW_LICENSE}
         options={{ maxPages: 1 }}
         components={{ ContextMenu: DefaultContextMenu }}
+        onMount={(editor) => {
+          // Restore last active tool immediately on mount
+          const savedTool = useUserPreferencesStore.getState().lastActiveTool;
+          if (savedTool && savedTool !== 'select') {
+            // Ensure no selection if switching to draw/eraser
+            if (['draw', 'eraser'].includes(savedTool)) editor.selectNone();
+
+            // Check if custom tool logic needed (like handleSelectTool)
+            // But simple setCurrentTool is usually enough for initial load
+            // For shapes, we might want lastGeoTool, but let's stick to savedTool first.
+            // If savedTool is 'shapes', handleSelectTool handles redirection.
+            // We can replicate that logic or just use savedTool.
+            // Let's replicate the safe logic from handleSelectTool:
+
+            if (savedTool === 'shapes') {
+              // We need to access the store state for lastUsedGeo too if we want to be perfect
+              // But handleSelectTool reads from a Ref which is local to CanvasInterface.
+              // HOWEVER, userPreferencesStore HAS lastUsedGeo!
+              const lastGeo = useUserPreferencesStore.getState().lastUsedGeo;
+              editor.setCurrentTool(lastGeo || 'rectangle');
+            } else {
+              editor.setCurrentTool(savedTool);
+            }
+          }
+        }}
         overrides={{
           actions(_editor, actions) {
             delete actions['move-to-page'];

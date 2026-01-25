@@ -20,7 +20,8 @@ interface UseDraggableWithBoundsReturn {
 export const useDraggableWithBounds = (
   initialPosition: Position,
   width: number,
-  height: number
+  height: number,
+  onDragEnd?: (pos: Position) => void
 ): UseDraggableWithBoundsReturn => {
   const [position, setPosition] = useState(initialPosition);
   const [isDraggingState, setIsDraggingState] = useState(false);
@@ -29,7 +30,14 @@ export const useDraggableWithBounds = (
   const startPos = useRef({ x: 0, y: 0 });
   const itemStartPos = useRef({ x: 0, y: 0 });
 
+  const latestPosition = useRef(initialPosition);
+
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
+
+  // Keep ref in sync with state for initialization/external updates
+  useEffect(() => {
+    latestPosition.current = position;
+  }, [position]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     hasMoved.current = false;
@@ -49,6 +57,7 @@ export const useDraggableWithBounds = (
     hasMoved.current = false;
     startPos.current = { x: e.clientX, y: e.clientY };
     itemStartPos.current = position;
+    latestPosition.current = position; // Sync start position
 
     document.addEventListener('pointermove', handlePointerMove);
     document.addEventListener('pointerup', handlePointerUp);
@@ -72,11 +81,18 @@ export const useDraggableWithBounds = (
     if (hasMoved.current) {
       const newX = clamp(itemStartPos.current.x + dx, 0, window.innerWidth - width);
       const newY = clamp(itemStartPos.current.y + dy, 0, window.innerHeight - height);
-      setPosition({ x: newX, y: newY });
+      const newPos = { x: newX, y: newY };
+      setPosition(newPos);
+      latestPosition.current = newPos; // Update ref
     }
   };
 
   const handlePointerUp = (e: PointerEvent) => {
+    if (isDragging.current) {
+      if (onDragEnd) {
+        onDragEnd(latestPosition.current); // Use fresh ref value
+      }
+    }
     isDragging.current = false;
     setIsDraggingState(false);
     document.removeEventListener('pointermove', handlePointerMove);
