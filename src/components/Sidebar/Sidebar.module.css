@@ -40,6 +40,12 @@
   border-right: 1px solid hsl(var(--color-text-secondary) / 0.1);
 }
 
+.columnOver {
+  background-color: var(--color-accent-soft) !important;
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -4px;
+}
+
 .header {
   padding: 1rem;
   font-weight: 600;
@@ -49,14 +55,25 @@
   letter-spacing: 0.05em;
   border-bottom: 1px solid hsl(var(--color-text-secondary) / 0.05);
   flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
 }
 
 .list {
   flex: 1;
   padding: 0.5rem;
   overflow-y: auto;
-  /* Scroll only the list */
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .item {
@@ -72,6 +89,8 @@
   transition: background-color 0.15s ease;
   gap: 0.5rem;
   touch-action: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .item:hover {
@@ -133,6 +152,7 @@
   width: 16px;
   height: 16px;
   opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .itemActive .icon {
@@ -213,8 +233,19 @@
   color: hsl(var(--color-text-primary));
 }
 
+.uploadButtonSmall {
+  flex: none !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  justify-content: center;
+  align-items: center;
+}
+
 .nameContainer {
   flex: 1;
+  min-width: 0;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -252,38 +283,71 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-.deleteBtn {
-  opacity: 0;
-  background: none;
-  border: none;
-  padding: 4px;
-  border-radius: 4px;
-  color: hsl(var(--color-text-secondary));
-  cursor: pointer;
-  transition: all 0.2s;
+.menuWrapper {
+  opacity: 0.5;
+  transition: opacity 0.2s;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
-.item:hover .deleteBtn {
-  opacity: 0.6;
+.item:hover .menuWrapper {
+  opacity: 1;
+}
+
+.menuDropdown :global(.Dropdown_trigger__29m9s) {
+  padding: 4px;
+}
+
+.menuDropdown :global(.Dropdown_triggerLabel__29m9s) {
+  margin: 0;
+}
+
+.menuDropdown :global(.Dropdown_chevron__29m9s) {
+  display: none;
+}
+
+.menuTrigger {
+  background: none !important;
+  border: none !important;
+  padding: 4px !important;
+  margin: 0 !important;
+  width: auto !important;
+  border-radius: 4px !important;
+  min-height: unset !important;
+  box-shadow: none !important;
+  color: hsl(var(--color-text-secondary) / 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.menuTrigger:hover {
+  background: hsla(var(--color-text-secondary) / 0.1) !important;
+}
+
+.itemActive .menuTrigger,
+.itemActive .menuTrigger :global(svg) {
+  color: #fff !important;
+  opacity: 1 !important;
+  fill: none;
+  /* Ensure it doesn't fill with white for icons that shouldn't */
+}
+
+.itemActive .menuTrigger:hover {
+  background: hsla(0, 0%, 100%, 0.2) !important;
 }
 
 @media (hover: none) {
-  .deleteBtn {
+  .menuWrapper {
     opacity: 0.6;
   }
 }
 
-.deleteBtn:hover {
-  opacity: 1 !important;
-  background: hsla(0, 70%, 50%, 0.1);
-  color: hsl(0, 70%, 50%);
-}
-
-.itemActive .deleteBtn {
+.itemActive .menuWrapper {
   color: inherit;
+  opacity: 1;
 }
