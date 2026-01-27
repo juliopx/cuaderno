@@ -1,3 +1,10 @@
+## [1.10.2] - 2026-01-27
+
+### Bug Fixes
+* Resolved Drive API loading race condition and COOP warnings (#117)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.10.1...v1.10.2
+
 ## [1.10.1] - 2026-01-27
 
 ### Bug Fixes
