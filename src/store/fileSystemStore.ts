@@ -936,15 +936,31 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       try {
         const data = JSON.parse(json);
 
+        // Deduplication helper for load
+        const deduplicate = <T extends { id: string, version: number, dirty?: boolean }>(items: T[]): T[] => {
+          const map = new Map<string, T>();
+          items.forEach(item => {
+            const existing = map.get(item.id);
+            if (!existing || (item.version > existing.version) || (item.dirty && !existing.dirty)) {
+              map.set(item.id, item);
+            }
+          });
+          return Array.from(map.values());
+        };
+
         // Ensure versioning exists on loaded data and migrate from baseVersion to dirty
-        const notebooks = (data.notebooks || []).map((n: any, idx: number) => ({
+        const notebooksRaw = (data.notebooks || []).map((n: any, idx: number) => ({
           ...n,
           version: n.version || 1,
           order: n.order !== undefined ? n.order : (idx + 1) * 10000,
           // Migration: if baseVersion exists and differs from version, item is dirty
           dirty: n.dirty !== undefined ? n.dirty : (n.baseVersion !== undefined ? n.version > n.baseVersion : false),
           lastModifier: n.lastModifier || clientId
-        })).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+        }));
+
+        // Deduplicate notebooks to fix the "duplicate entries" bug
+        const notebooks = deduplicate<Notebook>(notebooksRaw)
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
 
         const folders = { ...data.folders };
         Object.keys(folders).forEach(id => {
@@ -1049,6 +1065,22 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 
   mergeRemoteData: (remoteData) => {
     set((state) => {
+      // Helper to deduplicate items by ID, keeping the "best" one (most recent version or dirty)
+      const deduplicate = <T extends Notebook | Folder | Page>(items: T[]): T[] => {
+        const map = new Map<string, T>();
+        items.forEach(item => {
+          const existing = map.get(item.id);
+          const isBetter = !existing || 
+            (item.dirty && !existing.dirty) || 
+            (item.version > existing.version);
+            
+          if (isBetter) {
+            map.set(item.id, item);
+          }
+        });
+        return Array.from(map.values());
+      };
+
       // 1. Merge tombstones: Keep both remote and any new local ones
       const deletedItemIds = [...new Set([
         ...(remoteData.deletedItemIds || []),
@@ -1064,66 +1096,123 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
         ln.dirty && !remoteNotebooks.find((rn: Notebook) => rn.id === ln.id)
       );
       const notebooksToMerge = remoteNotebooks.map((rn: Notebook) => {
-        const local = state.notebooks.find(ln => ln.id === rn.id);
+        // Find local version. If we have multiple (bug), take the dirty one or the first one.
+        const localItems = state.notebooks.filter(ln => ln.id === rn.id);
+        const local = localItems.find(l => l.dirty) || localItems[0];
+        
         // If local is dirty, keep local to avoid losing mid-sync changes
         return (local && local.dirty) ? local : rn;
       });
-      const newNotebooks = [...notebooksToMerge, ...newLocalNotebooks]
+
+      // deduplicate handles potential duplicates in remoteData or state
+      const newNotebooks = deduplicate([...notebooksToMerge, ...newLocalNotebooks])
         .filter((n: Notebook) => !deletedItemIds.includes(n.id))
         .sort((a: Notebook, b: Notebook) => (a.order || 0) - (b.order || 0));
 
       // 3. Folders: Merge similarly
       const remoteFolders = remoteData.folders || {};
-      const folders = { ...remoteFolders };
-      Object.entries(state.folders).forEach(([id, lf]) => {
-        const rf = remoteFolders[id];
-        if (lf.dirty && (!rf || lf.version >= rf.version)) {
-          folders[id] = lf;
+      let foldersChanged = false;
+      const folders = { ...state.folders };
+
+      // Add/Update from remote
+      Object.entries(remoteFolders).forEach(([id, rf]) => {
+        const lf = state.folders[id];
+        if (!lf || (rf as any).version > lf.version) {
+          folders[id] = rf as any;
+          foldersChanged = true;
         }
       });
-      // Filter out deleted
-      Object.keys(folders).forEach(id => {
-        if (deletedItemIds.includes(id)) delete folders[id];
+
+      // Preserve local dirty
+      Object.entries(state.folders).forEach(([id, lf]) => {
+        const rf = remoteFolders[id];
+        if (lf.dirty && (!rf || lf.version >= (rf as any).version)) {
+          if (folders[id] !== lf) {
+            folders[id] = lf;
+            foldersChanged = true;
+          }
+        }
+      });
+
+      // Filter deleted
+      const finalFolders: Record<string, Folder> = {};
+      Object.entries(folders).forEach(([id, f]) => {
+        if (!deletedItemIds.includes(id)) {
+          finalFolders[id] = f;
+        } else {
+          foldersChanged = true;
+        }
       });
 
       // 4. Pages: Merge similarly
       const remotePages = remoteData.pages || {};
-      const pages = { ...remotePages };
+      let pagesChanged = false;
+      const pages = { ...state.pages };
+
+      // Add/Update from remote
+      Object.entries(remotePages).forEach(([id, rp]) => {
+        const lp = state.pages[id];
+        if (!lp || (rp as any).version > lp.version) {
+          pages[id] = rp as any;
+          pagesChanged = true;
+        }
+      });
+
+      // Preserve local dirty
       Object.entries(state.pages).forEach(([id, lp]) => {
         const rp = remotePages[id];
-        // Only preserve local dirty if its version is >= remote version to avoid reverting pulls
-        if (lp.dirty && (!rp || lp.version >= rp.version)) {
-          if (rp && lp.version < rp.version) {
-            console.warn(`[FileSystem] Blocking dirty overwrite for ${id} because remote v${rp.version} is ahead of local v${lp.version}`);
+        if (lp.dirty && (!rp || lp.version >= (rp as any).version)) {
+          if (lp.version < (rp as any)?.version) {
+            console.warn(`[FileSystem] Blocking dirty overwrite for ${id} because remote v${(rp as any).version} is ahead of local v${lp.version}`);
           } else {
-            pages[id] = lp;
+            if (pages[id] !== lp) {
+              pages[id] = lp;
+              pagesChanged = true;
+            }
           }
         }
       });
-      // Filter out deleted
-      Object.keys(pages).forEach(id => {
-        if (deletedItemIds.includes(id)) delete pages[id];
+
+      // Filter deleted
+      const finalPages: Record<string, Page> = {};
+      Object.entries(pages).forEach(([id, p]) => {
+        if (!deletedItemIds.includes(id)) {
+          finalPages[id] = p;
+        } else {
+          pagesChanged = true;
+        }
       });
 
       let nextActiveNotebookId = shouldUpdateActiveState ? remoteData.activeNotebookId : state.activeNotebookId;
       let nextActivePageId = shouldUpdateActiveState ? remoteData.activePageId : state.activePageId;
       let nextActivePath = shouldUpdateActiveState ? (remoteData.activePath || []) : state.activePath;
 
-      // Validate Active State: If the active item was deleted in this merge, reset it.
+      // Validate Active State
       if (nextActiveNotebookId && !newNotebooks.find((n: any) => n.id === nextActiveNotebookId)) {
         console.warn(`[FileSystem] Active notebook ${nextActiveNotebookId} no longer exists. Resetting.`);
         nextActiveNotebookId = null;
         nextActivePageId = null;
         nextActivePath = [];
-      } else if (nextActivePageId && !pages[nextActivePageId]) {
+      } else if (nextActivePageId && !finalPages[nextActivePageId]) {
         console.warn(`[FileSystem] Active page ${nextActivePageId} no longer exists. Deselecting.`);
         nextActivePageId = null;
       }
 
+      // Optimization: Only trigger state update if something actually changed
+      const stateChanged = foldersChanged || pagesChanged || 
+        nextActiveNotebookId !== state.activeNotebookId ||
+        nextActivePageId !== state.activePageId ||
+        JSON.stringify(nextActivePath) !== JSON.stringify(state.activePath) ||
+        newNotebooks.length !== state.notebooks.length;
+
+      if (!stateChanged) {
+        return {};
+      }
+
       return {
         notebooks: newNotebooks,
-        folders,
-        pages,
+        folders: finalFolders,
+        pages: finalPages,
         deletedItemIds,
         activeNotebookId: nextActiveNotebookId,
         activePageId: nextActivePageId,

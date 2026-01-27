@@ -238,8 +238,20 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       // 2. Fetch Remote Metadata
       const remoteMetaFile = await googleDrive.findFileByName('metadata.json', rootId || '');
 
+      // Helper to deduplicate local notebooks before processing
+      const deduplicateItems = <T extends { id: string, version: number, dirty?: boolean }>(items: T[]): T[] => {
+        const map = new Map<string, T>();
+        items.forEach(item => {
+          const existing = map.get(item.id);
+          if (!existing || (item.dirty && !existing.dirty) || (item.version > existing.version)) {
+            map.set(item.id, item);
+          }
+        });
+        return Array.from(map.values());
+      };
+
       const localData = JSON.parse(JSON.stringify({
-        notebooks: fsStore.notebooks,
+        notebooks: deduplicateItems(fsStore.notebooks),
         folders: fsStore.folders,
         pages: fsStore.pages,
         activeNotebookId: fsStore.activeNotebookId,
@@ -544,21 +556,21 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
           // Handle tombstones
           if (remoteTombstones.length > 0) {
-            localData.notebooks = localData.notebooks.filter((n: any) => !remoteTombstones.includes(n.id));
+            console.log('[Sync] Applying remote deletions to metadata...');
+            const tombstoneSet = new Set(remoteTombstones);
+            localData.notebooks = localData.notebooks.filter((n: any) => !tombstoneSet.has(n.id));
+            
             remoteTombstones.forEach((kid: string) => {
               delete localData.folders[kid];
               delete localData.pages[kid];
             });
 
-            // CRITICAL FIX: Merge remote tombstones into our local deletedItemIds list
-            // to ensure we don't overwrite the server's history with just our local history.
-            // This guarantees that deletions propagate correctly to other clients.
-            console.log('[Sync] Debug - Merging Tombstones. Local:', localData.deletedItemIds?.length, 'Remote:', remoteTombstones.length);
-            localData.deletedItemIds = [...new Set([...(localData.deletedItemIds || []), ...remoteTombstones])];
+            const localTombstones = localData.deletedItemIds || [];
+            console.log('[Sync] Debug - Merging Tombstones. Local:', localTombstones.length, 'Remote:', remoteTombstones.length);
+            
+            // Merge unique IDs safely
+            localData.deletedItemIds = Array.from(new Set([...localTombstones, ...remoteTombstones]));
             console.log('[Sync] Debug - Merged Result:', localData.deletedItemIds.length);
-          } else {
-            // Debug log if we skip the merge
-            console.log('[Sync] Debug - No Remote Tombstones. Local Deletions:', localData.deletedItemIds?.length, localData.deletedItemIds);
           }
 
           // Now localData implies the "Merged State".
@@ -581,21 +593,22 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             cleanData.activePath = fsStore.activePath;
             cleanData.activeStateUpdatedAt = fsStore.activeStateUpdatedAt;
             cleanData.activeStateModifier = state.clientId;
-          } else {
-            // We accept remote active state (already in remoteData, will be merged into local FS store)
           }
 
           // PUSH Metadata if we made changes OR if we just want to update active state OR if deletions occurred
           const hasNewDeletions = (localData.deletedItemIds || []).length > (remoteData.deletedItemIds || []).length;
 
           if (safePushes.length > 0 || localActiveUpdatedAt > remoteActiveUpdatedAt || hasNewDeletions) {
+            console.log('[Sync] Pushing updated metadata to server...');
             await googleDrive.updateFile(remoteMetaFile.id, JSON.stringify(cleanData));
             console.log('[Sync] Metadata updated on server.');
           }
 
+          console.log('[Sync] Committing to local store...');
           // Commit to Local Store
           fsStore.mergeRemoteData(localData);
           set({ lastSync: Date.now(), status: 'idle' });
+          console.log('[Sync] Sync process finished successfully.');
           if (manual) toast.success('Sync complete');
 
         } else {
@@ -882,13 +895,29 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
   checkTokenValidity: async () => {
     const { expiresAt, isConfigured } = get();
-    if (!isConfigured || !expiresAt) return;
+    if (!isConfigured) return;
+
+    // If we are configured but have no expiresAt, it's a stale or incomplete session
+    if (!expiresAt) {
+      console.warn('🔑 No expiration time found for active session. Forcing dialog...');
+      set({ isConfigured: false, isLoginDialogOpen: true });
+      return;
+    }
 
     // Refresh if expired or expiring in less than 5 minutes
     const buffer = 5 * 60 * 1000;
     if (Date.now() + buffer > expiresAt) {
       console.log('🔑 Token expired or close to expiration. Refreshing...');
-      googleDrive.authenticateSilent();
+      
+      // If we are already in the process of refreshing/syncing, don't overlap too much
+      // but ensure we try to get a fresh token.
+      try {
+        await googleDrive.authenticateSilent();
+      } catch (e) {
+        console.error('Failed silent refresh on visibility change', e);
+        // If silent fails, ensure user sees the dialog
+        set({ isConfigured: false, isLoginDialogOpen: true });
+      }
     }
   }
 }));
