@@ -361,9 +361,11 @@ function App() {
 
   // 4. Handle returning from background (check token validity)
   useEffect(() => {
-    if (!isEnabled) return;
+    // Add debug log to check if effect runs
+    console.log('👀 Visibility effect registered. isEnabled:', isEnabled);
 
     const handleVisibilityChange = () => {
+      console.log('🔄 visibilitychange event fired. State:', document.visibilityState);
       if (document.visibilityState === 'visible') {
         console.log('📱 App became visible. Checking token validity and sync status...');
         const syncStore = useSyncStore.getState();
@@ -381,7 +383,10 @@ function App() {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      console.log('🧹 Cleaning up visibility effect');
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [isEnabled]);
 
   // 5. Exit Prevention & Sync on Stay
