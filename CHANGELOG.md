@@ -1,3 +1,13 @@
+## [1.10.1] - 2026-01-27
+
+### Bug Fixes
+* - Fixed sync stalling when app returns from background.
+- Improved session expiration detection and dialog triggers.
+- Silently fixed duplicate entries in the sidebar.
+- Optimized sync performance to prevent intrusive page reloads. (#114)
+
+**Full Changelog**: https://github.com/juliopx/cuaderno/compare/v1.10.0...v1.10.1
+
 ## [1.10.0] - 2026-01-25
 
 ### Features
