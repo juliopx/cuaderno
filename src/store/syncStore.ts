@@ -574,6 +574,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             const tombstoneSet = new Set(remoteTombstones);
             localData.notebooks = localData.notebooks.filter((n: any) => !tombstoneSet.has(n.id));
 
+
             remoteTombstones.forEach((kid: string) => {
               delete localData.folders[kid];
               delete localData.pages[kid];
@@ -581,6 +582,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
             const localTombstones = localData.deletedItemIds || [];
             console.log('[Sync] Debug - Merging Tombstones. Local:', localTombstones.length, 'Remote:', remoteTombstones.length);
+
 
             // Merge unique IDs safely
             localData.deletedItemIds = Array.from(new Set([...localTombstones, ...remoteTombstones]));
@@ -922,6 +924,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     const buffer = 5 * 60 * 1000;
     if (Date.now() + buffer > expiresAt) {
       console.log('🔑 Token expired or close to expiration. Refreshing...');
+
 
       // If we are already in the process of refreshing/syncing, don't overlap too much
       // but ensure we try to get a fresh token.
