@@ -191,10 +191,24 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     // @ts-expect-error - GAPI types are incomplete
     if (!gapi.client.drive) {
-      console.error('[Sync] Drive API not loaded despite client being ready.');
-      set({ status: 'error', error: 'Drive API not loaded' });
-      toast.error('Sync failed: Drive API not loaded. Please refresh.');
-      return;
+      console.warn('[Sync] Drive API not loaded. Attempting re-initialization...');
+      try {
+        await get().initialize();
+        // Wait a bit just in case
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Check again
+        // @ts-expect-error - GAPI types are incomplete
+        if (!gapi.client.drive) {
+          throw new Error('Drive API still not loaded after re-init');
+        }
+        console.log('[Sync] Drive API recovered successfully.');
+      } catch (e: any) {
+        console.error('[Sync] Drive API initialization recovery failed:', e);
+        set({ status: 'error', error: 'Drive API not loaded' });
+        if (manual) toast.error('Sync failed: Drive API not loaded. Please try refreshing the page.');
+        return;
+      }
     }
 
     try {
@@ -559,7 +573,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             console.log('[Sync] Applying remote deletions to metadata...');
             const tombstoneSet = new Set(remoteTombstones);
             localData.notebooks = localData.notebooks.filter((n: any) => !tombstoneSet.has(n.id));
-            
+
             remoteTombstones.forEach((kid: string) => {
               delete localData.folders[kid];
               delete localData.pages[kid];
@@ -567,7 +581,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
             const localTombstones = localData.deletedItemIds || [];
             console.log('[Sync] Debug - Merging Tombstones. Local:', localTombstones.length, 'Remote:', remoteTombstones.length);
-            
+
             // Merge unique IDs safely
             localData.deletedItemIds = Array.from(new Set([...localTombstones, ...remoteTombstones]));
             console.log('[Sync] Debug - Merged Result:', localData.deletedItemIds.length);
@@ -908,7 +922,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     const buffer = 5 * 60 * 1000;
     if (Date.now() + buffer > expiresAt) {
       console.log('🔑 Token expired or close to expiration. Refreshing...');
-      
+
       // If we are already in the process of refreshing/syncing, don't overlap too much
       // but ensure we try to get a fresh token.
       try {
