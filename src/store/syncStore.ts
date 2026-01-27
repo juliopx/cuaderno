@@ -593,8 +593,6 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             cleanData.activePath = fsStore.activePath;
             cleanData.activeStateUpdatedAt = fsStore.activeStateUpdatedAt;
             cleanData.activeStateModifier = state.clientId;
-          } else {
-            // We accept remote active state (already in remoteData, will be merged into local FS store)
           }
 
           // PUSH Metadata if we made changes OR if we just want to update active state OR if deletions occurred

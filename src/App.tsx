@@ -301,6 +301,7 @@ function App() {
     let pollingTimer: any;
     const runPolling = async () => {
       const { status } = useSyncStore.getState();
+      // Only poll if idle and NOT recently active (give user space)
       if (status === 'idle') {
         try {
           await sync();
@@ -308,10 +309,11 @@ function App() {
           console.error('[Polling] Sync failed', e);
         }
       }
-      pollingTimer = setTimeout(runPolling, 20000); // Wait 20s before next check
+      // Increased polling interval to 60s to be less intrusive on heavy pages
+      pollingTimer = setTimeout(runPolling, 60000); 
     };
 
-    pollingTimer = setTimeout(runPolling, 20000);
+    pollingTimer = setTimeout(runPolling, 60000);
 
     // 2. Reactive local sync (for local changes)
     let debounceTimer: any;
@@ -393,11 +395,14 @@ function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange, { capture: true });
     window.addEventListener('focus', handleFocus, { capture: true });
     
-    // Polling fallback: check every 30 seconds even if events fail
+    // Polling fallback: check every 2 minutes to recover from rare stuck states
+    // but only if app is visible (don't waste background resources)
     const fallbackInterval = setInterval(() => {
-      console.log('⏰ Polling fallback check...');
-      checkState();
-    }, 30000);
+      if (document.visibilityState === 'visible') {
+        console.log('⏰ Polling fallback check...');
+        checkState();
+      }
+    }, 120000);
 
     return () => {
       console.log('🧹 Cleaning up focus/visibility effects');
