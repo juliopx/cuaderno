@@ -936,15 +936,31 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       try {
         const data = JSON.parse(json);
 
+        // Deduplication helper for load
+        const deduplicate = <T extends { id: string, version: number, dirty?: boolean }>(items: T[]): T[] => {
+          const map = new Map<string, T>();
+          items.forEach(item => {
+            const existing = map.get(item.id);
+            if (!existing || (item.version > existing.version) || (item.dirty && !existing.dirty)) {
+              map.set(item.id, item);
+            }
+          });
+          return Array.from(map.values());
+        };
+
         // Ensure versioning exists on loaded data and migrate from baseVersion to dirty
-        const notebooks = (data.notebooks || []).map((n: any, idx: number) => ({
+        const notebooksRaw = (data.notebooks || []).map((n: any, idx: number) => ({
           ...n,
           version: n.version || 1,
           order: n.order !== undefined ? n.order : (idx + 1) * 10000,
           // Migration: if baseVersion exists and differs from version, item is dirty
           dirty: n.dirty !== undefined ? n.dirty : (n.baseVersion !== undefined ? n.version > n.baseVersion : false),
           lastModifier: n.lastModifier || clientId
-        })).sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+        }));
+
+        // Deduplicate notebooks to fix the "duplicate entries" bug
+        const notebooks = deduplicate<Notebook>(notebooksRaw)
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
 
         const folders = { ...data.folders };
         Object.keys(folders).forEach(id => {
@@ -1049,6 +1065,26 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
 
   mergeRemoteData: (remoteData) => {
     set((state) => {
+      // Helper to deduplicate items by ID, keeping the "best" one (most recent version or dirty)
+      const deduplicate = <T extends { id: string, version: number, dirty?: boolean }>(items: T[]): T[] => {
+        const map = new Map<string, T>();
+        items.forEach(item => {
+          const existing = map.get(item.id);
+          // Keep if: 
+          // 1. Doesn't exist yet
+          // 2. New one is dirty and existing is not
+          // 3. New one has a higher version (and same dirty state or both not dirty)
+          const isBetter = !existing || 
+            (item.dirty && !existing.dirty) || 
+            (item.version > existing.version);
+            
+          if (isBetter) {
+            map.set(item.id, item);
+          }
+        });
+        return Array.from(map.values());
+      };
+
       // 1. Merge tombstones: Keep both remote and any new local ones
       const deletedItemIds = [...new Set([
         ...(remoteData.deletedItemIds || []),
@@ -1064,11 +1100,16 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
         ln.dirty && !remoteNotebooks.find((rn: Notebook) => rn.id === ln.id)
       );
       const notebooksToMerge = remoteNotebooks.map((rn: Notebook) => {
-        const local = state.notebooks.find(ln => ln.id === rn.id);
+        // Find local version. If we have multiple (bug), take the dirty one or the first one.
+        const localItems = state.notebooks.filter(ln => ln.id === rn.id);
+        const local = localItems.find(l => l.dirty) || localItems[0];
+        
         // If local is dirty, keep local to avoid losing mid-sync changes
         return (local && local.dirty) ? local : rn;
       });
-      const newNotebooks = [...notebooksToMerge, ...newLocalNotebooks]
+
+      // deduplicate handles potential duplicates in remoteData or state
+      const newNotebooks = deduplicate([...notebooksToMerge, ...newLocalNotebooks])
         .filter((n: Notebook) => !deletedItemIds.includes(n.id))
         .sort((a: Notebook, b: Notebook) => (a.order || 0) - (b.order || 0));
 
@@ -1077,6 +1118,7 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
       const folders = { ...remoteFolders };
       Object.entries(state.folders).forEach(([id, lf]) => {
         const rf = remoteFolders[id];
+        // If local is dirty and (remote doesn't exist OR local version is at least as new as remote)
         if (lf.dirty && (!rf || lf.version >= rf.version)) {
           folders[id] = lf;
         }
