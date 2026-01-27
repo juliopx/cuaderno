@@ -39,9 +39,11 @@ export const googleDrive = {
         try {
           // @ts-ignore
           await gapi.client.init({});
+          console.log('[GoogleDrive] gapi client inited');
           // Explicitly load Drive API v3
           // @ts-ignore
           await gapi.client.load('drive', 'v3');
+          console.log('[GoogleDrive] Drive API v3 load attempt finished');
         } catch (e) {
           console.warn('[GoogleDrive] Primary load failed, trying fallback details', e);
         }
@@ -55,6 +57,7 @@ export const googleDrive = {
             await gapi.client.init({
               discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
             });
+            console.log('[GoogleDrive] Fallback discovery init finished');
           } catch (e2) {
             console.error('[GoogleDrive] Fallback discovery failed', e2);
           }
@@ -63,10 +66,14 @@ export const googleDrive = {
         // Final check before marking as ready
         // @ts-ignore
         if (gapi.client.drive) {
+          console.log('[GoogleDrive] Drive API loaded successfully');
           gapiInited = true;
           checkInited();
         } else {
           console.error('[GoogleDrive] CRITICAL: Failed to load Google Drive API.');
+          // Even if it failed, we resolve to avoid hanging, but with gapiInited = false
+          // syncStore should handle this state.
+          checkInited();
         }
       });
 
