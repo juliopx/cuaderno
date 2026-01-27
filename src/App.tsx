@@ -301,6 +301,7 @@ function App() {
     let pollingTimer: any;
     const runPolling = async () => {
       const { status } = useSyncStore.getState();
+      // Only poll if idle and NOT recently active (give user space)
       if (status === 'idle') {
         try {
           await sync();
@@ -308,10 +309,11 @@ function App() {
           console.error('[Polling] Sync failed', e);
         }
       }
-      pollingTimer = setTimeout(runPolling, 20000); // Wait 20s before next check
+      // Increased polling interval to 60s to be less intrusive on heavy pages
+      pollingTimer = setTimeout(runPolling, 60000); 
     };
 
-    pollingTimer = setTimeout(runPolling, 20000);
+    pollingTimer = setTimeout(runPolling, 60000);
 
     // 2. Reactive local sync (for local changes)
     let debounceTimer: any;
@@ -361,17 +363,53 @@ function App() {
 
   // 4. Handle returning from background (check token validity)
   useEffect(() => {
-    if (!isEnabled) return;
+    console.log('👀 Visibility/Focus effect registered. isEnabled:', isEnabled);
 
-    const handleVisibilityChange = () => {
+    const checkState = () => {
+      console.log('🔍 Checking state (Triggered by:', document.visibilityState, ')');
       if (document.visibilityState === 'visible') {
-        console.log('📱 App became visible. Checking token validity...');
-        useSyncStore.getState().checkTokenValidity();
+        console.log('📱 App is active. Checking token validity and sync status...');
+        const syncStore = useSyncStore.getState();
+        
+        syncStore.checkTokenValidity();
+
+        if (syncStore.isConfigured && syncStore.status !== 'idle') {
+          console.warn('[Visibility] Sync status was stuck in:', syncStore.status, '. Resetting to idle and retrying...');
+          syncStore.setStatus('idle');
+          syncStore.sync();
+        }
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    const handleVisibilityChange = () => {
+      console.log('🔄 visibilitychange event fired:', document.visibilityState);
+      checkState();
+    };
+
+    const handleFocus = () => {
+      console.log('🎯 window focus event fired');
+      checkState();
+    };
+
+    // Robust listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange, { capture: true });
+    window.addEventListener('focus', handleFocus, { capture: true });
+    
+    // Polling fallback: check every 2 minutes to recover from rare stuck states
+    // but only if app is visible (don't waste background resources)
+    const fallbackInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        console.log('⏰ Polling fallback check...');
+        checkState();
+      }
+    }, 120000);
+
+    return () => {
+      console.log('🧹 Cleaning up focus/visibility effects');
+      document.removeEventListener('visibilitychange', handleVisibilityChange, { capture: true });
+      window.removeEventListener('focus', handleFocus, { capture: true });
+      clearInterval(fallbackInterval);
+    };
   }, [isEnabled]);
 
   // 5. Exit Prevention & Sync on Stay
