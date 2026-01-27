@@ -365,8 +365,18 @@ function App() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('📱 App became visible. Checking token validity...');
-        useSyncStore.getState().checkTokenValidity();
+        console.log('📱 App became visible. Checking token validity and sync status...');
+        const syncStore = useSyncStore.getState();
+        
+        // 1. Check token
+        syncStore.checkTokenValidity();
+
+        // 2. If sync was stuck, resume it
+        if (syncStore.isConfigured && syncStore.status !== 'idle') {
+          console.warn('[Visibility] Sync status was stuck in:', syncStore.status, '. Resetting to idle and retrying...');
+          syncStore.setStatus('idle');
+          syncStore.sync();
+        }
       }
     };
 

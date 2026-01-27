@@ -882,13 +882,29 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
   checkTokenValidity: async () => {
     const { expiresAt, isConfigured } = get();
-    if (!isConfigured || !expiresAt) return;
+    if (!isConfigured) return;
+
+    // If we are configured but have no expiresAt, it's a stale or incomplete session
+    if (!expiresAt) {
+      console.warn('🔑 No expiration time found for active session. Forcing dialog...');
+      set({ isConfigured: false, isLoginDialogOpen: true });
+      return;
+    }
 
     // Refresh if expired or expiring in less than 5 minutes
     const buffer = 5 * 60 * 1000;
     if (Date.now() + buffer > expiresAt) {
       console.log('🔑 Token expired or close to expiration. Refreshing...');
-      googleDrive.authenticateSilent();
+      
+      // If we are already in the process of refreshing/syncing, don't overlap too much
+      // but ensure we try to get a fresh token.
+      try {
+        await googleDrive.authenticateSilent();
+      } catch (e) {
+        console.error('Failed silent refresh on visibility change', e);
+        // If silent fails, ensure user sees the dialog
+        set({ isConfigured: false, isLoginDialogOpen: true });
+      }
     }
   }
 }));
