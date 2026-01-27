@@ -361,12 +361,12 @@ function App() {
 
   // 4. Handle returning from background (check token validity)
   useEffect(() => {
-    console.log('👀 Visibility effect registered. isEnabled:', isEnabled);
+    console.log('👀 Visibility/Focus effect registered. isEnabled:', isEnabled);
 
-    const handleVisibilityChange = () => {
-      console.log('🔄 visibilitychange event fired. State:', document.visibilityState);
+    const checkState = () => {
+      console.log('🔍 Checking state (Triggered by:', document.visibilityState, ')');
       if (document.visibilityState === 'visible') {
-        console.log('📱 App became visible. Checking token validity and sync status...');
+        console.log('📱 App is active. Checking token validity and sync status...');
         const syncStore = useSyncStore.getState();
         
         syncStore.checkTokenValidity();
@@ -379,21 +379,31 @@ function App() {
       }
     };
 
-    const handleFocus = () => {
-      console.log('🎯 focus event fired');
-      // Reuse logic from visibility change to be safe
-      if (document.visibilityState === 'visible') {
-        useSyncStore.getState().checkTokenValidity();
-      }
+    const handleVisibilityChange = () => {
+      console.log('🔄 visibilitychange event fired:', document.visibilityState);
+      checkState();
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
+    const handleFocus = () => {
+      console.log('🎯 window focus event fired');
+      checkState();
+    };
+
+    // Robust listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange, { capture: true });
+    window.addEventListener('focus', handleFocus, { capture: true });
     
+    // Polling fallback: check every 30 seconds even if events fail
+    const fallbackInterval = setInterval(() => {
+      console.log('⏰ Polling fallback check...');
+      checkState();
+    }, 30000);
+
     return () => {
       console.log('🧹 Cleaning up focus/visibility effects');
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange, { capture: true });
+      window.removeEventListener('focus', handleFocus, { capture: true });
+      clearInterval(fallbackInterval);
     };
   }, [isEnabled]);
 
