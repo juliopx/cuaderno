@@ -1066,14 +1066,10 @@ export const useFileSystemStore = create<FileSystemState>((set, get) => ({
   mergeRemoteData: (remoteData) => {
     set((state) => {
       // Helper to deduplicate items by ID, keeping the "best" one (most recent version or dirty)
-      const deduplicate = <T extends { id: string, version: number, dirty?: boolean }>(items: T[]): T[] => {
+      const deduplicate = <T extends Notebook | Folder | Page>(items: T[]): T[] => {
         const map = new Map<string, T>();
         items.forEach(item => {
           const existing = map.get(item.id);
-          // Keep if: 
-          // 1. Doesn't exist yet
-          // 2. New one is dirty and existing is not
-          // 3. New one has a higher version (and same dirty state or both not dirty)
           const isBetter = !existing || 
             (item.dirty && !existing.dirty) || 
             (item.version > existing.version);
