@@ -361,7 +361,6 @@ function App() {
 
   // 4. Handle returning from background (check token validity)
   useEffect(() => {
-    // Add debug log to check if effect runs
     console.log('👀 Visibility effect registered. isEnabled:', isEnabled);
 
     const handleVisibilityChange = () => {
@@ -370,10 +369,8 @@ function App() {
         console.log('📱 App became visible. Checking token validity and sync status...');
         const syncStore = useSyncStore.getState();
         
-        // 1. Check token
         syncStore.checkTokenValidity();
 
-        // 2. If sync was stuck, resume it
         if (syncStore.isConfigured && syncStore.status !== 'idle') {
           console.warn('[Visibility] Sync status was stuck in:', syncStore.status, '. Resetting to idle and retrying...');
           syncStore.setStatus('idle');
@@ -382,10 +379,21 @@ function App() {
       }
     };
 
+    const handleFocus = () => {
+      console.log('🎯 focus event fired');
+      // Reuse logic from visibility change to be safe
+      if (document.visibilityState === 'visible') {
+        useSyncStore.getState().checkTokenValidity();
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    
     return () => {
-      console.log('🧹 Cleaning up visibility effect');
+      console.log('🧹 Cleaning up focus/visibility effects');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [isEnabled]);
 
